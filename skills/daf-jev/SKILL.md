@@ -4,8 +4,9 @@ description: >
   Build with the daf-jev Python client for the TypeSafe Jev (System One) API:
   typed question builders (noul/choice/score), sync and async clients,
   concurrent evaluation, composable decision patterns (composite scoring,
-  confidence and tiered gates), calibration utilities, a CLI, and an MCP
-  server. Use when writing or reviewing daf-jev code, integrating System One
+  confidence and tiered gates), usage accounting (UsageLedger), an opt-in
+  circuit breaker, calibration utilities, a CLI, and an MCP server. Use when
+  writing or reviewing daf-jev code, integrating System One
   judgments into a Python project, evaluating a question set over many states,
   or wiring Jev tools into an MCP-capable agent.
 ---
@@ -51,6 +52,17 @@ never be committed, printed, or read by tests.
     middle_label="review", low_label="escalate")` — two-threshold routing.
   - `route(answer, handlers, *, min_confidence=0.0, fallback=None)` and
     `pick(actions, choices)` for dispatch to callables.
+- **Usage** (`daf_jev.ledger`) — `UsageLedger()` thread-safe accounting
+  across any loop of calls: `.record(usage | response | None)` (None is
+  skipped), `.snapshot()` / `.reset()` return a frozen `UsageSnapshot` with
+  `requests`, `input_tokens`, `output_tokens`, `.total_tokens`, `.to_dict()`.
+- **Resilience** (`daf_jev.resilience`) — `CircuitBreaker(failure_threshold=5,
+  cooldown_seconds=30.0, clock=time.monotonic)` opt-in failure isolation over
+  any callable: `cb.call(fn, *args, **kwargs)` runs fn unless the circuit is
+  open (`CircuitOpenError` with `.remaining_seconds`); N consecutive
+  failures open for the cooldown, then one probe; `record_success()` /
+  `record_failure()` drive it manually; states via `CircuitState`
+  (closed/open/half_open).
 - **Models** — `client.models() -> list[ModelCard]`;
   `pick_model(cards, *, contains=None, prefer="latest")`.
 - **Calibration** (`daf_jev.calibration`, pure): `bucket_index(confidence,
@@ -61,7 +73,8 @@ never be committed, printed, or read by tests.
   `resolve_base_url`, `resolve_retry`, `resolve_timeout`.
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
-composite scoring, corpus evaluation); each skips cleanly without a key.
+composite scoring, gated fallback, corpus evaluation); each skips cleanly
+without a key.
 
 ## CLI
 

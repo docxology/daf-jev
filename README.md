@@ -33,6 +33,15 @@ reproducible manuscript pipeline.
   `AsyncJevClient`) without aborting the batch: per-state failures are
   captured in `EvaluationRecord.error`. `summary()` aggregates per-question
   means/p95s; `to_json()` serializes records.
+- **Usage accounting** — `UsageLedger` (thread-safe) accumulates request
+  counts and token totals across any loop of `ask` calls; it accepts `Usage`
+  objects, full responses, or `None` for error paths, and
+  `snapshot().to_dict()` is JSON-safe.
+- **Resilience** — an opt-in, composable `CircuitBreaker`: after
+  `failure_threshold` consecutive failures it fails fast for
+  `cooldown_seconds`, then admits a single recovery probe. It wraps any
+  callable, never sleeps, and takes an injectable clock; it complements the
+  per-request retry policy.
 - **Calibration** — pure reliability statistics in `daf_jev.calibration`
   (`bucket_index`, `reliability_table`, `expected_calibration_error`,
   `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
@@ -109,19 +118,20 @@ verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 
 ## Examples
 
-Four runnable scripts live in `examples/` (walkthrough per script in
+Five runnable scripts live in `examples/` (walkthrough per script in
 [`examples/README.md`](examples/README.md)). Each resolves the API key from
 the environment or `.env` and — when no key is found — prints
-`SKIP: JEV_API_KEY not set` and exits 0, so all four are offline-safe:
+`SKIP: JEV_API_KEY not set` and exits 0, so all five are offline-safe:
 
 ```bash
 python examples/quickstart.py         # one mixed ask call; answers, usage, request id
 python examples/triage_router.py      # tiered_gate + route over one choice answer
 python examples/composite_scoring.py  # composite_score + confidence_gate
 python examples/evaluate_corpus.py    # Evaluator over an inline four-state corpus
+python examples/gated_fallback.py     # heuristic-first: model called only when it adds value
 ```
 
-All four take `--model NAME` (default: `JEV_MODEL`, then
+All five take `--model NAME` (default: `JEV_MODEL`, then
 `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`); `evaluate_corpus.py` also takes
 `--concurrency N` (default 2).
 
@@ -163,6 +173,45 @@ with JevClient() as client:
 summary = evaluator.summary(records)      # per-question means/p95s + usage
 print(evaluator.to_json(records))         # per-state records incl. errors/latency
 ```
+
+## Usage accounting and resilience
+
+Long-running consumers need receipts and failure isolation beyond the
+per-request retry policy. Both are small, opt-in, client-side helpers:
+
+```python
+from daf_jev import UsageLedger
+
+ledger = UsageLedger()
+for state in states:
+    try:
+        response = client.ask(state, questions)
+    except TypeSafeError:
+        response = None               # error paths produce no usage
+    ledger.record(response)
+print(ledger.snapshot().to_dict())    # {"requests": .., "input_tokens": .., ...}
+```
+
+`UsageLedger` accumulates request counts and token totals across any loop of
+`ask` calls; `Evaluator.summary()` remains the aggregator for batch
+evaluation runs. `reset()` returns the pre-reset totals and zeroes the
+ledger.
+
+```python
+from daf_jev import CircuitBreaker, CircuitOpenError
+
+breaker = CircuitBreaker(failure_threshold=5, cooldown_seconds=30.0)
+try:
+    response = breaker.call(client.ask, state, questions)
+except CircuitOpenError as exc:
+    ...                               # fail fast while the circuit is open
+```
+
+`CircuitBreaker` wraps any callable: `failure_threshold` consecutive
+failures open the circuit for `cooldown_seconds`, after which a single
+probe is admitted. It never sleeps — wait out the cooldown in your own loop
+(`exc.remaining_seconds` reports what is left) — and composes with the
+per-request retry policy.
 
 ## CLI
 
@@ -306,7 +355,7 @@ The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 256 unit tests; coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # 294 unit tests; coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```
 

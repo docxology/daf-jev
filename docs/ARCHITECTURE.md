@@ -135,6 +135,24 @@ contradictions (report the delta; do not silently deviate).
   - `Settings` frozen dataclass (`api_key, base_url, model, retry=RetryPolicy(),
     timeout=None`) + `load_settings(env=None)` (populates retry/timeout via the
     new resolvers).
+- `ledger.py` — thread-safe usage accounting across call loops (no I/O):
+  `UsageLedger.record(Usage | SystemOneResponse | None) -> None` (None is a
+  silent no-op for error paths); `snapshot()` / `reset()` (returns pre-reset
+  totals, then zeroes) return a frozen `UsageSnapshot` (`requests`,
+  `input_tokens`, `output_tokens`, `total_tokens` property, JSON-safe
+  `to_dict()`). Complements `Evaluator.summary()`, which aggregates usage
+  per evaluation batch.
+- `resilience.py` — opt-in client-side failure isolation:
+  `CircuitState` (closed / open / half_open), `CircuitOpenError(TypeSafeError)`
+  (carries `remaining_seconds`), `CircuitBreaker(failure_threshold=5,
+  cooldown_seconds=30.0, clock=time.monotonic)` with `call(fn, *args,
+  **kwargs)`, `record_success()` / `record_failure()`, pure-read `state` /
+  `consecutive_failures`, and a JSON-safe `to_dict()`. N consecutive
+  failures open the circuit for the cooldown; a single probe is admitted
+  after it (probe failure reopens with a fresh stamp). The wrapped callable
+  always runs outside the lock and the breaker never sleeps — the same
+  pure-computation philosophy as `RetryPolicy`. Default OFF: `JevClient`
+  is not wired to it.
 - `cli.py` — argparse (stdlib), thin. `main(argv=None) -> int`.
   - `daf-jev ask --state-file FILE | --state TEXT [--question ID=SPEC ...] [--model M]
     [--json | --pretty]` where SPEC is `noul:<instructions>` |
@@ -150,7 +168,8 @@ contradictions (report the delta; do not silently deviate).
   TypeSafeError, RateLimitError, OverloadedError, APITimeoutError, APIConnectionError,
   noul, choice, score, QuestionSet, composite_score, confidence_gate, route,
   Settings, load_settings, resolve_retry, resolve_timeout, pick_model,
-  Evaluator, EvaluationRecord, __version__`.
+  Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
+  CircuitOpenError, CircuitState, __version__`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
