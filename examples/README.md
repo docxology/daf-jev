@@ -1,6 +1,6 @@
 # daf-jev examples
 
-Four runnable scripts showing the core patterns of the toolkit. Each script:
+Five runnable scripts showing the core patterns of the toolkit. Each script:
 
 - resolves credentials with `daf_jev.load_settings()` — from `JEV_API_KEY`
   or `TYPESAFE_API_KEY` (env or a `.env` file in the current directory);
@@ -51,10 +51,23 @@ state's choice or captured error plus the aggregate summary.
 python examples/evaluate_corpus.py [--model NAME] [--concurrency N]
 ```
 
+### `gated_fallback.py`
+
+Heuristic-first triage: a deterministic keyword lexicon scores each demo
+message as `(label, confidence)` over the same labels a `choice` question
+uses. Confident heuristic results are used with no model call at all;
+unsure messages fall back to `client.ask()`, whose answer then passes
+through `confidence_gate` (`below="escalate"`) as the final escalation
+lane. `UsageLedger` totals the requests and tokens the run actually spent.
+
+```sh
+python examples/gated_fallback.py [--model NAME]
+```
+
 ## Notes
 
 - Optional helpers are imported defensively, so a checkout mid-build that
   lacks them fails with a clear message instead of a raw traceback.
 - Network calls go to `JEV_BASE_URL` / `TYPESAFE_BASE_URL`
-  (default `https://api.typesafe.ai`). All four scripts are offline-safe:
+  (default `https://api.typesafe.ai`). All five scripts are offline-safe:
   without a key they do nothing but print the SKIP line.
