@@ -1,16 +1,16 @@
 {
   "claim_boundary": "Compact evidence summary for manuscript validation; full fact dumps are opt-in debug output.",
-  "fact_count": 361,
+  "fact_count": 370,
   "freshness_warnings": [],
   "kind_counts": {
-    "artifact": 25,
+    "artifact": 27,
     "citation": 13,
-    "figure": 12,
-    "number": 299,
-    "section": 9,
+    "figure": 14,
+    "number": 303,
+    "section": 10,
     "table": 3
   },
-  "omitted_fact_count": 161,
+  "omitted_fact_count": 170,
   "sample_facts": [
     {
       "active": true,
@@ -218,6 +218,18 @@
     },
     {
       "active": true,
+      "checked_at": "2026-09-17T16:36:08Z",
+      "kind": "number",
+      "source": "output/reports/manuscript_composition.json:$.ordered_inputs[9].ordinal",
+      "source_field": "$.ordered_inputs[9].ordinal",
+      "source_path": "output/reports/manuscript_composition.json",
+      "source_tier": "generated_metric",
+      "stale": false,
+      "tolerance": 0.0,
+      "value": "10"
+    },
+    {
+      "active": true,
       "checked_at": "2026-09-16T23:23:28Z",
       "kind": "number",
       "source": "manuscript/config.yaml:$.experiment.batching_n_values[1] (numeric variant)",
@@ -295,6 +307,18 @@
       "source": "output/benchmarks/patterns_20260916.json:$.intent_routing.p50_s (numeric variant)",
       "source_field": "$.intent_routing.p50_s",
       "source_path": "output/benchmarks/patterns_20260916.json",
+      "source_tier": "generated_metric",
+      "stale": false,
+      "tolerance": 0.0,
+      "value": "0.1"
+    },
+    {
+      "active": true,
+      "checked_at": "2026-09-17T16:36:08Z",
+      "kind": "number",
+      "source": "output/reports/manuscript_composition.json:$.ordered_inputs[9].ordinal (numeric variant)",
+      "source_field": "$.ordered_inputs[9].ordinal",
+      "source_path": "output/reports/manuscript_composition.json",
       "source_tier": "generated_metric",
       "stale": false,
       "tolerance": 0.0,
@@ -2387,37 +2411,13 @@
       "stale": false,
       "tolerance": 0.0,
       "value": "70%"
-    },
-    {
-      "active": true,
-      "checked_at": "2026-09-17T01:17:42Z",
-      "kind": "number",
-      "source": "output/benchmarks/calibration_20260916.json:$.choice.buckets[1].n",
-      "source_field": "$.choice.buckets[1].n",
-      "source_path": "output/benchmarks/calibration_20260916.json",
-      "source_tier": "generated_metric",
-      "stale": false,
-      "tolerance": 0.0,
-      "value": "3"
-    },
-    {
-      "active": true,
-      "checked_at": "2026-09-16T23:23:28Z",
-      "kind": "number",
-      "source": "output/reports/manuscript_composition.json:$.ordered_inputs[2].ordinal",
-      "source_field": "$.ordered_inputs[2].ordinal",
-      "source_path": "output/reports/manuscript_composition.json",
-      "source_tier": "generated_metric",
-      "stale": false,
-      "tolerance": 0.0,
-      "value": "3"
     }
   ],
   "schema": "template-evidence-registry-report-v1",
   "source_tiers": {
-    "artifact": 49,
+    "artifact": 54,
     "bibliography": 13,
     "configuration": 20,
-    "generated_metric": 279
+    "generated_metric": 283
   }
 }

@@ -43,10 +43,10 @@ here.
   - `models.py` — `pick_model(cards, *, contains=None, prefer="latest")`;
     pure selection over the models listing (no I/O); `ValueError` on empty
     input, no match after filtering, or unknown `prefer`.
-  - `figures.py` — matplotlib figure registry: 6 named figures
+  - `figures.py` — matplotlib figure registry: 7 named figures
     (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
-    `calibration`) + `figure_registry.json` emission; data-driven figures
-    read the newest `output/benchmarks/*.json`.
+    `calibration`, `graphical_abstract`) + `figure_registry.json` emission;
+    data-driven figures read the newest `output/benchmarks/*.json`.
   - `manuscript_variables.py` — `generate_variables` / `save_variables`: 46
     `{{TOKEN}}` manuscript variables derived from pyproject, docs MANIFEST,
     test counts, and benchmark JSONs; zero hardcoded result values.
@@ -92,8 +92,9 @@ here.
 - `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
   Markdown skill) + `README.md` (install notes). Documentation only — never
   imported by code.
-- `manuscript/` — 9 sections (`00_abstract.md` … `07_scope_and_related_work.md`,
-  `99_references.md`) + `preamble.md` + `config.yaml` + `references.bib`
+- `manuscript/` — 10 sections (`00_abstract.md` …
+  `08_scope_and_related_work.md`, `99_references.md`) + `preamble.md` +
+  `config.yaml` + `references.bib`
   (13 entries). Prose only: every measured number is a `{{TOKEN}}`
   placeholder (see invariants).
 - `benchmarks/` — live-API benchmark scripts with their own `README.md`;
@@ -104,11 +105,11 @@ here.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
-  JSONs), `figures/` (6 PNGs + `figure_registry.json`), `data/`
+  JSONs), `figures/` (7 PNGs + `figure_registry.json`), `data/`
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
-- `pyproject.toml` — setuptools build, version 0.2.0, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.3.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), `bench` (rich), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
@@ -117,11 +118,33 @@ here.
 ## Invariants and gotchas
 
 - **Self-versioned, local-only git repo** (branch `main`, initial commit
-  `72c3bdc`, **no remote**). Commit meaningful changes locally — the
-  template's provenance validation requires git-tracked worktree files.
-  Never push or publish: publishing is the owner's call. Never `git add`
-  any path under this lane into an OUTER repo (`../../AGENTS.md`,
-  `../AGENTS.md`).
+  `72c3bdc`, **no configured remote**). Commit meaningful changes locally —
+  the template's provenance validation requires git-tracked worktree files.
+  Publishing goes through the release remote (see the Published Zenodo
+  deposit / Public release remote invariants below), never by pushing this
+  lane repo itself. Never `git add` any path under this lane into an OUTER
+  repo (`../../AGENTS.md`, `../AGENTS.md`).
+- **Published Zenodo deposit (v0.3.0).** The v0.3.0 release is archived as
+  Zenodo deposit id **22816188** (version DOI
+  `10.5281/zenodo.22816188`, record
+  <https://zenodo.org/records/22816188>); the concept DOI
+  `10.5281/zenodo.22816187` is stable across versions and always resolves to
+  the latest published version. New releases MUST be new version deposits on
+  the same concept via the Zenodo deposits API — never a fresh deposit
+  (that would mint a new concept DOI). The Zenodo API token lives in the
+  template checkout's `.env` as `ZENODO_PROD_TOKEN`: never echo it, never
+  print it in logs or transcripts, never copy it into the lane repo or
+  commit it anywhere.
+- **Public release remote.** <https://github.com/docxology/daf-jev>
+  (`docxology/daf-jev`) is the release remote for the published code and
+  repo landing page; the local lane git repo (branch `main`, still no
+  configured remote) remains the source of truth. Publishing to the public
+  repo is the owner's call; the lane invariant against `git add`-ing lane
+  paths into outer repos stands.
+- **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
+  `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
+  live at the repo root and MUST stay in sync with the pyproject version
+  (currently 0.3.0) and the deposit DOIs above.
 - **`.env` is gitignored and holds the real key.** Never print, copy, or
   commit its value. Tests MUST never read it: unit config tests pass
   explicit env mappings; live tests read `os.environ["JEV_API_KEY"]` only.
@@ -154,9 +177,10 @@ here.
   after the PNGs (`scripts/generate_figures.py` inherits this); template
   validation (`stage_04_validate.py`) checks the registry, so a figures
   rebuild that omits it fails validation. Data-driven figures (`batching`,
-  `latency`, `calibration`) raise `FileNotFoundError` naming the missing
-  benchmark JSON rather than fabricating data; `architecture`, `primitives`,
-  and `confidence` are data-free and always render.
+  `latency`, `calibration`, `graphical_abstract`) raise `FileNotFoundError`
+  naming the missing benchmark JSON rather than fabricating data;
+  `architecture`, `primitives`, and `confidence` are data-free and always
+  render.
 - **`{{TOKEN}}` no-hardcode manuscript protocol.** Every measured number in
   `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 46 tokens live in
   `output/data/manuscript_variables.json` (generated by
@@ -218,7 +242,7 @@ uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mi
 python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # offline
 uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
-uv run python scripts/generate_figures.py   # 6 PNGs + figure_registry.json -> output/figures/
+uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
 uv run python scripts/z_generate_manuscript_variables.py   # 46 tokens + injection
 
 # Render + validate from the template checkout (leaf symlink must exist):

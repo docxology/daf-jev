@@ -125,8 +125,13 @@ ictionary-english.trsl) [1] (./_combined_manuscript.toc
 (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msa.cfg)
 (/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd)
 (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msb.cfg)) [1]
-[2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13] [14] [15]
-(./_combined_manuscript.bbl) [16] (./_combined_manuscript.aux) )
+[2] [3] [4] [5] [6] [7] [8]
+Underfull \hbox (badness 1259) in paragraph at lines 823--833
+\TU/lmr/m/n/10 and one or more \TU/JuliaMono-Regular(0)/m/n/10 --question ID=SP
+EC \TU/lmr/m/n/10 flags build the question set from a compact grammar (\TU/Juli
+aMono-Regular(0)/m/n/10 noul:<instructions>\TU/lmr/m/n/10 ,
+[9] [10] [11] [12] [13] [14] [15] [16] (./_combined_manuscript.bbl) [17]
+(./_combined_manuscript.aux) )
 (see the transcript file for additional information)
-Output written on _combined_manuscript.pdf (17 pages).
+Output written on _combined_manuscript.pdf (18 pages).
 Transcript written on _combined_manuscript.log.

@@ -1,33 +1,37 @@
 \babel@toc {english}{}\relax
 \contentsline {section}{\numberline {1}Abstract}{2}{section.1}%
-\contentsline {section}{\numberline {2}Introduction}{3}{section.2}%
+\contentsline {section}{\numberline {2}Introduction: From Generated Text to Typed Decisions}{3}{section.2}%
 \contentsline {subsection}{\numberline {2.1}The problem this package solves}{3}{subsection.2.1}%
 \contentsline {subsection}{\numberline {2.2}Reader's guide}{3}{subsection.2.2}%
-\contentsline {section}{\numberline {3}The Jev (System One) Decision Model}{4}{section.3}%
+\contentsline {section}{\numberline {3}The Jev Model: Calibrated, Parallel Machine Decisions without Text Generation}{4}{section.3}%
 \contentsline {subsection}{\numberline {3.1}A model class, not a chat endpoint}{4}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}One endpoint, three question primitives}{4}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Parallel, composable evaluation semantics}{4}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}The latency envelope and calibration}{4}{subsection.3.4}%
-\contentsline {section}{\numberline {4}Methodology: Package Architecture}{6}{section.4}%
+\contentsline {section}{\numberline {4}Methodology: The Layered Architecture of a Composable Decision Toolkit}{6}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Layered architecture}{6}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Typed primitives}{8}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Composable decision patterns}{8}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.2}Typed primitives}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Composable decision patterns}{7}{subsection.4.3}%
 \contentsline {subsection}{\numberline {4.4}Design rulings}{8}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Integration surfaces}{9}{subsection.4.5}%
-\contentsline {section}{\numberline {5}Results}{10}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Batching speedup and token cost}{10}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Decision-pipeline latency}{11}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Calibration}{11}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Interpretation}{12}{subsection.5.4}%
-\contentsline {section}{\numberline {6}Experimental Setup}{13}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Software environment}{13}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Benchmark configuration}{13}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Measurement protocol}{13}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Reproducibility Certification}{14}{section.7}%
-\contentsline {subsection}{\numberline {7.1}Artifact inventory and hashing}{14}{subsection.7.1}%
-\contentsline {subsection}{\numberline {7.2}Test suite and coverage}{14}{subsection.7.2}%
-\contentsline {subsection}{\numberline {7.3}Provenance chain}{14}{subsection.7.3}%
-\contentsline {section}{\numberline {8}Scope, Related Work, and Positioning}{15}{section.8}%
-\contentsline {subsection}{\numberline {8.1}Scope and limitations}{15}{subsection.8.1}%
-\contentsline {subsection}{\numberline {8.2}Related work}{15}{subsection.8.2}%
-\contentsline {section}{\numberline {9}References}{16}{section.9}%
+\contentsline {section}{\numberline {5}Integration Surfaces: CLI, MCP Server, Agent Skill, and Worked Examples}{9}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Command-line interface}{9}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}MCP server}{9}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Agent skill}{9}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Worked examples}{10}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Results: Batching Economics, Pipeline Latency, and Confidence Calibration under Live-API Load}{11}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Batching speedup and token cost}{11}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Decision-pipeline latency}{12}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Calibration}{12}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Interpretation}{13}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Experimental Setup: Live-API Benchmark Protocol, Environment, and Data Provenance}{14}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Software environment}{14}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Benchmark configuration}{14}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Measurement protocol}{14}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Reproducibility: Hashed Snapshots, Figure Registry, and Machine-Checked Provenance}{15}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Artifact inventory and hashing}{15}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Test suite and coverage}{15}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Provenance chain}{15}{subsection.8.3}%
+\contentsline {section}{\numberline {9}Scope, Limitations, and Related Work: Early-Access Model, Proxy Metrics, and the Structured-Decision Landscape}{16}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Scope and limitations}{16}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Related work}{16}{subsection.9.2}%
+\contentsline {section}{\numberline {10}References}{17}{section.10}%

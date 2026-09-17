@@ -2,20 +2,22 @@
 
 One ``generate_<name>()`` function per manuscript figure plus
 :func:`generate_all`, orchestrated by the thin
-``scripts/generate_figures.py``. Figures 1-2 (architecture, primitives)
-are data-free diagrams; figures 3-4 (batching, latency) read the latest
-benchmark JSONs from ``output/benchmarks/`` at generation time; figure 5
-(confidence) is a parametric illustration of confidence-gated routing.
+``scripts/generate_figures.py``. The graphical abstract opens the registry;
+figures 1-2 (architecture, primitives) are data-free diagrams; figures 3-4
+(batching, latency) read the latest benchmark JSONs from
+``output/benchmarks/`` at generation time; figure 5 (confidence) is a
+parametric illustration of confidence-gated routing; figure 6 (calibration)
+plots the live reliability benchmark.
 
 Every label, color, and size is a module-level constant below — no magic
-numbers inline. Generation is offline (no network). Missing benchmark
-data raises :class:`FileNotFoundError` naming the missing file; figures 1,
-2, and 5 never touch benchmark data and are always renderable.
+numbers inline. All generators share :func:`_style` (palette, fonts,
+gridlines, dpi) and the :func:`_panel_letter` helper for multi-panel
+layouts. Generation is offline (no network). Missing benchmark data
+raises :class:`FileNotFoundError` naming the missing file; figures 1, 2,
+and 5 never touch benchmark data and are always renderable.
 """
-
-from __future__ import annotations
-
 import json
+import textwrap
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -24,8 +26,10 @@ import matplotlib
 matplotlib.use("Agg")  # headless PNG rendering; must precede pyplot import
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+from cycler import cycler
+from matplotlib.patches import ConnectionPatch, FancyArrowPatch, FancyBboxPatch
+from matplotlib.ticker import MaxNLocator
+__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
 
 
 # ---------------------------------------------------------------------------
@@ -43,22 +47,65 @@ COLOR_BAND_REVIEW = "#F2D38B"
 COLOR_BAND_ESCALATE = "#E5A48C"
 COLOR_TEXT = "#222222"
 COLOR_EDGE = "#444444"
-
-SIZE_DIAGRAM = (7.5, 4.6)
-SIZE_CHART = (7.5, 4.2)
-
 FONT_BOX = 9
 FONT_TITLE = 12
 FONT_AXIS = 10
 FONT_ANNOTATE = 9
+FONT_MINI = 7.5  # graphical-abstract mini charts
 
 ARROW_STYLE = "-|>"
 ARROW_LW = 1.4
 
 BENCHMARK_DIR = Path("output") / "benchmarks"
 
+SIZE_ABSTRACT = (8.5, 3.2)  # graphical abstract: 1700 x 640 px at DPI
+SIZE_DIAGRAM = (7.5, 4.6)
+SIZE_CHART = (7.5, 4.2)
+
+
 # Meta keys of patterns_*.json that are not pipeline result objects.
 _PATTERN_META_KEYS = frozenset({"name", "date", "model", "runs"})
+
+
+def _style() -> None:
+    """Apply the shared manuscript style: palette, fonts, gridlines, dpi.
+
+    Every generator calls this first so all figures render from one set of
+    rcParams — consistent fonts, colors, light gridlines, and output dpi.
+    """
+    plt.rcParams.update(
+        {
+            "figure.dpi": DPI,
+            "savefig.dpi": DPI,
+            "font.family": "DejaVu Sans",
+            "font.size": FONT_AXIS,
+            "text.color": COLOR_TEXT,
+            "axes.edgecolor": COLOR_EDGE,
+            "axes.labelcolor": COLOR_TEXT,
+            "axes.titlesize": FONT_TITLE,
+            "axes.titlecolor": COLOR_TEXT,
+            "axes.grid": True,
+            "grid.color": "#D9D9D9",
+            "grid.linewidth": 0.6,
+            "axes.axisbelow": True,
+            "xtick.color": COLOR_TEXT,
+            "ytick.color": COLOR_TEXT,
+            "legend.frameon": False,
+            "axes.prop_cycle": cycler(
+                color=[COLOR_LAYER_MAIN, COLOR_ACCENT, COLOR_LAYER_SIDE, COLOR_EXTERNAL]
+            ),
+        }
+    )
+
+
+def _panel_letter(ax, letter: str, *, dx: float = 0.015, dy: float = 0.96) -> None:
+    """Annotate a bold ``(letter)`` panel tag inside an axis's top-left corner."""
+    ax.text(
+        dx, dy, f"({letter})",
+        transform=ax.transAxes,
+        ha="left", va="top",
+        fontsize=FONT_TITLE, fontweight="bold", color=COLOR_TEXT,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +134,7 @@ def _box(
     facecolor: str,
     sublabel: Optional[str] = None,
     dashed: bool = False,
+    aspect: float = SIZE_DIAGRAM[0] / SIZE_DIAGRAM[1],
 ) -> None:
     """Draw a labeled rounded box with ``(x, y)`` as its lower-left corner."""
     patch = FancyBboxPatch(
@@ -98,7 +146,7 @@ def _box(
         edgecolor=COLOR_EDGE,
         facecolor=facecolor,
         linestyle="--" if dashed else "-",
-        mutation_aspect=SIZE_DIAGRAM[0] / SIZE_DIAGRAM[1],
+        mutation_aspect=aspect,
     )
     ax.add_patch(patch)
     if sublabel is None:
@@ -124,12 +172,15 @@ def _arrow(ax, start: tuple[float, float], end: tuple[float, float], *, dashed: 
         )
     )
 
+def _save(fig: plt.Figure, out_dir: Path, filename: str, *, tight: bool = True) -> Path:
+    """Save a figure as PNG into *out_dir* and return the written path.
 
-def _save(fig: plt.Figure, out_dir: Path, filename: str) -> Path:
-    """Save a figure as PNG into *out_dir* and return the written path."""
+    With ``tight=False`` the canvas is written at its exact figsize so the
+    graphical abstract lands at its designed pixel size.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / filename
-    fig.savefig(path, dpi=DPI, bbox_inches="tight")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight" if tight else None)
     plt.close(fig)
     return path
 
@@ -167,6 +218,7 @@ def _load_benchmark(project_root: Path, prefix: str) -> dict[str, Any]:
 
 def generate_architecture(out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Draw the package layer diagram: entry points down to the TypeSafe API."""
+    _style()
     fig, ax = _new_diagram("daf-jev package architecture")
 
     # Layer 4 (top): entry points.
@@ -225,6 +277,7 @@ def generate_architecture(out_dir: Path, project_root: Optional[Path] = None) ->
 
 def generate_primitives(out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Diagram the three question types and their typed answer shapes."""
+    _style()
     fig, ax = _new_diagram("Jev question primitives and typed answers")
 
     columns = [
@@ -242,7 +295,6 @@ def generate_primitives(out_dir: Path, project_root: Optional[Path] = None) -> P
         _arrow(ax, (x + col_w / 2, 74), (x + col_w / 2, 55))
         ax.text(x + col_w / 2, 26, "confidence:\n" + ("absent" if name == "noul" else "second decision axis"), ha="center", va="center", fontsize=FONT_ANNOTATE - 1, color=COLOR_TEXT)
 
-    ax.text(50, 96, "", fontsize=FONT_ANNOTATE)
     return _save(fig, out_dir, "primitives_overview.png")
 
 
@@ -253,6 +305,7 @@ def generate_primitives(out_dir: Path, project_root: Optional[Path] = None) -> P
 
 def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Bar chart of batching speedup vs N, with token-cost ratio overlay."""
+    _style()
     root = Path.cwd() if project_root is None else project_root
     data = _load_benchmark(root, "batching")
 
@@ -260,8 +313,11 @@ def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Pat
     ns = [str(r["n"]) for r in results]
     speedups = [float(r["speedup_ratio"]) for r in results]
     token_ratios = [float(r["token_cost_ratio"]) for r in results]
+    # token_cost_ratio = sequential tokens / batched tokens: values above one
+    # mean the sequential strategy costs MORE tokens (it re-sends the state).
 
     fig, ax = plt.subplots(figsize=SIZE_CHART)
+    ax.set_ylim(0, max(speedups) * 1.14)  # headroom so labels clear the overlay
     bars = ax.bar(ns, speedups, width=0.55, color=COLOR_LAYER_MAIN, label="wall-clock speedup")
     for bar, value in zip(bars, speedups):
         ax.annotate(
@@ -279,7 +335,9 @@ def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Pat
     ax.tick_params(labelsize=FONT_AXIS)
 
     ax2 = ax.twinx()
-    ax2.plot(ns, token_ratios, color=COLOR_ACCENT, marker="o", linewidth=1.6, label="token-cost ratio")
+    ax2.plot(ns, token_ratios, color=COLOR_ACCENT, marker="o", linewidth=1.6, label="sequential token cost relative to batched")
+    # Margins keep the markers and their labels clear of the bar tops.
+    ax2.set_ylim(min(token_ratios) * 0.92, max(token_ratios) * 1.14)
     for x_pos, value in zip(range(len(ns)), token_ratios):
         ax2.annotate(
             f"{value:.2f}",
@@ -289,7 +347,7 @@ def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Pat
             fontsize=FONT_ANNOTATE - 1,
             color=COLOR_ACCENT,
         )
-    ax2.set_ylabel("token-cost ratio (batched / single)", fontsize=FONT_AXIS, color=COLOR_ACCENT)
+    ax2.set_ylabel("sequential ÷ batched tokens", fontsize=FONT_AXIS, color=COLOR_ACCENT)
     ax2.tick_params(labelsize=FONT_AXIS, colors=COLOR_ACCENT)
 
     # Title reads model + run date from the benchmark JSON, never hardcoded.
@@ -310,6 +368,7 @@ def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Pat
 def generate_latency(out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Grouped p50/p95 bars per pipeline, labeled from the benchmark JSON."""
     root = Path.cwd() if project_root is None else project_root
+    _style()
     data = _load_benchmark(root, "patterns")
 
     pipelines = [key for key in sorted(data) if key not in _PATTERN_META_KEYS]
@@ -346,11 +405,11 @@ def generate_latency(out_dir: Path, project_root: Optional[Path] = None) -> Path
 
 # ---------------------------------------------------------------------------
 # Figure 5 — confidence-gated routing bands
-# ---------------------------------------------------------------------------
 
 
 def generate_confidence(out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Parametric illustration of confidence-gated routing (illustrative thresholds)."""
+    _style()
     thresholds = (0.6, 0.85)
     bands = [
         ("escalate", 0.0, thresholds[0], COLOR_BAND_ESCALATE),
@@ -372,15 +431,21 @@ def generate_confidence(out_dir: Path, project_root: Optional[Path] = None) -> P
                 linewidth=1.0,
             )
         )
-        ax.text(
-            (lo + hi) / 2,
-            y + band_height / 2,
-            f"{label}\nconfidence in [{lo:.2f}, {hi:.2f}]",
-            ha="center",
-            va="center",
-            fontsize=FONT_ANNOTATE + 1,
-            color=COLOR_TEXT,
-        )
+        text = f"{label}\nconfidence in [{lo:.2f}, {hi:.2f}]"
+        if hi - lo < 0.2:
+            # Narrow band: place the label just left of the band so it
+            # cannot overflow the axis.
+            ax.text(
+                lo - 0.015, y + band_height / 2, text,
+                ha="right", va="center",
+                fontsize=FONT_ANNOTATE, color=COLOR_TEXT,
+            )
+        else:
+            ax.text(
+                (lo + hi) / 2, y + band_height / 2, text,
+                ha="center", va="center",
+                fontsize=FONT_ANNOTATE + 1, color=COLOR_TEXT,
+            )
 
     for threshold in thresholds:
         ax.axvline(
@@ -415,7 +480,6 @@ def generate_confidence(out_dir: Path, project_root: Optional[Path] = None) -> P
 
 # ---------------------------------------------------------------------------
 # Figure 6 — calibration reliability
-# ---------------------------------------------------------------------------
 
 
 def generate_calibration(out_dir: Path, project_root: Optional[Path] = None) -> Path:
@@ -427,6 +491,7 @@ def generate_calibration(out_dir: Path, project_root: Optional[Path] = None) -> 
     calibration; the title and annotation carry the model, run date, ECE,
     and Brier score read from the benchmark JSON.
     """
+    _style()
     root = Path.cwd() if project_root is None else project_root
     data = _load_benchmark(root, "calibration")
 
@@ -475,7 +540,7 @@ def generate_calibration(out_dir: Path, project_root: Optional[Path] = None) -> 
             fontsize=FONT_ANNOTATE, color=COLOR_TEXT,
         )
     ax.set_xlim(0.0, 1.0)
-    ax.set_ylim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.06)  # headroom so top markers are not clipped
     ax.set_xlabel("mean reported confidence in bucket", fontsize=FONT_AXIS)
     ax.set_ylabel("observed accuracy (modal agreement)", fontsize=FONT_AXIS)
     ax.tick_params(labelsize=FONT_AXIS)
@@ -490,7 +555,153 @@ def generate_calibration(out_dir: Path, project_root: Optional[Path] = None) -> 
     return _save(fig, out_dir, "calibration_reliability.png")
 
 
+# ---------------------------------------------------------------------------
+# Graphical abstract — wide cover composition with live benchmark numbers
+# ---------------------------------------------------------------------------
+
+
+def generate_graphical_abstract(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Render the wide cover composition into ``graphical_abstract.png``.
+
+    Three zones: (a) the decision state and the three typed question
+    primitives; (b) the daf-jev processing stack; (c) live benchmark outputs
+    (batching speedup, pipeline p50 latency, calibration reliability) read at
+    generation time from the latest benchmark JSONs. Arrows trace state →
+    typed answers → routed decisions. Missing benchmark data raises
+    :class:`FileNotFoundError` naming the missing file.
+    """
+    _style()
+    root = Path.cwd() if project_root is None else project_root
+    batching = _load_benchmark(root, "batching")
+    patterns = _load_benchmark(root, "patterns")
+    calibration = _load_benchmark(root, "calibration")
+
+    fig = plt.figure(figsize=SIZE_ABSTRACT)
+    gs = fig.add_gridspec(
+        1, 3,
+        width_ratios=[1.0, 0.85, 1.45],
+        wspace=0.42,
+        left=0.01, right=0.99, top=0.82, bottom=0.07,
+    )
+    ax_state = fig.add_subplot(gs[0, 0])
+    ax_stack = fig.add_subplot(gs[0, 1])
+    gs_live = gs[0, 2].subgridspec(3, 1, height_ratios=[1.25, 0.85, 1.25], hspace=0.72)
+    ax_batch = fig.add_subplot(gs_live[0])
+    ax_lat = fig.add_subplot(gs_live[1])
+    ax_cal = fig.add_subplot(gs_live[2])
+
+    fig.suptitle(
+        "daf-jev: typed questions, routed decisions, measured trust",
+        fontsize=FONT_TITLE, fontweight="bold", color=COLOR_TEXT, y=0.97,
+    )
+
+    # --- Zone (a): STATE + question-type cards -------------------------------
+    ax_state.set_xlim(0, 100)
+    ax_state.set_ylim(0, 100)
+    ax_state.set_axis_off()
+    ax_state.set_title("ask: state + question primitives", loc="left", fontsize=FONT_MINI + 1, fontweight="bold", color=COLOR_TEXT)
+    _panel_letter(ax_state, "a", dx=0.02, dy=0.90)
+    _box(ax_state, 22, 70, 56, 16, "STATE", sublabel="context under judgment", facecolor=COLOR_EXTERNAL, aspect=1.0)
+    _box(ax_state, 12, 50, 76, 12, "noul()", sublabel="probability", facecolor=COLOR_LAYER_SIDE, aspect=1.0)
+    _box(ax_state, 12, 32, 76, 12, "choice()", sublabel="distribution", facecolor=COLOR_LAYER_SIDE, aspect=1.0)
+    _box(ax_state, 12, 14, 76, 12, "score()", sublabel="rubric", facecolor=COLOR_LAYER_SIDE, aspect=1.0)
+    _arrow(ax_state, (30, 69.5), (30, 63.5))
+    _arrow(ax_state, (50, 69.5), (50, 63.5))
+    _arrow(ax_state, (70, 69.5), (70, 63.5))
+
+    # --- Zone (b): daf-jev processing stack ----------------------------------
+    ax_stack.set_xlim(0, 100)
+    ax_stack.set_ylim(0, 100)
+    ax_stack.set_axis_off()
+    ax_stack.set_title("decide: daf-jev pipeline", loc="left", fontsize=FONT_MINI + 1, fontweight="bold", color=COLOR_TEXT)
+    _box(ax_stack, 8, 6, 84, 15, "typed client", sublabel="JevClient", facecolor=COLOR_LAYER_MAIN, aspect=1.0)
+    _box(ax_stack, 8, 29, 84, 15, "compose", sublabel="gates + routing", facecolor=COLOR_LAYER_MAIN, aspect=1.0)
+    _box(ax_stack, 8, 52, 84, 15, "evaluator", sublabel="calibration", facecolor=COLOR_LAYER_MAIN, aspect=1.0)
+    _box(ax_stack, 8, 75, 84, 15, "CLI · MCP · agent skill", facecolor=COLOR_EXTERNAL, aspect=1.0)
+    _panel_letter(ax_stack, "b", dx=0.02, dy=0.99)
+    _arrow(ax_stack, (50, 45), (50, 51))
+    _arrow(ax_stack, (50, 68), (50, 74))
+
+    # Zone-to-zone flow arrows: state → typed answers → routed decisions.
+    fig.add_artist(ConnectionPatch(
+        xyA=(1.0, 0.45), coordsA="axes fraction", axesA=ax_state,
+        xyB=(0.0, 0.45), coordsB="axes fraction", axesB=ax_stack,
+        arrowstyle=ARROW_STYLE, mutation_scale=14, linewidth=ARROW_LW, color=COLOR_EDGE,
+    ))
+    fig.add_artist(ConnectionPatch(
+        xyA=(1.0, 0.45), coordsA="axes fraction", axesA=ax_stack,
+        xyB=(0.0, 0.45), coordsB="axes fraction", axesB=ax_lat,
+        arrowstyle=ARROW_STYLE, mutation_scale=14, linewidth=ARROW_LW, color=COLOR_EDGE,
+    ))
+    fig.text(0.335, 0.50, "typed\nanswers", ha="center", va="center", fontsize=FONT_MINI - 1, color=COLOR_TEXT, style="italic")
+    fig.text(0.615, 0.55, "routed\ndecisions", ha="center", va="center", fontsize=FONT_MINI - 1, color=COLOR_TEXT, style="italic")
+
+    # --- Zone (c): live benchmark outputs ------------------------------------
+    _panel_letter(ax_batch, "c", dx=0.02, dy=0.94)
+
+    results = sorted(batching["results"], key=lambda r: r["n"])
+    ns = [str(r["n"]) for r in results]
+    speedups = [float(r["speedup_ratio"]) for r in results]
+    bars = ax_batch.bar(ns, speedups, width=0.55, color=COLOR_LAYER_MAIN)
+    for bar, value in zip(bars, speedups):
+        ax_batch.annotate(
+            f"{value:.1f}x",
+            (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+            textcoords="offset points", xytext=(0, 2),
+            ha="center", fontsize=FONT_MINI - 1, color=COLOR_TEXT,
+        )
+    ax_batch.set_title("batching speedup (×) — N", loc="left", fontsize=FONT_MINI, color=COLOR_TEXT)
+    ax_batch.set_ylim(0, max(speedups) * 1.7)
+    ax_batch.text(
+        0.99, 0.95, f"{batching['model']} · {batching['date']}",
+        transform=ax_batch.transAxes, ha="right", va="top",
+        fontsize=FONT_MINI - 1, color=COLOR_TEXT,
+    )
+
+    pipelines = [key for key in sorted(patterns) if key not in _PATTERN_META_KEYS]
+    p50 = [float(patterns[key]["p50_s"]) for key in pipelines]
+    _ga_pipeline_labels = {"composite_score_pipeline": "composite scoring", "intent_routing": "intent routing"}
+    labels = [textwrap.fill(_ga_pipeline_labels.get(key, key), 16) for key in pipelines]
+    bars = ax_lat.barh(labels, p50, height=0.5, color=COLOR_LAYER_MAIN)
+    for bar, value in zip(bars, p50):
+        ax_lat.annotate(
+            f"{value:.3f}s",
+            (bar.get_width(), bar.get_y() + bar.get_height() / 2),
+            textcoords="offset points", xytext=(-4, -1),
+            ha="right", va="center", fontsize=FONT_MINI - 1, color="white",
+        )
+    ax_lat.set_xlim(0, max(p50) * 1.15)
+    ax_lat.set_title("pipeline p50 latency (s)", loc="left", fontsize=FONT_MINI, color=COLOR_TEXT)
+    ax_lat.tick_params(labelsize=FONT_MINI - 1)
+    ax_lat.xaxis.set_major_locator(MaxNLocator(4))
+    ax_lat.invert_yaxis()
+    choice = calibration.get("choice") or {}
+    buckets = list(choice.get("buckets") or [])
+    ax_cal.plot([0.0, 1.0], [0.0, 1.0], linestyle="--", color=COLOR_EXTERNAL, linewidth=1.0, label="perfect")
+    if buckets:
+        ax_cal.plot(
+            [float(b["mean_confidence"]) for b in buckets],
+            [float(b["accuracy"]) for b in buckets],
+            color=COLOR_LAYER_MAIN, marker="o", markersize=3.5, linewidth=1.4,
+            label="observed",
+        )
+    ax_cal.set_xlim(0.0, 1.0)
+    ax_cal.set_ylim(0.0, 1.06)
+    ece = choice.get("ece")
+    if ece is not None:
+        ax_cal.text(
+            0.03, 0.10, f"ECE {float(ece):.3f}",
+            transform=ax_cal.transAxes, ha="left", va="bottom",
+        )
+    ax_cal.set_title("calibration reliability", loc="left", fontsize=FONT_MINI, color=COLOR_TEXT)
+    ax_cal.tick_params(labelsize=FONT_MINI - 1)
+    ax_cal.legend(loc="lower right", fontsize=FONT_MINI - 2)
+
+    return _save(fig, out_dir, "graphical_abstract.png", tight=False)
+
+
 _REGISTRY: dict[str, Callable[[Path, Optional[Path]], Path]] = {
+    "graphical_abstract": generate_graphical_abstract,
     "architecture": generate_architecture,
     "primitives": generate_primitives,
     "batching": generate_batching,
@@ -500,6 +711,7 @@ _REGISTRY: dict[str, Callable[[Path, Optional[Path]], Path]] = {
 }
 
 FIGURE_FILENAMES: dict[str, str] = {
+    "graphical_abstract": "graphical_abstract.png",
     "architecture": "architecture.png",
     "primitives": "primitives_overview.png",
     "batching": "batching_speedup.png",
@@ -523,6 +735,33 @@ def generate_one(name: str, out_dir: Path, project_root: Optional[Path] = None) 
 FIGURE_REGISTRY_FILENAME = "figure_registry.json"
 
 _FIGURE_META: tuple[dict[str, str], ...] = (
+    {
+        "label": "fig:graphical_abstract",
+        "filename": "graphical_abstract.png",
+        "section": "Abstract",
+        "width": "1.0\\textwidth",
+        "caption": (
+            "Graphical abstract of daf-jev. Left: a decision state enters the "
+            "package through the three typed question primitives — noul "
+            "probability, choice distribution, score rubric. Centre: the "
+            "processing stack, from the typed client through the composition "
+            "layer with its confidence gates and routing patterns and the "
+            "evaluator with its calibration machinery up to the surfaced entry "
+            "points (CLI, MCP server, agent skill). Right: live benchmark "
+            "outputs read at figure-generation time from the benchmark JSONs — "
+            "batching wall-clock speedup with the benchmarked model and run "
+            "date, per-pipeline median latency, and the confidence reliability "
+            "curve with its expected calibration error. Arrows trace the flow "
+            "from state, to typed answers, to routed decisions."
+        ),
+        "alt_text": (
+            "Three-panel cover figure: question-type cards fed by a decision "
+            "state, a four-layer processing stack from typed client to surfaced "
+            "entry points, and miniature benchmark charts of batching speedup, "
+            "median pipeline latency, and calibration reliability, annotated "
+            "with the benchmarked model and run date."
+        ),
+    },
     {
         "label": "fig:architecture",
         "filename": "architecture.png",
@@ -579,17 +818,19 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
             "Batching speedup of the benchmark model versus sequential "
             "single-question calls, measured by benchmarks/bench_batching.py. Bars "
             "give the wall-time speedup of one batched call over one sequential call "
-            "per question for each configured batch width; the secondary axis shows "
-            "the token-cost ratio, which falls below unity because the sequential "
+            "per question for each configured batch width; the secondary axis "
+            "shows the token-cost ratio — sequential tokens divided by batched "
+            "tokens — which exceeds unity because the sequential "
             "strategy re-sends the state once per question. Bars are annotated with "
             "their values; the title carries the model and run date read from the "
             "benchmark JSON itself."
         ),
         "alt_text": (
             "Bar chart of wall-time speedup versus sequential calls for each "
-            "configured batch width, with a secondary-axis token-cost ratio; the "
-            "speedup grows with batch width while the token-cost ratio stays below "
-            "unity."
+            "configured batch width, with a secondary-axis token-cost ratio "
+            "measuring sequential tokens relative to batched tokens; the "
+            "speedup grows with batch width while the sequential strategy "
+            "costs proportionally more tokens than the single batched call."
         ),
     },
     {
@@ -714,8 +955,10 @@ def generate_all(out_dir: Path, project_root: Optional[Path] = None) -> list[Pat
 
     Raises:
         FileNotFoundError: When a benchmark JSON needed by a data-driven
-            figure is missing; the error names the missing file. Figures
-            1, 2, and 5 are data-free and never trigger this.
+            figure is missing; the error names the missing file. The
+            graphical abstract renders first and needs all three benchmark
+            JSONs; the architecture, primitives, and confidence figures are
+            data-free and never trigger this.
     """
     paths = [_REGISTRY[name](out_dir, project_root) for name in _REGISTRY]
     write_figure_registry(out_dir, project_root)

@@ -32,9 +32,9 @@ reproducible manuscript pipeline.
   (`bucket_index`, `reliability_table`, `expected_calibration_error`,
   `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
   benchmark (`benchmarks/bench_calibration.py`).
-- **Figures & manuscript** — a matplotlib figure registry (6 figures +
+- **Figures & manuscript** — a matplotlib figure registry (7 figures +
   `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
-  9-section manuscript in `manuscript/` free of hardcoded results.
+  10-section manuscript in `manuscript/` free of hardcoded results.
 - **MCP server** — `daf-jev serve` exposes the toolkit as seven MCP tools
   (`jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
   `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`) plus a
@@ -230,12 +230,12 @@ hardcoded in the prose.
 
 ```bash
 uv sync --extra figures
-uv run python scripts/generate_figures.py    # 6 figures + figure_registry.json -> output/figures/
+uv run python scripts/generate_figures.py    # 7 figures + figure_registry.json -> output/figures/
 uv run python scripts/generate_figures.py --only batching   # single figure by name
 ```
 
 Figures `architecture`, `primitives`, and `confidence` are drawn from code;
-`batching`, `latency`, and `calibration` read the newest
+`batching`, `latency`, `calibration`, and `graphical_abstract` read the newest
 `output/benchmarks/*.json`.
 
 ```bash
@@ -255,10 +255,9 @@ uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
 uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
 ```
 
-Stage 04 runs 9 validation checks (all PASS as of 2026-09-16, including the
-figure registry and rendered provenance). The rendered PDF lands at
-`output/pdf/daf-jev_combined.pdf` (479.4 KB, 16 pages, 5 embedded figures as
-of 2026-09-16).
+Stage 04 runs 9 validation checks (including the figure registry and rendered
+provenance); re-run render + validate after any manuscript or figure change.
+The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
 
 ## Tests and benchmarks
 
@@ -304,8 +303,41 @@ mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
 
-## Documentation
+## Release and citation
 
+v0.3.0 is published on Zenodo (deposit 22816188, released 2026-09-17) and
+mirrored to the public repository at
+[github.com/docxology/daf-jev](https://github.com/docxology/daf-jev).
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
+
+- **Concept DOI** (all versions, stable):
+  [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
+- **v0.3.0 version record**: https://zenodo.org/records/22816188
+  (version DOI `10.5281/zenodo.22816188`)
+- **Public repository**: https://github.com/docxology/daf-jev
+- Machine-readable release metadata: [`CITATION.cff`](CITATION.cff) and
+  [`.zenodo.json`](.zenodo.json) at the repo root.
+
+To cite daf-jev, use the metadata in `CITATION.cff` (cffconvert and Zenodo
+both render it), or paste this BibTeX:
+
+```bibtex
+@software{friedman2026dafjev,
+  title   = {daf-jev: A Composable Python Decision Toolkit for the TypeSafe Jev (System One) API},
+  author  = {Friedman, Daniel Ari},
+  year    = {2026},
+  doi     = {10.5281/zenodo.22816187},
+  url     = {https://github.com/docxology/daf-jev},
+  version = {0.3.0}
+}
+```
+
+New releases are added as new version deposits on the same Zenodo concept, so
+the concept DOI always resolves to the latest published version.
+
+
+## Documentation
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the authoritative design
   contract (wire facts, module signatures, test and benchmark conventions).
 - [`docs/models.md`](docs/models.md) — sourced technical reference on System

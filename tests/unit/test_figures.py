@@ -16,6 +16,7 @@ import pytest
 from daf_jev.figures import (
     FIGURE_REGISTRY_FILENAME,
     generate_all,
+    generate_graphical_abstract,
     generate_architecture,
     generate_batching,
     generate_calibration,
@@ -29,6 +30,7 @@ from daf_jev.figures import (
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 EXPECTED_PNGS = {
+    "graphical_abstract": "graphical_abstract.png",
     "architecture": "architecture.png",
     "primitives": "primitives_overview.png",
     "batching": "batching_speedup.png",
@@ -41,12 +43,14 @@ EXPECTED_REGISTRY_KEYS = {f"fig:{name}" for name in EXPECTED_PNGS}
 EXPECTED_REGISTRY_SECTIONS = {
     "fig:architecture": "Methodology",
     "fig:primitives": "Methodology",
+    "fig:graphical_abstract": "Abstract",
     "fig:batching": "Results",
     "fig:latency": "Results",
     "fig:confidence": "Methodology",
     "fig:calibration": "Results",
 }
 EXPECTED_REGISTRY_WIDTHS = {
+    "fig:graphical_abstract": "1.0\\textwidth",
     "fig:confidence": "0.8\\textwidth",
 }
 
@@ -165,9 +169,7 @@ def _assert_valid_png(path: Path) -> None:
 
 
 # --------------------------------------------------------------- generate_all ---
-
-
-def test_generate_all_writes_all_six_pngs(fake_project: Path, tmp_path: Path) -> None:
+def test_generate_all_writes_all_seven_pngs(fake_project: Path, tmp_path: Path) -> None:
     out_dir = tmp_path / "figures"
     paths = generate_all(out_dir, project_root=fake_project)
 
@@ -187,8 +189,42 @@ def test_generate_all_regenerates_byte_deterministically(fake_project: Path, tmp
         assert (first / filename).read_bytes() == (second / filename).read_bytes(), filename
 
 
+def test_graphical_abstract_is_byte_deterministic(fake_project: Path, tmp_path: Path) -> None:
+    """The cover figure renders byte-identically from the same benchmark JSONs."""
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    path_a = generate_graphical_abstract(first, project_root=fake_project)
+    path_b = generate_graphical_abstract(second, project_root=fake_project)
+
+    assert path_a == first / "graphical_abstract.png"
+    assert path_b == second / "graphical_abstract.png"
+    assert path_a.read_bytes() == path_b.read_bytes()
+
+
+def test_graphical_abstract_missing_benchmark_raises_file_not_found(tmp_path: Path) -> None:
+    """The cover figure needs all three benchmark JSONs; the error names the path."""
+    root = tmp_path / "empty"
+    root.mkdir()
+
+    with pytest.raises(FileNotFoundError) as excinfo:
+        generate_graphical_abstract(tmp_path / "out", project_root=root)
+
+    assert str(root / "output" / "benchmarks") in str(excinfo.value)
+
+
+def test_registry_orders_graphical_abstract_first(generated_project: Path) -> None:
+    """The abstract opens the registry and is figure_001."""
+    registry = json.loads((generated_project / FIGURE_REGISTRY_FILENAME).read_text(encoding="utf-8"))
+
+    assert next(iter(registry)) == "fig:graphical_abstract"
+    assert registry["fig:graphical_abstract"]["figure_id"] == "figure_001"
+    assert registry["fig:graphical_abstract"]["section"] == "Abstract"
+    assert registry["fig:graphical_abstract"]["width"] == "1.0\\textwidth"
+
+
 def test_generate_all_stops_at_first_missing_benchmark(tmp_path: Path) -> None:
-    """Benchmarks feed figures 3-4 only; figures 1 and 2 render before the raise."""
+    """The graphical abstract renders first and needs all three benchmark JSONs."""
     out_dir = tmp_path / "figures"
     empty_root = tmp_path / "empty"
     empty_root.mkdir()
@@ -196,10 +232,8 @@ def test_generate_all_stops_at_first_missing_benchmark(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         generate_all(out_dir, project_root=empty_root)
 
-    _assert_valid_png(out_dir / "architecture.png")
-    _assert_valid_png(out_dir / "primitives_overview.png")
-    assert not (out_dir / "batching_speedup.png").exists()
-    assert not (out_dir / "latency_percentiles.png").exists()
+    for filename in EXPECTED_PNGS.values():
+        assert not (out_dir / filename).exists()
 
 
 def test_confidence_figure_is_data_free(tmp_path: Path) -> None:
@@ -236,10 +270,10 @@ def test_missing_calibration_benchmark_raises_file_not_found(tmp_path: Path) -> 
 
 
 # ------------------------------------------------------------ generate_one ---
-
 @pytest.mark.parametrize(
     ("generate", "filename"),
     [
+        (generate_graphical_abstract, "graphical_abstract.png"),
         (generate_architecture, "architecture.png"),
         (generate_primitives, "primitives_overview.png"),
         (generate_batching, "batching_speedup.png"),

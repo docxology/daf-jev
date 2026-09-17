@@ -1,4 +1,4 @@
-# Experimental Setup {#sec:experimental_setup}
+# Experimental Setup: Live-API Benchmark Protocol, Environment, and Data Provenance {#sec:experimental_setup}
 
 This section records the environment, configuration, and measurement protocol behind the results in [@sec:results], so that the runs can be reproduced bit-for-bit in intent.
 

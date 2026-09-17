@@ -2,6 +2,14 @@
 
 Documentation for daf-jev.
 
+## Release metadata
+
+`CITATION.cff` (CFF 1.2.0 citation metadata) and `.zenodo.json` (Zenodo
+deposit metadata) live at the repo root. The v0.3.0 release is archived on
+Zenodo under the stable concept DOI `10.5281/zenodo.22816187` (v0.3.0
+version record: <https://zenodo.org/records/22816188>), with the public
+repository at <https://github.com/docxology/daf-jev>.
+
 ## ARCHITECTURE.md — the contract
 
 `docs/ARCHITECTURE.md` (v1, 2026-09-16) is the **single source of truth**

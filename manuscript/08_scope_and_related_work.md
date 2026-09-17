@@ -1,8 +1,8 @@
-# Scope, Related Work, and Positioning {#sec:scope}
+# Scope, Limitations, and Related Work: Early-Access Model, Proxy Metrics, and the Structured-Decision Landscape {#sec:scope}
 
 ## Scope and limitations
 
-This manuscript describes an early, private sidecar package, and three caveats bound every claim in it.
+This manuscript describes an early, rapidly evolving package, and four caveats bound every claim in it.
 
 **Single-model measurements.** All benchmarks in [@sec:results] were recorded against the {{BENCH_MODEL}} model at the configuration described in [@sec:experimental_setup]. The package accepts a per-call model override, but nothing here characterizes how the speedups, token ratios, or latency percentiles transfer across models or across provider-side changes to the same model; re-running the two benchmark scripts against another setting is the intended way to extend the measurements, and the render-time token pipeline picks up the new payloads automatically.
 
@@ -10,7 +10,7 @@ This manuscript describes an early, private sidecar package, and three caveats b
 
 **Early-access documentation basis.** The model-level claims in [@sec:jev_model] rest on a hash-manifested snapshot of the vendor's documentation (snapshot {{DOCS_SNAPSHOT_ID}}) rather than on the vendor's release process. The package documents an early-access surface: wire shapes, model identifiers, and documented patterns can change upstream, and the `docs-verify` command plus a re-scrape ([@sec:reproducibility]) is the mechanism for detecting and absorbing such changes. Behavior not covered by the snapshot is implemented as a stated assumption rather than a verified fact.
 
-**Private sidecar status.** This project is a private sidecar of the surrounding research infrastructure: it is versioned and licensed (MIT) for its own reproducibility, but it makes no archival deposit claims and carries no DOI.
+**Early-release status.** The package is published for reproducibility and reuse — the source is versioned, MIT-licensed, and mirrored in a public repository, and this manuscript's edition carries a versioned archival deposit alongside it — but it remains an early release of a tool built against an early-access model surface. The DOI of record identifies the concept of this deposit; individual editions are versioned beneath it, and the caveats above travel with every edition.
 
 ## Related work
 

@@ -1,67 +1,73 @@
 {
   "algorithm": "shared-combined-markdown-v1",
-  "binding_sha256": "5a59e2d3de205a79f0670df2b10f859e8293b87d31922793d54a1d300bbf41c0",
+  "binding_sha256": "c93f5c3ef33d0b8f28f740d5ed7845f1ffbe6cbc1e4a7cdb65bc3ab4383b8ad0",
   "combined_path": "output/web/_combined_manuscript.md",
-  "combined_sha256": "a858c437e845385722b1739e71ebd12d051c9fc455a742310a5b5f6b1c710452",
-  "combined_size_bytes": 45225,
+  "combined_sha256": "b1cd98a643b1e5a4dc3ea0d2d840f2ea02f398df3e9d818c1686a0a9d23ff303",
+  "combined_size_bytes": 54392,
   "input_root_kind": "hydrated",
   "ordered_inputs": [
     {
       "ordinal": 1,
       "path": "output/manuscript/00_abstract.md",
-      "sha256": "6d9748fe0fd45a741b5e3ac9d80fe54cc7cedeab50206665d486d0a417ac03f4",
-      "size_bytes": 2122
+      "sha256": "02b7f8b782fa53565e75f493680843f973979cdb3c023177a9f05012df3a6fb7",
+      "size_bytes": 4285
     },
     {
       "ordinal": 2,
       "path": "output/manuscript/01_introduction.md",
-      "sha256": "4bc56780a44cc3641f8ba832f118c157038c4146970b5fc9974b8d38309b6796",
-      "size_bytes": 4388
+      "sha256": "15346cc671687c00f79eac517cf6e527700b2879b4a8c91eaa60caa8e40ecdbb",
+      "size_bytes": 4638
     },
     {
       "ordinal": 3,
       "path": "output/manuscript/02_the_jev_model.md",
-      "sha256": "91feec8978efbb487e429a9a198f14fd042e6b8007588ad8d6311e88c693427a",
-      "size_bytes": 6148
+      "sha256": "a00145a217cda3c606ba1c188342114e2f41a768b3a0bdcdc30d9dfe2b19c49f",
+      "size_bytes": 6190
     },
     {
       "ordinal": 4,
       "path": "output/manuscript/03_methodology.md",
-      "sha256": "c64135edefe5c022a0f20c2b9335cb0f8f0624db11ffe7ef8deca3a16faa15f5",
-      "size_bytes": 9631
+      "sha256": "4043fe90b6c20631914b50a9b1e1bf1e3be663d1a780899871c0a3cc35ce2d37",
+      "size_bytes": 9013
     },
     {
       "ordinal": 5,
-      "path": "output/manuscript/04_results.md",
-      "sha256": "debb5e648fd34f13f074bc29543c006b004c2eae30531b0d098ee64904bd106b",
-      "size_bytes": 8987
+      "path": "output/manuscript/04_integration_surfaces.md",
+      "sha256": "5c87415dceb250911560476f008b9af40e782530f19f7661635811ffea2f96db",
+      "size_bytes": 5475
     },
     {
       "ordinal": 6,
-      "path": "output/manuscript/05_experimental_setup.md",
-      "sha256": "6561cb10e05b8282207011dcfe65d4748f2e3a28a7b481c9c6695ef9660c4fdb",
-      "size_bytes": 3991
+      "path": "output/manuscript/05_results.md",
+      "sha256": "0c9f2d7c7a00fb987f7513481f2bc2ca3c68a17604d4096d9f48e3975e194894",
+      "size_bytes": 10175
     },
     {
       "ordinal": 7,
-      "path": "output/manuscript/06_reproducibility.md",
-      "sha256": "083c6122f1fdef87119420eba06f7fcf1e0a21862f069cae8b67e0c249143d77",
-      "size_bytes": 4681
+      "path": "output/manuscript/06_experimental_setup.md",
+      "sha256": "7a6a5dec71c8a2dbb6a385714e81e66a549664a64766e9544519235e4d17ae28",
+      "size_bytes": 4054
     },
     {
       "ordinal": 8,
-      "path": "output/manuscript/07_scope_and_related_work.md",
-      "sha256": "7da8f6ae85308a686fa2b8583a0971aefcff07d25f2bb6e2e127d0f1c9367c0b",
-      "size_bytes": 4358
+      "path": "output/manuscript/07_reproducibility.md",
+      "sha256": "9a4dc7b965b9f3858cf1d94d23c85786ced953d4510cffe99f7a33df468169b2",
+      "size_bytes": 4935
     },
     {
       "ordinal": 9,
+      "path": "output/manuscript/08_scope_and_related_work.md",
+      "sha256": "c195a6b81ecd6618800dea9f8b8b6ddb90727a8b4641e64964a34e0a2142751f",
+      "size_bytes": 4687
+    },
+    {
+      "ordinal": 10,
       "path": "output/manuscript/99_references.md",
       "sha256": "797d001917c65c41fc592052414017587b564e4aaee98dccd5876ef048bd030c",
       "size_bytes": 737
     }
   ],
-  "ordered_inputs_sha256": "ff15369bab37ea1fad8706b1aabd26c0b03d099f6ae98c9f1e77352d8adc3c93",
+  "ordered_inputs_sha256": "13f8731cbe467e91a3722bf3d09cadda974507f6c237bfd431a5279992c9a86e",
   "project": "ongoing/daf-jev",
   "schema_version": "template-manuscript-composition-v1"
 }

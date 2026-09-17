@@ -1,4 +1,4 @@
-# The Jev (System One) Decision Model {#sec:jev_model}
+# The Jev Model: Calibrated, Parallel Machine Decisions without Text Generation {#sec:jev_model}
 
 This section states the model-level facts that {{PACKAGE_NAME}} builds on. Throughout, claims taken from the primary TypeSafe documentation snapshot bundled with this repository are attributed to it; characterizations drawn from independent projects are marked as third-party and carry their own citations.
 

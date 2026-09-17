@@ -159,21 +159,21 @@
 \makeatother
 \hypersetup{
   pdftitle={Jev in Practice: A Composable Python Toolkit for TypeSafe\textquotesingle s System One Decision Model},
-  pdfauthor={docxology},
+  pdfauthor={Daniel Ari Friedman},
   pdflang={en},
   colorlinks=true,linkcolor=red,urlcolor=red,citecolor=red,anchorcolor=red,filecolor=red,
   pdfcreator={LaTeX via pandoc}}
 
 \title{Jev in Practice: A Composable Python Toolkit for
 TypeSafe\textquotesingle s System One Decision Model}
-\author{docxology}
+\author{Daniel Ari Friedman}
 \date{}
 
 \IfFileExists{seqsplit.sty}{\usepackage{seqsplit}}{\newcommand{\seqsplit}[1]{#1}}
 \protected\def\breakseq#1{\seqsplit{#1}}
 \protected\def\breaktt#1{\begingroup\ttfamily\seqsplit{#1}\endgroup}
 \title{Jev in Practice: A Composable Python Toolkit for TypeSafe's System One Decision Model}
-\author{docxology\\\footnotesize{docxology projects (private)}}
+\author{Daniel Ari Friedman}
 \date{\today}
 
 % Core mathematics
@@ -248,16 +248,23 @@ TypeSafe\textquotesingle s System One Decision Model}
 \begin{document}
 \begin{titlepage}
 \centering
-\vspace*{2cm}
-{\LARGE\bfseries Jev in Practice: A Composable Python Toolkit for TypeSafe's System One Decision Model\par}
+\vspace*{0.55cm}
+{\Huge\sffamily\bfseries Jev in Practice: A Composable Python Toolkit for TypeSafe's System One Decision Model\par}
+\vspace{0.4em}
+{\Large\sffamily Batching Speedups, Confidence-Gated Routing, and Calibrated Decisions over a Single HTTP Endpoint\par}
 \vspace{0.75em}
-{\large Batching Speedups, Confidence-Gated Routing, and Calibrated Decisions over a Single HTTP Endpoint\par}
-\vfill
+{\large\sffamily\bfseries Daniel Ari Friedman\par}
+{\small\sffamily Active Inference Institute\par}
+{\small\sffamily\texttt{daniel@activeinference.institute}\par}
+{\small\sffamily\href{https://orcid.org/0000-0001-6232-9096}{ORCID: 0000-0001-6232-9096}\par}
+\vspace{0.08em}
+{\small\sffamily DOI: \href{https://doi.org/10.5281/zenodo.22816187}{10.5281/zenodo.22816187}\par}
+\vspace{0.35em}
 \makeatletter
-{\@author\par}
-\vspace{1em}
 {\@date\par}
 \makeatother
+\vfill
+\includegraphics[width=0.98\textwidth,height=0.6\textheight,keepaspectratio,alt={Graphical abstract, three zones read left to right: the decision state with the noul, choice, and score question primitives; the daf-jev layer stack from typed client through compose gates and routing to the evaluator and calibration, consumed via CLI, MCP server, and agent skill; and a live outputs panel with batching speedups, pipeline latency, and calibration reliability read from the benchmark JSON payloads.}]{\detokenize{../figures/graphical_abstract.png}}
 \vfill
 \end{titlepage}
 \thispagestyle{empty}
@@ -266,44 +273,85 @@ TypeSafe\textquotesingle s System One Decision Model}
 
 \section{Abstract}\label{sec:abstract}
 
-Large language models are usually consumed as text generators, yet a
-growing class of applications needs them as \emph{decision components}:
-bounded, typed answers that software can branch on. This manuscript
-presents daf-jev, a composable Python toolkit for the TypeSafe Jev
-(System One) decision model
-\citep{typesafe2026systemone, typesafe2026systemoneconcept}. The package
-reduces the entire decision surface to three typed question primitives
---- \texttt{noul} (a calibrated yes/no), \texttt{choice} (a labelled
-pick with a full probability distribution and a confidence), and
-\texttt{score} (a rating over ordered levels with a probability-weighted
-expected value) --- all carried by a single HTTP endpoint. Pure-logic
-composition patterns (\texttt{composite\_score},
-\texttt{confidence\_gate}, \texttt{route}/\texttt{pick}) turn typed
-answers into executable decisions with no additional network traffic,
-and a batch \texttt{Evaluator} fans a fixed question set out over many
-states through either the synchronous or the asynchronous client. Two
-live-API benchmarks quantify the practical payoff of this design.
-Batching a batch's worth of questions into one call yields wall-time
-speedups of 3.98, 8.77, and 18.55 across the configured batch widths,
-with a token-cost ratio of 4.22 at the widest setting; end-to-end
-decision pipelines (network round trip plus composition logic) complete
-at a median wall time of 0.133 for composite scoring and 0.129 for
-intent routing against the jev-latest model. Decision quality is
-validated as well as speed: a self-consistency calibration benchmark
-reports an expected calibration error of 0.0730 and a Brier score of
-0.0252 over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats against the jev-latest model, and the
-same core is exposed to non-Python consumers through an MCP server
-(\texttt{daf-jev\ serve}), an agent skill, and a set of runnable
-examples. Every numeric value in this manuscript is generated from the
-same analysis outputs as the figures and tables, so the prose cannot
-drift from the data.
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth,height=0.5\textheight,keepaspectratio,alt={Graphical abstract for the daf-jev manuscript, in three zones read left to right. Left: the decision state --- the context to be judged --- together with stylized cards for the three typed question primitives: a noul (a 0--1 calibrated probability), a choice (a probability distribution over named options), and a score (a rubric over ordered levels). Center: the package's layer stack, from the typed client through the compose layer's gates and routing to the evaluator and its calibration checks, with the CLI, the MCP server, and the agent skill as consumer surfaces. Right: a live-outputs panel whose batching speedup bars, speedup annotation, pipeline latency figure, and calibration reliability mini-curve are all read from the latest batching, patterns, and calibration benchmark JSON payloads at generation time --- no metric in this panel is hardcoded. Arrows run left to right, tracing the path from an unstructured state to typed answers to composable decisions.}]{../figures/graphical_abstract.png}
+\caption{Graphical abstract for the daf-jev manuscript, in three zones
+read left to right. Left: the decision \emph{state} --- the context to
+be judged --- together with stylized cards for the three typed question
+primitives: a \protect\texttt{noul} (a 0--1 calibrated probability), a
+\protect\texttt{choice} (a probability distribution over named options),
+and a \protect\texttt{score} (a rubric over ordered levels). Center: the
+package's layer stack, from the typed client through the compose layer's
+gates and routing to the evaluator and its calibration checks, with the
+CLI, the MCP server, and the agent skill as consumer surfaces. Right: a
+live-outputs panel whose batching speedup bars, speedup annotation,
+pipeline latency figure, and calibration reliability mini-curve are all
+read from the latest batching, patterns, and calibration benchmark JSON
+payloads at generation time --- no metric in this panel is hardcoded.
+Arrows run left to right, tracing the path from an unstructured state to
+typed answers to composable decisions.}\label{fig:graphical_abstract}
+\end{figure}
+
+Software rarely needs an essay from a language model; it needs an answer
+it can act on --- route this ticket or escalate it, approve this refund
+or flag it, rate this draft or send it back. daf-jev is a small,
+composable Python toolkit for getting exactly those answers from the
+TypeSafe Jev ``System One'' decision model
+\citep{typesafe2026systemone, typesafe2026systemoneconcept}: instead of
+generating text that must be parsed back into decisions, the model
+returns bounded, typed judgments that code can branch on directly.
+
+The entire decision surface of the model reduces to three typed question
+primitives, all carried by a single HTTP endpoint: \texttt{noul}, a
+calibrated yes/no; \texttt{choice}, a labelled pick that comes back with
+a full probability distribution over the options and a scalar
+confidence; and \texttt{score}, a rating over ordered levels that comes
+back with a probability-weighted expected value. On top of these
+primitives, pure-logic composition patterns ---
+\texttt{composite\_score}, \texttt{confidence\_gate}, and
+\texttt{route}/\texttt{pick} --- turn typed answers into executable
+decisions with no additional network traffic, and a batch
+\texttt{Evaluator} fans a fixed question set out over many states
+through either the synchronous or the asynchronous client. The same core
+is reachable without writing Python at all: a command-line interface
+with five subcommands, an MCP server exposing seven tools to any
+MCP-capable agent host, an agent skill manifest for coding agents, and
+four runnable example scripts (all described in
+sec.~\ref{sec:integration_surfaces}).
+
+Two live-API benchmarks against the jev-latest model quantify the
+practical payoff of this design. Batching a batch's worth of questions
+into one call yields wall-time speedups of 3.98, 8.77, and 18.55 across
+the configured batch widths, and the sequential strategy consumes 4.22
+times the tokens of the batched call at the widest setting --- batching
+is simultaneously faster and cheaper. End-to-end decision pipelines
+complete at a median wall time of 0.133 for composite scoring and 0.129
+for intent routing, so confidence-gated decisions can sit inline on
+interactive request paths. Decision quality is measured alongside speed:
+a self-consistency calibration benchmark over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats
+against the jev-latest model reports an expected calibration error of
+0.0730 and a Brier score of 0.0252, indicating that reported confidence
+tracks repeat-stable behaviour under the stated proxy semantics. The
+unit test suite stands at 91.73 measured coverage, and every model-level
+claim is grounded in a hash-manifested documentation snapshot
+(b79c9cd6008489f1, 108 pages, 1014.8 KiB, scraped 2026-09-16) whose
+drift is machine-checkable at any time. Every numeric value in this
+manuscript is generated from the same analysis outputs as the figures
+and tables, so the prose cannot drift from the data.
+
+The graphical abstract in fig.~\ref{fig:graphical_abstract} summarizes
+this path --- from an unstructured state, through typed answers, to
+composable decisions --- with the live benchmark outputs on its
+right-hand panel.
 
 \textbf{Keywords:} decision models, LLM APIs, calibrated confidence,
 batching, confidence-gated routing, Python client, reproducible research
 
 \newpage
 
-\section{Introduction}\label{sec:introduction}
+\section{Introduction: From Generated Text to Typed
+Decisions}\label{sec:introduction}
 
 Software that consumes large language models faces a structural
 mismatch. Language models emit prose; software needs values. When an
@@ -384,7 +432,10 @@ guarantees --- distinguishing primary documentation claims from
 third-party characterizations. sec.~\ref{sec:methodology} describes the
 package architecture: its layers, its primitives, its composition
 patterns, and the design rulings that shaped them.
-sec.~\ref{sec:results} reports the measured batching speedups,
+sec.~\ref{sec:integration_surfaces} tours the surfaces that sit on top
+of that architecture without adding logic to it --- the CLI subcommands,
+the MCP server and its tools, the agent skill, and the runnable
+examples. sec.~\ref{sec:results} reports the measured batching speedups,
 token-cost ratios, and decision-pipeline latencies, all bound to figures
 and tables generated from the benchmark outputs.
 sec.~\ref{sec:experimental_setup} records the exact environment and
@@ -395,7 +446,8 @@ positioning.
 
 \newpage
 
-\section{The Jev (System One) Decision Model}\label{sec:jev_model}
+\section{The Jev Model: Calibrated, Parallel Machine Decisions without
+Text Generation}\label{sec:jev_model}
 
 This section states the model-level facts that daf-jev builds on.
 Throughout, claims taken from the primary TypeSafe documentation
@@ -532,33 +584,43 @@ composition logic is pure computation.
 
 \newpage
 
-\section{Methodology: Package Architecture}\label{sec:methodology}
+\section{Methodology: The Layered Architecture of a Composable Decision
+Toolkit}\label{sec:methodology}
 
 daf-jev is organized as a strict layering: an ergonomic surface (CLI,
-scripts, benchmarks) on top of pure-logic composition, on top of
-primitives and wire types, on top of a single transport and client layer
-that owns all I/O. fig.~\ref{fig:architecture} shows the module graph.
-The layering is enforced by convention: the composition and primitive
-modules import no I/O machinery, so every decision pattern is testable
-against constructed answers without a network stand-in.
+MCP server, scripts, benchmarks) on top of pure-logic composition, on
+top of primitives and wire types, on top of a single transport and
+client layer that owns all I/O. fig.~\ref{fig:architecture} shows the
+module graph. The layering is enforced by convention: the composition
+and primitive modules import no I/O machinery, so every decision pattern
+is testable against constructed answers without a network stand-in. The
+ergonomic surface itself --- CLI subcommands, MCP tools, an agent skill,
+and worked examples --- is the subject of
+sec.~\ref{sec:integration_surfaces}; this section covers the layers
+those surfaces delegate to.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Package layer diagram for daf-jev. The CLI (src/daf\_jev/cli.py) and the thin orchestration scripts (scripts/, benchmarks/) sit on the application layer; compose.py (pure decision patterns) and primitives.py (typed question builders and QuestionSet) form the logic layer over the wire dataclasses in \_types.py; client.py and \_http.py own the single transport to the System One endpoint, with \_retry.py and \_errors.py providing the pure retry policy and the typed exception hierarchy; models.py, config.py, and evaluate.py enter as side inputs and the batch harness respectively. Boxes are named modules only; no measured values appear in the diagram.}]{../figures/architecture.png}
-\caption{Package layer diagram for daf-jev. The CLI
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Package layer diagram for daf-jev, drawn from the module graph of src/daf\_jev/. The application layer --- the CLI (src/daf\_jev/cli.py) and the thin orchestration scripts (scripts/, benchmarks/) --- delegates downward to the logic layer, where compose.py (pure decision patterns) and primitives.py (typed question builders and the QuestionSet container) sit over the wire dataclasses of \_types.py. client.py and \_http.py own the single transport to the System One endpoint, with \_retry.py providing the pure retry policy and \_errors.py the typed exception hierarchy; models.py and config.py enter as side inputs, and evaluate.py is the batch harness. The key structural takeaway is the enforced dependency direction: composition and primitives import no I/O machinery, so every decision pattern is testable against constructed answers without a network stand-in. Boxes are named modules only; no measured values appear in this schematic.}]{../figures/architecture.png}
+\caption{Package layer diagram for daf-jev, drawn from the module graph
+of \protect\texttt{src/daf\_jev/}. The application layer --- the CLI
 (\protect\breaktt{src/daf\_jev/cli.py}) and the thin orchestration
-scripts (\protect\texttt{scripts/}, \protect\texttt{benchmarks/}) sit on
-the application layer; \protect\texttt{compose.py} (pure decision
-patterns) and \protect\texttt{primitives.py} (typed question builders
-and \protect\texttt{QuestionSet}) form the logic layer over the wire
-dataclasses in \protect\texttt{\_types.py}; \protect\texttt{client.py}
-and \protect\texttt{\_http.py} own the single transport to the System
-One endpoint, with \protect\texttt{\_retry.py} and
-\protect\texttt{\_errors.py} providing the pure retry policy and the
-typed exception hierarchy; \protect\texttt{models.py},
-\protect\texttt{config.py}, and \protect\texttt{evaluate.py} enter as
-side inputs and the batch harness respectively. Boxes are named modules
-only; no measured values appear in the diagram.}\label{fig:architecture}
+scripts (\protect\texttt{scripts/}, \protect\texttt{benchmarks/}) ---
+delegates downward to the logic layer, where \protect\texttt{compose.py}
+(pure decision patterns) and \protect\texttt{primitives.py} (typed
+question builders and the \protect\texttt{QuestionSet} container) sit
+over the wire dataclasses of \protect\texttt{\_types.py}.
+\protect\texttt{client.py} and \protect\texttt{\_http.py} own the single
+transport to the System One endpoint, with \protect\texttt{\_retry.py}
+providing the pure retry policy and \protect\texttt{\_errors.py} the
+typed exception hierarchy; \protect\texttt{models.py} and
+\protect\texttt{config.py} enter as side inputs, and
+\protect\texttt{evaluate.py} is the batch harness. The key structural
+takeaway is the enforced dependency direction: composition and
+primitives import no I/O machinery, so every decision pattern is
+testable against constructed answers without a network stand-in. Boxes
+are named modules only; no measured values appear in this
+schematic.}\label{fig:architecture}
 \end{figure}
 
 \subsection{Layered architecture}\label{layered-architecture}
@@ -608,16 +670,22 @@ The layers, bottom-up:
 
 \begin{figure}
 \centering
-\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A noul question yields a calibrated yes/no probability; a choice question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a score question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only --- it carries no measured data.}]{../figures/primitives_overview.png}
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into, drawn as a schematic of the wire contract (sec.~). A noul question yields a calibrated yes/no probability; a choice question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a score question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The takeaway is that the builders in primitives.py map one-to-one onto these shapes with strict, eager validation --- score criteria must carry at least two ordered levels, choice criteria must be non-empty, and the answer-side parser rejects any payload outside the discriminated union --- so downstream composition code can pattern-match on answers without defensive parsing. The diagram carries no measured data.}]{../figures/primitives_overview.png}
 \caption{The three question primitives of the System One surface and the
-typed answer shapes daf-jev parses them into. A \protect\texttt{noul}
+typed answer shapes daf-jev parses them into, drawn as a schematic of
+the wire contract (sec.~\ref{sec:jev_model}). A \protect\texttt{noul}
 question yields a calibrated yes/no probability; a
 \protect\texttt{choice} question yields a selected label, a full
 probability distribution over the named options, and a scalar
 confidence; a \protect\texttt{score} question yields a
 probability-weighted score over ordered levels together with the level
-legend, the level distribution, and a confidence. The diagram is a
-schematic of shapes only --- it carries no measured
+legend, the level distribution, and a confidence. The takeaway is that
+the builders in \protect\texttt{primitives.py} map one-to-one onto these
+shapes with strict, eager validation --- score criteria must carry at
+least two ordered levels, choice criteria must be non-empty, and the
+answer-side parser rejects any payload outside the discriminated union
+--- so downstream composition code can pattern-match on answers without
+defensive parsing. The diagram carries no measured
 data.}\label{fig:primitives}
 \end{figure}
 
@@ -679,15 +747,20 @@ points, which remain policy owned by the caller.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.8\linewidth,height=0.5\textheight,keepaspectratio,alt={Parametric illustration of confidence-gated routing as implemented by confidence\_gate() and route() in src/daf\_jev/compose.py. The horizontal axis is the model-reported confidence on the unit interval; the three horizontal bands assign an action per confidence region --- automate, review, escalate. The boundary markers are annotated as example thresholds: they illustrate the band semantics and are not fitted or recommended values.}]{../figures/confidence_bands.png}
+\includegraphics[width=0.8\linewidth,height=0.5\textheight,keepaspectratio,alt={Parametric illustration of confidence-gated routing as implemented by confidence\_gate() and route() in src/daf\_jev/compose.py (sec.~). The horizontal axis is the model-reported confidence on the unit interval; the three horizontal bands assign an action per confidence region --- automate above the upper boundary, route to review in the middle band, escalate below the lower boundary. The boundary markers are annotated as example thresholds: the semantics are the bands, not any particular cut points, and the actual thresholds remain policy owned by the caller. This figure is parametric and carries no measured data; sec.~ measures the latency and calibration properties that make running this policy inline sound.}]{../figures/confidence_bands.png}
 \caption{Parametric illustration of confidence-gated routing as
 implemented by \protect\breaktt{confidence\_gate()} and
-\protect\texttt{route()} in \protect\breaktt{src/daf\_jev/compose.py}.
-The horizontal axis is the model-reported confidence on the unit
-interval; the three horizontal bands assign an action per confidence
-region --- automate, review, escalate. The boundary markers are
-annotated as example thresholds: they illustrate the band semantics and
-are not fitted or recommended values.}\label{fig:confidence}
+\protect\texttt{route()} in \protect\breaktt{src/daf\_jev/compose.py}
+(sec.~\ref{sec:methodology}). The horizontal axis is the model-reported
+confidence on the unit interval; the three horizontal bands assign an
+action per confidence region --- automate above the upper boundary,
+route to review in the middle band, escalate below the lower boundary.
+The boundary markers are annotated as example thresholds: the semantics
+are the bands, not any particular cut points, and the actual thresholds
+remain policy owned by the caller. This figure is parametric and carries
+no measured data; sec.~\ref{sec:results} measures the latency and
+calibration properties that make running this policy inline
+sound.}\label{fig:confidence}
 \end{figure}
 
 \subsection{Design rulings}\label{design-rulings}
@@ -721,52 +794,170 @@ Four rulings shaped the codebase and are worth stating as contracts:
   a moving website.
 \end{enumerate}
 
-\subsection{Integration surfaces}\label{integration-surfaces}
+\newpage
 
-The Python API is the primary door into the package, but not the only
-one. Three additional surfaces sit on top of the same layering ---
-transport, client, primitives, composition --- and add accessibility
-rather than logic: each one delegates to the very modules described
-above and contains no decision code of its own.
+\section{Integration Surfaces: CLI, MCP Server, Agent Skill, and Worked
+Examples}\label{sec:integration_surfaces}
+
+The Python API is the primary door into daf-jev, but not the only one.
+Four additional surfaces sit on top of the same layering described in
+sec.~\ref{sec:methodology} --- transport, client, primitives,
+composition --- and add accessibility rather than logic: the
+command-line interface, an MCP server, an agent skill, and a set of
+runnable examples. Each one delegates to the very modules described
+above and contains no decision code of its own. A behaviour fixed in the
+composition layer therefore reaches every consumer at once: the CLI and
+the MCP server call the same client and compose functions the Python API
+calls, the skill documents those entry points, and the examples exercise
+them.
+
+\subsection{Command-line interface}\label{command-line-interface}
+
+The \texttt{daf-jev} console script (\breaktt{src/daf\_jev/cli.py})
+exposes five subcommands that cover the package's main paths without
+writing Python:
 
 \begin{itemize}
 \tightlist
 \item
-  \textbf{MCP server} (\breaktt{src/daf\_jev/mcp\_server.py}, launched
-  with \texttt{daf-jev\ serve} over the stdio transport). It exposes the
-  core to any MCP-capable agent host through tools that mirror the
-  package one-to-one: \texttt{jev\_ask} and \texttt{jev\_evaluate} drive
-  the client's single-call and batch paths, \texttt{jev\_models} reports
-  the available model surface, \breaktt{jev\_composite\_score},
-  \breaktt{jev\_confidence\_gate}, and \texttt{jev\_tiered\_gate} expose
-  the composition patterns, and \texttt{jev\_docs\_verify} re-runs the
-  documentation drift check of Design ruling 4; a
-  \breaktt{jev://docs/snapshot} resource serves the bundled documentation
-  snapshot itself. The server is a thin adapter --- it owns no retry
-  policy, no parsing, and no thresholds.
+  \textbf{\texttt{daf-jev\ ask}} --- one call, one state: the state
+  arrives as inline text or JSON (\texttt{-\/-state}) or from a file
+  (\texttt{-\/-state-file}), and one or more
+  \texttt{-\/-question\ ID=SPEC} flags build the question set from a
+  compact grammar (\texttt{noul:\textless{}instructions\textgreater{}},
+  \texttt{choice:\textless{}instructions\textgreater{}:k1=desc,k2=...},
+  \texttt{score:\textless{}instructions\textgreater{}:l1,l2,...}). The
+  answer is emitted as JSON (compact by default, \texttt{-\/-pretty} for
+  readability).
 \item
-  \textbf{Agent skill} (\breaktt{skills/daf-jev/SKILL.md}). A skill
-  manifest that tells a coding agent when and how to reach for the CLI
-  subcommands and composition helpers, so an agent can use the package
-  correctly without reading its source.
+  \textbf{\breaktt{daf-jev\ evaluate}} --- the batch \texttt{Evaluator}
+  of sec.~\ref{sec:methodology} as a command: a fixed question set runs
+  concurrently over many states, and the evaluation records --- answers,
+  per-state failures, and measured latency --- are emitted as JSON.
 \item
-  \textbf{Runnable examples} (\texttt{examples/}). Four self-contained
-  scripts --- \texttt{quickstart.py}, \breaktt{triage\_router.py},
-  \breaktt{composite\_scoring.py}, and \breaktt{evaluate\_corpus.py} ---
-  walk the typical integration path from a first call to a batch
-  evaluation, doubling as executable documentation of the composition
-  layer.
+  \textbf{\texttt{daf-jev\ models}} --- lists the available model
+  surface, with \texttt{-\/-pick\ latest|{}first|{}last}
+  selecting a single identifier for scripting.
+\item
+  \textbf{\breaktt{daf-jev\ docs-verify}} --- re-hashes the bundled
+  documentation snapshot against its manifest and exits non-zero on
+  drift; this is the command-line face of Design ruling 4
+  (sec.~\ref{sec:reproducibility}).
+\item
+  \textbf{\texttt{daf-jev\ serve}} --- launches the MCP server described
+  next, over the stdio transport.
 \end{itemize}
 
-None of these surfaces introduces a second implementation of the model
-semantics: the MCP tools call the same client and compose functions the
-CLI calls, the skill documents those entry points, and the examples
-exercise them. A behaviour fixed in the composition layer therefore
-reaches every consumer at once.
+The CLI is a thin adapter in the same sense as the composition layer is
+pure: it parses arguments, delegates to the client or the composition
+helpers, and serializes the result. It owns no retry policy, no parsing
+of answers, and no thresholds.
+
+\subsection{MCP server}\label{mcp-server}
+
+\breaktt{src/daf\_jev/mcp\_server.py} exposes the same core to any
+MCP-capable agent host. Launched with \texttt{daf-jev\ serve} over the
+stdio transport, it advertises seven tools that mirror the package
+one-to-one:
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{jev\_ask} --- drives the client's single-call path: named
+  questions (\texttt{noul} / \texttt{choice} / \texttt{score}, given in
+  the same compact grammar the CLI accepts or as native
+  \texttt{\{type,\ instructions,\ criteria\}} dicts) asked about one
+  state;
+\item
+  \texttt{jev\_evaluate} --- drives the batch path, running a fixed
+  question set over many states concurrently;
+\item
+  \texttt{jev\_models} --- reports (and optionally picks from) the
+  available model surface;
+\item
+  \breaktt{jev\_composite\_score}, \breaktt{jev\_confidence\_gate}, and
+  \texttt{jev\_tiered\_gate} --- expose the composition patterns of
+  sec.~\ref{sec:methodology}; these combine answers locally with no API
+  call at all;
+\item
+  \texttt{jev\_docs\_verify} --- re-runs the documentation drift check
+  of Design ruling 4.
+\end{itemize}
+
+A \breaktt{jev://docs/snapshot} resource serves a summary of the bundled
+documentation snapshot itself, so an agent can inspect what the
+model-level claims rest on without leaving its host. The server is a
+thin adapter --- it owns no retry policy, no parsing, and no thresholds;
+every call delegates to \texttt{JevClient}, \texttt{AsyncJevClient}, or
+the pure composition functions.
+
+Registering the server with an MCP client is a one-block stdio
+configuration; with the package installed (or, equivalently,
+\texttt{command:\ "uv"} with
+\texttt{args:\ {[}"run",\ "daf-jev",\ "serve"{]}} inside the
+repository):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{\{}
+  \DataTypeTok{"mcpServers"}\FunctionTok{:} \FunctionTok{\{}
+    \DataTypeTok{"daf{-}jev"}\FunctionTok{:} \FunctionTok{\{}
+      \DataTypeTok{"command"}\FunctionTok{:} \StringTok{"daf{-}jev"}\FunctionTok{,}
+      \DataTypeTok{"args"}\FunctionTok{:} \OtherTok{[}\StringTok{"serve"}\OtherTok{]}
+    \FunctionTok{\}}
+  \FunctionTok{\}}
+\FunctionTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+The MCP extra (\texttt{pip\ install\ "daf-jev{[}mcp{]}"} or
+\texttt{uv\ sync\ -\/-extra\ mcp}) is the only optional dependency this
+surface adds; the core package does not depend on it.
+
+\subsection{Agent skill}\label{agent-skill}
+
+\breaktt{skills/daf-jev/SKILL.md} is a skill manifest for coding agents:
+it states when to reach for the package, and how --- the builders and
+their constraints, the client surface, the evaluation harness, the
+composition patterns, the CLI subcommands, and the MCP tools --- so an
+agent can use the package correctly without reading its source. The
+skill carries no logic of its own; it is documentation positioned where
+agents look for it, and it points at the same entry points the CLI and
+MCP server expose.
+
+\subsection{Worked examples}\label{worked-examples}
+
+Four self-contained scripts under \texttt{examples/} walk the typical
+integration path from a first call to a batch evaluation, doubling as
+executable documentation of the composition layer:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{\texttt{quickstart.py}} --- the shortest path to a typed
+  answer: build a question set, make one call, read the typed answers;
+\item
+  \textbf{\breaktt{triage\_router.py}} --- confidence-gated routing end
+  to end: a \texttt{choice} call dispatched by \texttt{route()} with a
+  fallback for low-confidence answers;
+\item
+  \textbf{\breaktt{composite\_scoring.py}} --- a \texttt{score} call
+  turned into a comparable scalar by \breaktt{composite\_score()} and
+  verdict-banded by \breaktt{confidence\_gate()};
+\item
+  \textbf{\breaktt{evaluate\_corpus.py}} --- the batch \texttt{Evaluator}
+  over many states, with per-state failure capture and summary
+  aggregates.
+\end{itemize}
+
+Each script runs against the real endpoint when an API key is present
+and prints a clear skip notice otherwise, matching the benchmark
+convention of sec.~\ref{sec:experimental_setup}.
 
 \newpage
 
-\section{Results}\label{sec:results}
+\section{Results: Batching Economics, Pipeline Latency, and Confidence
+Calibration under Live-API Load}\label{sec:results}
 
 This section reports the three live-API benchmarks that quantify the
 design claims of sec.~\ref{sec:methodology}: the batching benchmark,
@@ -796,17 +987,21 @@ together with the token-cost ratio on a secondary axis.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Batching speedup of the jev-latest model versus sequential single-question calls, measured by benchmarks/bench\_batching.py on 2026-09-16. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, 20 questions, values in tbl.~); the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title in the rendered figure carries the model and run date read from the benchmark JSON itself.}]{../figures/batching_speedup.png}
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Batching speedup of the jev-latest model versus sequential single-question calls, measured by benchmarks/bench\_batching.py on 2026-09-16 against the live API. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, and 20 questions per batch, tabulated in tbl.~); the secondary axis traces the token-cost ratio --- sequential tokens divided by batched tokens --- which rises above unity because the sequential strategy re-sends the state paragraph once per question. Each bar is annotated with its measured value, and the rendered title carries the model identifier and run date read from the benchmark JSON itself. The takeaway: the speedup grows with batch width as the fixed per-call overhead amortizes, while the batched strategy is simultaneously cheaper in tokens, not only faster.}]{../figures/batching_speedup.png}
 \caption{Batching speedup of the jev-latest model versus sequential
 single-question calls, measured by
-\protect\breaktt{benchmarks/bench\_batching.py} on 2026-09-16. Bars give
-the wall-time speedup of one batched call over one sequential call per
-question for each configured batch width (5, 10, 20 questions, values in
-tbl.~\ref{tbl:batching}); the secondary axis shows the token-cost ratio,
-which falls below unity because the sequential strategy re-sends the
-state once per question. Bars are annotated with their values; the title
-in the rendered figure carries the model and run date read from the
-benchmark JSON itself.}\label{fig:batching}
+\protect\breaktt{benchmarks/bench\_batching.py} on 2026-09-16 against the
+live API. Bars give the wall-time speedup of one batched call over one
+sequential call per question for each configured batch width (5, 10, and
+20 questions per batch, tabulated in tbl.~\ref{tbl:batching}); the
+secondary axis traces the token-cost ratio --- sequential tokens divided
+by batched tokens --- which rises above unity because the sequential
+strategy re-sends the state paragraph once per question. Each bar is
+annotated with its measured value, and the rendered title carries the
+model identifier and run date read from the benchmark JSON itself. The
+takeaway: the speedup grows with batch width as the fixed per-call
+overhead amortizes, while the batched strategy is simultaneously cheaper
+in tokens, not only faster.}\label{fig:batching}
 \end{figure}
 
 tbl.~\ref{tbl:batching} tabulates the measured speedups. The speedup
@@ -835,11 +1030,13 @@ Questions per batch & Wall-time speedup vs sequential \\
 20 & 18.55 \\
 \end{longtable}
 
-Token cost moves in the same direction. At the widest configured batch
-width the batched strategy consumes a token ratio of 4.22 relative to
-the sequential strategy: the state paragraph dominates the input tokens
-of a single-question call, so re-sending it per question makes the
-sequential strategy strictly more expensive in addition to being slower.
+Token cost moves in the same direction. The recorded
+\breaktt{token\_cost\_ratio} expresses the sequential strategy's token
+consumption relative to the batched strategy's: at the widest configured
+batch width the sequential strategy consumes 4.22 times the tokens of
+the batched call. The state paragraph dominates the input tokens of a
+single-question call, so re-sending it per question makes the sequential
+strategy strictly more expensive in addition to being slower.
 
 \subsection{Decision-pipeline latency}\label{decision-pipeline-latency}
 
@@ -864,14 +1061,22 @@ fig.~\ref{fig:latency} plots them side by side.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by benchmarks/bench\_patterns.py over 6 runs against the jev-latest model on 2026-09-16. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time. Values are tabulated in tbl.~.}]{../figures/latency_percentiles.png}
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by benchmarks/bench\_patterns.py over 6 runs against the jev-latest model on 2026-09-16. Each pipeline group --- composite scoring (one score call, then composite\_score and a confidence\_gate verdict) and intent routing (one choice call, then route() dispatch) --- shows paired p50/p95 bars covering the full network round trip plus the local composition logic; values are tabulated in tbl.~ and read from the benchmark JSON fields at figure-generation time. The takeaway: both pipelines sit within the model's millisecond-scale latency envelope, so the pure-logic composition layer adds no measurable latency beyond the network round trip and the gating policy can run inline on interactive request paths.}]{../figures/latency_percentiles.png}
 \caption{Median (p50) and tail (p95) end-to-end wall time per decision
 pipeline, measured by \protect\breaktt{benchmarks/bench\_patterns.py}
-over 6 runs against the jev-latest model on 2026-09-16. Each bar is one
-pipeline (composite scoring, intent routing) with paired p50/p95 groups;
-axis labels are read from the benchmark JSON fields at figure-generation
-time. Values are tabulated in
-tbl.~\ref{tbl:latency}.}\label{fig:latency}
+over 6 runs against the jev-latest model on 2026-09-16. Each pipeline
+group --- composite scoring (one \protect\texttt{score} call, then
+\protect\texttt{composite\_score} and a
+\protect\texttt{confidence\_gate} verdict) and intent routing (one
+\protect\texttt{choice} call, then \protect\texttt{route()} dispatch)
+--- shows paired p50/p95 bars covering the full network round trip plus
+the local composition logic; values are tabulated in
+tbl.~\ref{tbl:latency} and read from the benchmark JSON fields at
+figure-generation time. The takeaway: both pipelines sit within the
+model's millisecond-scale latency envelope, so the pure-logic
+composition layer adds no measurable latency beyond the network round
+trip and the gating policy can run inline on interactive request
+paths.}\label{fig:latency}
 \end{figure}
 
 \begin{longtable}[]{@{}
@@ -953,17 +1158,20 @@ Mean pairwise noul gap & 0.0050 \\
 
 \begin{figure}
 \centering
-\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by benchmarks/bench\_calibration.py over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats. Because the proxy scores self-agreement rather than verified correctness, the diagonal indicates consistency between stated confidence and repeat-stable behaviour --- not truthfulness.}]{../figures/calibration_reliability.png}
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by benchmarks/bench\_calibration.py over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats of the same state; the dashed diagonal marks perfect agreement between stated confidence and observed proxy accuracy. Because the proxy scores self-agreement rather than verified correctness, proximity to the diagonal indicates consistency between stated confidence and repeat-stable behaviour --- not truthfulness about the world. Aggregate scores are tabulated in tbl.~.}]{../figures/calibration_reliability.png}
 \caption{Reliability diagram of choice-answer confidence under the
 self-consistency proxy, measured by
 \protect\breaktt{benchmarks/bench\_calibration.py} over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5
 repeats against the jev-latest model on 2026-09-16. Each point is a
 confidence bucket plotting mean reported confidence against proxy
 accuracy, where proxy accuracy is agreement with the modal choice across
-repeats. Because the proxy scores self-agreement rather than verified
-correctness, the diagonal indicates consistency between stated
-confidence and repeat-stable behaviour --- not
-truthfulness.}\label{fig:calibration}
+repeats of the same state; the dashed diagonal marks perfect agreement
+between stated confidence and observed proxy accuracy. Because the proxy
+scores self-agreement rather than verified correctness, proximity to the
+diagonal indicates consistency between stated confidence and
+repeat-stable behaviour --- not truthfulness about the world. Aggregate
+scores are tabulated in
+tbl.~\ref{tbl:calibration}.}\label{fig:calibration}
 \end{figure}
 
 The expected calibration error of 0.0730 and the Brier score of 0.0252
@@ -987,26 +1195,28 @@ tbl.~\ref{tbl:batching} confirm that the parallel-sampler semantics
 translate directly into wall-clock savings: the batched strategy is
 faster at every configured width, and the gap widens with width exactly
 as the round-trip accounting predicts. Second, the token-cost ratio
-below unity at the widest width shows that batching is not merely faster
-but cheaper, because the state is transmitted once --- so the pattern
-documented in the primary source \citep{typesafe2026patterns} holds end
-to end for a third-party client implementation. Third, the pipeline
-latencies in tbl.~\ref{tbl:latency} sit within the model's
-millisecond-scale latency envelope (sec.~\ref{sec:jev_model}): the
-pure-logic composition layer adds no measurable latency beyond the
-network round trip, which is precisely what allows confidence-gated
-routing to run inline on interactive request paths rather than in a
-background queue. Fourth, the calibration summary in
-tbl.~\ref{tbl:calibration} supports the calibrated-decision premise of
-the confidence-gated patterns described in sec.~\ref{sec:methodology}
---- reported choice confidence aligns with repeat-stable behaviour, and
-noul answers are stable across repeats --- under the self-consistency
-proxy semantics stated in the Calibration section, and only as far as
-those semantics extend.
+above unity at the widest width --- the sequential strategy's token
+consumption relative to the batched call's --- shows that batching is
+not merely faster but cheaper, because the state is transmitted once ---
+so the pattern documented in the primary source
+\citep{typesafe2026patterns} holds end to end for a third-party client
+implementation. Third, the pipeline latencies in tbl.~\ref{tbl:latency}
+sit within the model's millisecond-scale latency envelope
+(sec.~\ref{sec:jev_model}): the pure-logic composition layer adds no
+measurable latency beyond the network round trip, which is precisely
+what allows confidence-gated routing to run inline on interactive
+request paths rather than in a background queue. Fourth, the calibration
+summary in tbl.~\ref{tbl:calibration} supports the calibrated-decision
+premise of the confidence-gated patterns described in
+sec.~\ref{sec:methodology} --- reported choice confidence aligns with
+repeat-stable behaviour, and noul answers are stable across repeats ---
+under the self-consistency proxy semantics stated in the Calibration
+section, and only as far as those semantics extend.
 
 \newpage
 
-\section{Experimental Setup}\label{sec:experimental_setup}
+\section{Experimental Setup: Live-API Benchmark Protocol, Environment,
+and Data Provenance}\label{sec:experimental_setup}
 
 This section records the environment, configuration, and measurement
 protocol behind the results in sec.~\ref{sec:results}, so that the runs
@@ -1014,7 +1224,7 @@ can be reproduced bit-for-bit in intent.
 
 \subsection{Software environment}\label{software-environment}
 
-All measurements were taken with daf-jev version 0.2.0, running under
+All measurements were taken with daf-jev version 0.3.0, running under
 3.14.6 on the platform reported as
 \breaktt{macOS-26.6.2-arm64-arm-64bit-Mach-O}. The package targets Python
 3.10 or newer and depends, at runtime, only on \texttt{httpx} for
@@ -1087,7 +1297,7 @@ the numbers in tbl.~\ref{tbl:latency} are conservative upper bounds on
 what an integrating application would add to its request path. Token
 totals are read from the response usage records, not estimated.
 
-This manuscript was generated at 2026-09-17T01:36:24Z; the rendered
+This manuscript was generated at 2026-09-17T17:07:41Z; the rendered
 values in sec.~\ref{sec:results} correspond to the benchmark JSONs
 current at that timestamp, and the figure generators resolve ``latest''
 the same way (latest by filename date) so that re-rendering after a new
@@ -1095,7 +1305,8 @@ benchmark run updates prose, tables, and figures together.
 
 \newpage
 
-\section{Reproducibility Certification}\label{sec:reproducibility}
+\section{Reproducibility: Hashed Snapshots, Figure Registry, and
+Machine-Checked Provenance}\label{sec:reproducibility}
 
 Every artifact behind this manuscript --- figures, tables, token values,
 and the documentation snapshot the model claims rest on --- is
@@ -1108,7 +1319,7 @@ hashing}\label{artifact-inventory-and-hashing}
 
 \begin{itemize}
 \item
-  \textbf{Figures.} The six figures of this manuscript are generated
+  \textbf{Figures.} The seven figures of this manuscript are generated
   into \texttt{../figures/} by \breaktt{src/daf\_jev/figures.py} (one
   \texttt{generate\_\textless{}name\textgreater{}()} function per figure
   plus \breaktt{generate\_all(out\_dir)}), orchestrated by
@@ -1127,15 +1338,19 @@ hashing}\label{artifact-inventory-and-hashing}
   \breaktt{output/benchmarks/calibration\_*.json}, resolving ``latest''
   by filename date; a missing benchmark file is reported as a clear
   error naming the missing file rather than silently producing an empty
-  chart. The two schematic figures and the parametric confidence-band
-  illustration require no data and no network.
+  chart. The same rule applies to the graphical abstract of
+  sec.~\ref{sec:abstract}, which composes the latest batching, latency,
+  and calibration payloads into its live-outputs panel. The two
+  schematic figures and the parametric confidence-band illustration
+  require no data and no network.
 \item
   \textbf{Figure registry.} Every figure is recorded in
-  \breaktt{../figures/figure\_registry.json} --- six entries, one per
+  \breaktt{../figures/figure\_registry.json} --- seven entries, one per
   figure, each mapping the manuscript's cross-reference label
-  (\breaktt{fig:architecture} through \texttt{fig:calibration}) to its
-  filename, caption, section, and layout width --- so the figure set
-  itself is a versioned data artifact rather than a convention.
+  (\breaktt{fig:graphical\_abstract} plus \breaktt{fig:architecture}
+  through \texttt{fig:calibration}) to its filename, caption, section,
+  and layout width --- so the figure set itself is a versioned data
+  artifact rather than a convention.
 \item
   \textbf{Calibration benchmark payloads.} The calibration run writes
   \texttt{output/benchmarks/calibration\_\textless{}date\textgreater{}.json}
@@ -1178,7 +1393,7 @@ hashing}\label{artifact-inventory-and-hashing}
 The test suite follows the no-mock convention: unit tests drive the real
 transport against a real local HTTP server fixture, and live tests hit
 the real API only when a key is present in the environment (they skip
-with a notice otherwise). The suite comprises 17 test files --- 256 unit
+with a notice otherwise). The suite comprises 17 test files --- 260 unit
 tests and 2 live tests --- collected with:
 
 \begin{Shaded}
@@ -1188,7 +1403,7 @@ tests and 2 live tests --- collected with:
 \end{Highlighting}
 \end{Shaded}
 
-Measured coverage over the package source stands at 92.16, enforced by
+Measured coverage over the package source stands at 91.73, enforced by
 the coverage gate configured in \texttt{pyproject.toml}. Test and
 collection counts are computed at variable-generation time by collecting
 the suite; if collection is unavailable in a given environment, the
@@ -1206,16 +1421,17 @@ injection step substitutes tokens into \breaktt{output/manuscript/*.md} \texorpd
 the renderer consumes the substituted copies. No numeric fact in this
 paper has a hand-maintained copy; the environment of record is
 \breaktt{macOS-26.6.2-arm64-arm-64bit-Mach-O} under 3.14.6, and the
-rendered edition is version 0.2.0 of this manuscript, generated at
-2026-09-17T01:36:24Z.
+rendered edition is version 0.3.0 of this manuscript, generated at
+2026-09-17T17:07:41Z.
 
 \newpage
 
-\section{Scope, Related Work, and Positioning}\label{sec:scope}
+\section{Scope, Limitations, and Related Work: Early-Access Model, Proxy
+Metrics, and the Structured-Decision Landscape}\label{sec:scope}
 
 \subsection{Scope and limitations}\label{scope-and-limitations}
 
-This manuscript describes an early, private sidecar package, and three
+This manuscript describes an early, rapidly evolving package, and four
 caveats bound every claim in it.
 
 \textbf{Single-model measurements.} All benchmarks in
@@ -1245,10 +1461,14 @@ upstream, and the \texttt{docs-verify} command plus a re-scrape
 absorbing such changes. Behavior not covered by the snapshot is
 implemented as a stated assumption rather than a verified fact.
 
-\textbf{Private sidecar status.} This project is a private sidecar of
-the surrounding research infrastructure: it is versioned and licensed
-(MIT) for its own reproducibility, but it makes no archival deposit
-claims and carries no DOI.
+\textbf{Early-release status.} The package is published for
+reproducibility and reuse --- the source is versioned, MIT-licensed, and
+mirrored in a public repository, and this manuscript's edition carries a
+versioned archival deposit alongside it --- but it remains an early
+release of a tool built against an early-access model surface. The DOI
+of record identifies the concept of this deposit; individual editions
+are versioned beneath it, and the caveats above travel with every
+edition.
 
 \subsection{Related work}\label{related-work}
 

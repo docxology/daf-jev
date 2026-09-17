@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.22)  16 SEP 2026 18:36
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.22)  17 SEP 2026 10:08
 entering extended mode
  %&-line parsing enabled.
 **_combined_manuscript.tex
@@ -1574,6 +1574,14 @@ nslations-basic-dictionary')
 )
 Package translations Info: loading dictionary `translations-basic-dictionary' f
 or `english'. on input line 248.
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `lmss' (encoding: TU).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/m/n' will be
+(Font)              scaled to size 7.05267pt on input line 258.
+File: ../figures/graphical_abstract.png Graphic file (type bmp)
+<../figures/graphical_abstract.png>
  [1
 
 ] (./_combined_manuscript.toc
@@ -1614,34 +1622,43 @@ File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 \openout4 = `_combined_manuscript.toc'.
 
  [1]
+File: ../figures/graphical_abstract.png Graphic file (type bmp)
+<../figures/graphical_abstract.png>
 LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/m/n' will be
-(Font)              scaled to size 7.8363pt on input line 276.
+(Font)              scaled to size 7.8363pt on input line 293.
 
 [2] [3]
 LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/b/n' will be
-(Font)              scaled to size 7.8363pt on input line 447.
+(Font)              scaled to size 7.8363pt on input line 499.
  [4] [5]
 File: ../figures/architecture.png Graphic file (type bmp)
 <../figures/architecture.png>
 File: ../figures/primitives_overview.png Graphic file (type bmp)
 <../figures/primitives_overview.png>
- [6] [7]
+ [6]
 File: ../figures/confidence_bands.png Graphic file (type bmp)
 <../figures/confidence_bands.png>
- [8] [9]
+ [7] [8]
+Underfull \hbox (badness 1259) in paragraph at lines 823--833
+\TU/lmr/m/n/10 and one or more \TU/JuliaMono-Regular(0)/m/n/10 --question ID=SP
+EC \TU/lmr/m/n/10 flags build the question set from a compact grammar (\TU/Juli
+aMono-Regular(0)/m/n/10 noul:<instructions>\TU/lmr/m/n/10 ,
+ []
+
+[9] [10]
 File: ../figures/batching_speedup.png Graphic file (type bmp)
 <../figures/batching_speedup.png>
- [10]
+ [11]
 File: ../figures/latency_percentiles.png Graphic file (type bmp)
 <../figures/latency_percentiles.png>
- [11]
+ [12]
 File: ../figures/calibration_reliability.png Graphic file (type bmp)
 <../figures/calibration_reliability.png>
- [12] [13]
+ [13] [14]
 LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/m/it' will be
-(Font)              scaled to size 7.8363pt on input line 1119.
- [14] [15]
-(./_combined_manuscript.bbl) [16] (./_combined_manuscript.aux
+(Font)              scaled to size 7.8363pt on input line 1330.
+ [15] [16] (./_combined_manuscript.bbl) [17]
+(./_combined_manuscript.aux
 Package cleveref Info: loaded `english' language definitions on input line 9.
 )
  ***********
@@ -1650,12 +1667,12 @@ L3 programming layer <2026-01-19>
  ***********
  )
 Here is how much of TeX's memory you used:
- 30212 strings out of 468168
- 609184 string characters out of 5432815
- 1224580 words of memory out of 5000000
- 58598 multiletter control sequences out of 15000+600000
- 630258 words of font info for 78 fonts, out of 8000000 for 9000
+ 30292 strings out of 468168
+ 611808 string characters out of 5432815
+ 1226624 words of memory out of 5000000
+ 58667 multiletter control sequences out of 15000+600000
+ 630306 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 90i,9n,117p,1040b,1071s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,9n,117p,1347b,1066s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on _combined_manuscript.pdf (17 pages).
+Output written on _combined_manuscript.pdf (18 pages).
