@@ -1,4 +1,9 @@
 # daf-jev
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![v0.3.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.3.0-1F77B4)](https://zenodo.org/records/22817425)
+
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
 (System One) API**. One HTTP endpoint, three question primitives, and a set of
@@ -42,6 +47,28 @@ reproducible manuscript pipeline.
 
 Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` for
 figures). Managed with `uv`.
+
+## How a decision flows
+
+```mermaid
+flowchart LR
+    S["state<br/>(text / JSON)"] --> Q["typed questions<br/>noul · choice · score"]
+    Q --> C["JevClient / AsyncJevClient<br/>POST /v1/systemone"]
+    C --> A["typed answers<br/>probability · distribution · rubric"]
+    A --> P["compose layer<br/>composite_score · confidence_gate · route/pick"]
+    P --> G{"tiered_gate"}
+    G -- "≥ high" --> AUTO["automate"]
+    G -- "between" --> REV["human review"]
+    G -- "< low" --> ESC["escalate"]
+    A --> EV["Evaluator<br/>batch over many states"]
+    EV --> CAL["calibration<br/>ECE · Brier · reliability"]
+```
+
+The batched call carries *all* questions at once — live benchmarks show it
+running up to ~18× faster than sequential single-question calls while the
+sequential strategy consumes ~4× more tokens (see
+[Tests and benchmarks](#tests-and-benchmarks)).
+
 
 ## Quickstart
 
@@ -165,7 +192,23 @@ runtime error.
 
 `daf-jev serve` runs the toolkit as a Model Context Protocol (MCP) server
 over stdio — the default and only supported transport. The server needs the
-official `mcp` SDK, shipped in the optional `mcp` dependency group:
+official `mcp` SDK, shipped in the optional `mcp` dependency group. Every
+surface below calls the same core; there is no second implementation:
+
+```mermaid
+flowchart TB
+    subgraph CORE["daf-jev core"]
+        CLI["CLI<br/>ask · evaluate · models · docs-verify"]
+        MCP["MCP server (stdio)<br/>jev_ask · jev_evaluate · jev_models<br/>jev_composite_score · jev_confidence_gate<br/>jev_tiered_gate · jev_docs_verify"]
+        SKILL["agent skill<br/>skills/daf-jev/SKILL.md"]
+        EX["examples/<br/>4 runnable scripts"]
+    end
+    CLI --> K["JevClient / compose / calibration"]
+    MCP --> K
+    SKILL --> K
+    EX --> K
+    K --> API["TypeSafe Jev API<br/>POST /v1/systemone"]
+```
 
 ```bash
 uv sync --extra mcp
@@ -303,8 +346,6 @@ mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
 
-## Release and citation
-
 v0.3.0 is published on Zenodo (deposit 22816188, released 2026-09-17) and
 mirrored to the public repository at
 [github.com/docxology/daf-jev](https://github.com/docxology/daf-jev).
@@ -316,6 +357,9 @@ mirrored to the public repository at
 - **v0.3.0 version record**: https://zenodo.org/records/22816188
   (version DOI `10.5281/zenodo.22816188`)
 - **Public repository**: https://github.com/docxology/daf-jev
+- **Rendered manuscript PDF**: [`daf-jev_combined.pdf`](daf-jev_combined.pdf)
+  at the repo root (regenerated to `output/pdf/daf-jev_combined.pdf` by the
+  template render pipeline; the root copy is refreshed at each release).
 - Machine-readable release metadata: [`CITATION.cff`](CITATION.cff) and
   [`.zenodo.json`](.zenodo.json) at the repo root.
 
