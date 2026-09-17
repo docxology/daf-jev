@@ -1,0 +1,67 @@
+{
+  "algorithm": "shared-combined-markdown-v1",
+  "binding_sha256": "b16e0ed8fc4bf13b520d7b61c979488a0d686985a0cfbf80490e17dad94e92a9",
+  "combined_path": "output/web/_combined_manuscript.md",
+  "combined_sha256": "3ce8d2a8e3fb7f95bb71311cdcde2cb2db73f2969b51ac8e8b54e07d40372be1",
+  "combined_size_bytes": 38113,
+  "input_root_kind": "hydrated",
+  "ordered_inputs": [
+    {
+      "ordinal": 1,
+      "path": "output/manuscript/00_abstract.md",
+      "sha256": "fe7a57999ebbd4cce1a0ffc41ed26fc8884a4ce925af8626363688bfc7145fad",
+      "size_bytes": 1758
+    },
+    {
+      "ordinal": 2,
+      "path": "output/manuscript/01_introduction.md",
+      "sha256": "4bc56780a44cc3641f8ba832f118c157038c4146970b5fc9974b8d38309b6796",
+      "size_bytes": 4388
+    },
+    {
+      "ordinal": 3,
+      "path": "output/manuscript/02_the_jev_model.md",
+      "sha256": "91feec8978efbb487e429a9a198f14fd042e6b8007588ad8d6311e88c693427a",
+      "size_bytes": 6148
+    },
+    {
+      "ordinal": 4,
+      "path": "output/manuscript/03_methodology.md",
+      "sha256": "7562bfa998b46ab99a1c47f018c9526de82445d96e3e331e11efda4588db74aa",
+      "size_bytes": 7756
+    },
+    {
+      "ordinal": 5,
+      "path": "output/manuscript/04_results.md",
+      "sha256": "6e6a6243f9f09187ed30261a2360318028dc6563f47bfe8a078b25dfe4d1b90e",
+      "size_bytes": 5501
+    },
+    {
+      "ordinal": 6,
+      "path": "output/manuscript/05_experimental_setup.md",
+      "sha256": "3a10e8cd7236b8e6da5820aa0a5dc7baa79bdb039ff9acfa98b83fdd4c7e18e3",
+      "size_bytes": 3481
+    },
+    {
+      "ordinal": 7,
+      "path": "output/manuscript/06_reproducibility.md",
+      "sha256": "a4236a9bd46834a585f133a8106281c0588669002f88df2df9350b4c0f2bb88d",
+      "size_bytes": 3789
+    },
+    {
+      "ordinal": 8,
+      "path": "output/manuscript/07_scope_and_related_work.md",
+      "sha256": "7da8f6ae85308a686fa2b8583a0971aefcff07d25f2bb6e2e127d0f1c9367c0b",
+      "size_bytes": 4358
+    },
+    {
+      "ordinal": 9,
+      "path": "output/manuscript/99_references.md",
+      "sha256": "797d001917c65c41fc592052414017587b564e4aaee98dccd5876ef048bd030c",
+      "size_bytes": 737
+    }
+  ],
+  "ordered_inputs_sha256": "13fcdf372d698b9acf9d58dafc649dbbc08ec41244bdd1b2138fd45389b1c324",
+  "project": "ongoing/daf-jev",
+  "schema_version": "template-manuscript-composition-v1"
+}

@@ -1,0 +1,54 @@
+{
+  "name": "batching",
+  "date": "2026-09-16",
+  "model": "jev-latest",
+  "runs": 2,
+  "state_chars": 544,
+  "results": [
+    {
+      "n": 5,
+      "batched": {
+        "mean_wall_s": 0.1906,
+        "input_tokens": 1444,
+        "output_tokens": 310
+      },
+      "single": {
+        "mean_total_wall_s": 0.7592,
+        "input_tokens": 4564,
+        "output_tokens": 340
+      },
+      "speedup_ratio": 3.983,
+      "token_cost_ratio": 2.796
+    },
+    {
+      "n": 10,
+      "batched": {
+        "mean_wall_s": 0.1694,
+        "input_tokens": 2032,
+        "output_tokens": 544
+      },
+      "single": {
+        "mean_total_wall_s": 1.4846,
+        "input_tokens": 9052,
+        "output_tokens": 610
+      },
+      "speedup_ratio": 8.765,
+      "token_cost_ratio": 3.751
+    },
+    {
+      "n": 20,
+      "batched": {
+        "mean_wall_s": 0.1646,
+        "input_tokens": 3472,
+        "output_tokens": 1168
+      },
+      "single": {
+        "mean_total_wall_s": 3.0532,
+        "input_tokens": 18292,
+        "output_tokens": 1308
+      },
+      "speedup_ratio": 18.554,
+      "token_cost_ratio": 4.224
+    }
+  ]
+}

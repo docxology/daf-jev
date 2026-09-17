@@ -1,0 +1,77 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Claburn(2026)]{register2026jev}
+Thomas Claburn.
+\newblock Typesafe ai debuts model for machines that plays doom, 9 2026.
+\newblock URL
+  \url{https://www.theregister.com/ai-and-ml/2026/09/16/typesafe-ai-debuts-model-for-machines-that-plays-doom/5296711}.
+\newblock Independent coverage: USD 40M funding, latency/pricing corroboration,
+  Jevons-paradox naming, and skepticism about the "hallucination-free" framing.
+
+\bibitem[Corvin(2026)]{orcarouter2026jev}
+Magnus Corvin.
+\newblock Jev refuses to write a single word: What typesafe ai's decision model
+  does, and what nobody has verified yet, 9 2026.
+\newblock URL
+  \url{https://www.orcarouter.ai/blog/jev-typesafe-system-one-what-we-know}.
+\newblock Independent analysis sorting vendor-claimed vs independently measured
+  numbers; recounts Every's tests; proposes the diagonal calibration-curve
+  audit method.
+
+\bibitem[Morales(2026)]{elsolitario2026jev}
+Andr\'es Morales.
+\newblock Typesafe ai's jev: The model that decides without text, 9 2026.
+\newblock URL
+  \url{https://elsolitario.org/en/2026/09/16/typesafe-ai-jev-structured-decision-model/}.
+\newblock Independent analysis: RLHF/RLVR-vs-RLCD framing, autoregressive-vs-
+  parallel sampling explanation, launch timeline, and caveats on vendor-run
+  benchmarks and pricing sustainability.
+
+\bibitem[{TypeSafe AI}(2026{\natexlab{a}})]{typesafe2026apidocs}
+{TypeSafe AI}.
+\newblock Api reference, 2026{\natexlab{a}}.
+\newblock URL \url{https://docs.typesafe.ai/api.md}.
+\newblock HTTP API for POST /v1/systemone: request/response shapes, the three
+  answer types, usage tokens, and error/retry semantics. Verified against local
+  snapshot docs/reference/api.md (snapshot id b79c9cd6008489f1).
+
+\bibitem[{TypeSafe AI}(2026{\natexlab{b}})]{typesafe2026confidence}
+{TypeSafe AI}.
+\newblock Confidence, 2026{\natexlab{b}}.
+\newblock URL \url{https://docs.typesafe.ai/confidence.md}.
+\newblock How confidence is derived from the probability distribution; the
+  three-band act/caution/escalate pattern; risk-scaled thresholds. Verified
+  against local snapshot docs/reference/confidence.md (snapshot id
+  b79c9cd6008489f1).
+
+\bibitem[{TypeSafe AI}(2026{\natexlab{c}})]{typesafe2026patterns}
+{TypeSafe AI}.
+\newblock Patterns, 2026{\natexlab{c}}.
+\newblock URL \url{https://docs.typesafe.ai/patterns.md}.
+\newblock Composable patterns for building systems on System One models, e.g.
+  confidence routing and composite scoring. Verified against local snapshot
+  docs/reference/patterns/ (snapshot id b79c9cd6008489f1).
+
+\bibitem[{TypeSafe AI}(2026{\natexlab{d}})]{typesafe2026systemone}
+{TypeSafe AI}.
+\newblock Introducing system one models \& jev, 9 2026{\natexlab{d}}.
+\newblock URL
+  \url{https://typesafe.ai/blog/introducing-system-one-models-and-jev}.
+\newblock Launch post by Diogo Almeida announcing System One models, Jev, the
+  parallel-sampler architecture, RLCD training, latency/cost envelope, and
+  early access. Canonical key: typesafe2026systemone.
+
+\bibitem[{TypeSafe AI}(2026{\natexlab{e}})]{typesafe2026systemoneconcept}
+{TypeSafe AI}.
+\newblock System one, 2026{\natexlab{e}}.
+\newblock URL \url{https://docs.typesafe.ai/concepts/system-one.md}.
+\newblock Verified against the local snapshot
+  docs/reference/concepts/system-one.md (snapshot id b79c9cd6008489f1, scraped
+  2026-09-16T21:19:06Z).
+
+\end{thebibliography}

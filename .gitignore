@@ -1,0 +1,16 @@
+.coverage
+.coverage.*
+.pytest_cache/
+__pycache__/
+*.pyc
+.benchmarks/
+**/*.egg-info/
+.venv/
+htmlcov/
+coverage_project.json
+.DS_Store
+.mypy_cache/
+.ruff_cache/
+
+# Secrets — never commit or publish the sidecar lane anyway (local-only), but keep the key out of any future snapshot.
+.env

@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daf-jev"
+version = "0.1.0"
+license = {text = "MIT"}
+description = "Modular, composable Python client and decision toolkit for the TypeSafe Jev (System One) API"
+authors = [
+    {name = "docxology"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.3.0",
+    "matplotlib>=3.7",
+]
+figures = [
+    "matplotlib>=3.7",
+]
+bench = [
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+daf-jev = "daf_jev.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: subprocess and full-pipeline integration checks kept for release profiles",
+    "live: requires JEV_API_KEY and network access; skipped when the key is absent",
+]
+timeout = 120
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "tests/*",
+    "*/__init__.py",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+# >=90% on src/ is the enforced gate (template_code_project convention).
+fail_under = 90
+show_missing = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

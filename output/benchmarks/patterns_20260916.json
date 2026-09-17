@@ -1,0 +1,28 @@
+{
+  "name": "patterns",
+  "date": "2026-09-16",
+  "model": "jev-latest",
+  "runs": 6,
+  "composite_score_pipeline": {
+    "runs": 6,
+    "mean_s": 0.1541,
+    "p50_s": 0.1334,
+    "p95_s": 0.2419,
+    "tokens": 2712,
+    "last_decision": {
+      "composite": 2.62,
+      "gate": "Excellent: specific, complete, and actionable."
+    }
+  },
+  "intent_routing": {
+    "runs": 6,
+    "mean_s": 0.1283,
+    "p50_s": 0.1292,
+    "p95_s": 0.1518,
+    "tokens": 2658,
+    "last_decision": {
+      "choice": "billing",
+      "routed": "handler:billing"
+    }
+  }
+}

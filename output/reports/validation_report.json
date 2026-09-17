@@ -1,0 +1,291 @@
+{
+  "timestamp": "2026-09-16T23:53:29Z",
+  "checks": {
+    "PDF validation": true,
+    "Transmission bookends": true,
+    "Enabled render outputs": true,
+    "Markdown validation": true,
+    "Output structure": true,
+    "Figure registry": true,
+    "Evidence registry": true,
+    "Project design overlays": true,
+    "Artifact manifest": true,
+    "Rendered provenance inputs": false
+  },
+  "figure_issues": [],
+  "output_statistics": {
+    "detailed_validation": {
+      "structure": {
+        "valid": true,
+        "issues": [],
+        "missing_files": [],
+        "suspicious_sizes": [],
+        "warnings": [],
+        "directory_structure": {
+          "combined_pdf": {
+            "exists": true,
+            "size_mb": 0.47,
+            "readable": true
+          },
+          "pdf": {
+            "exists": true,
+            "files": 1,
+            "size_mb": 0.47,
+            "readable": true,
+            "optional": false,
+            "required": true
+          },
+          "web": {
+            "exists": true,
+            "files": 1,
+            "size_mb": 0.04,
+            "readable": true,
+            "optional": false,
+            "required": false
+          },
+          "slides": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": false,
+            "required": false
+          },
+          "docx": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": true,
+            "required": false
+          },
+          "epub": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": true,
+            "required": false
+          },
+          "figures": {
+            "exists": true,
+            "files": 6,
+            "size_mb": 0.36,
+            "readable": true,
+            "optional": false,
+            "required": true
+          },
+          "data": {
+            "exists": true,
+            "files": 1,
+            "size_mb": 0.0,
+            "readable": true,
+            "optional": false,
+            "required": true
+          },
+          "reports": {
+            "exists": true,
+            "files": 1,
+            "size_mb": 0.0,
+            "readable": true,
+            "optional": false,
+            "required": true
+          },
+          "simulations": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": true,
+            "required": false
+          },
+          "llm": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": true,
+            "required": false
+          },
+          "logs": {
+            "exists": false,
+            "files": 0,
+            "size_mb": 0.0,
+            "optional": true,
+            "required": false
+          },
+          "benchmarks": {
+            "exists": true,
+            "files": 2,
+            "size_mb": 0.0,
+            "readable": true,
+            "optional": false,
+            "required": true
+          },
+          "manuscript": {
+            "exists": true,
+            "files": 12,
+            "size_mb": 0.05,
+            "readable": true,
+            "optional": false,
+            "required": true
+          }
+        },
+        "inventory_mode": "stable-local-output-v1"
+      },
+      "directories": {
+        "pdf": {
+          "exists": true,
+          "file_count": 1,
+          "size_mb": "0.47",
+          "largest_file": "daf-jev_combined.pdf",
+          "largest_file_path": "pdf/daf-jev_combined.pdf"
+        },
+        "web": {
+          "exists": true,
+          "file_count": 1,
+          "size_mb": "0.04",
+          "largest_file": "_combined_manuscript.md",
+          "largest_file_path": "web/_combined_manuscript.md"
+        },
+        "slides": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "docx": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "epub": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "figures": {
+          "exists": true,
+          "file_count": 6,
+          "size_mb": "0.36",
+          "largest_file": "architecture.png",
+          "largest_file_path": "figures/architecture.png"
+        },
+        "data": {
+          "exists": true,
+          "file_count": 1,
+          "size_mb": "0.00",
+          "largest_file": "manuscript_variables.json",
+          "largest_file_path": "data/manuscript_variables.json"
+        },
+        "reports": {
+          "exists": true,
+          "file_count": 1,
+          "size_mb": "0.00",
+          "largest_file": "manuscript_composition.json",
+          "largest_file_path": "reports/manuscript_composition.json"
+        },
+        "simulations": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "llm": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "logs": {
+          "exists": false,
+          "file_count": 0,
+          "size_mb": "0.00"
+        },
+        "benchmarks": {
+          "exists": true,
+          "file_count": 2,
+          "size_mb": "0.00",
+          "largest_file": "batching_20260916.json",
+          "largest_file_path": "benchmarks/batching_20260916.json"
+        },
+        "manuscript": {
+          "exists": true,
+          "file_count": 12,
+          "size_mb": "0.05",
+          "largest_file": "references.bib",
+          "largest_file_path": "manuscript/references.bib"
+        }
+      },
+      "file_counts": {
+        "pdf": 1,
+        "web": 1,
+        "figures": 6,
+        "data": 1,
+        "reports": 1,
+        "benchmarks": 2,
+        "manuscript": 12
+      },
+      "total_size_mb": 0.9165868759155273,
+      "issues_by_severity": {
+        "critical": [],
+        "warning": [],
+        "info": []
+      },
+      "recommendations": [],
+      "inventory_mode": "stable-local-output-v1"
+    },
+    "inventory_mode": "stable-local-output-v1",
+    "stable_inventory": {
+      "mode": "stable-local-output-v1",
+      "total_files": 24,
+      "total_size_bytes": 961111,
+      "categories": {
+        "benchmarks": {
+          "files": 2,
+          "size_bytes": 1680
+        },
+        "data": {
+          "files": 1,
+          "size_bytes": 1966
+        },
+        "figures": {
+          "files": 6,
+          "size_bytes": 374412
+        },
+        "manuscript": {
+          "files": 12,
+          "size_bytes": 51653
+        },
+        "pdf": {
+          "files": 1,
+          "size_bytes": 490957
+        },
+        "reports": {
+          "files": 1,
+          "size_bytes": 2330
+        },
+        "web": {
+          "files": 1,
+          "size_bytes": 38113
+        }
+      }
+    },
+    "pdf": {
+      "files": 1,
+      "size_mb": 0.4682130813598633
+    },
+    "figures": {
+      "files": 6,
+      "size_mb": 0.3570671081542969
+    },
+    "data": {
+      "files": 1,
+      "size_mb": 0.0018749237060546875
+    },
+    "rendered_provenance_issue": {
+      "code": "PROJECT_SOURCE_MISSING",
+      "message": "no cached project source files found"
+    }
+  },
+  "summary": {
+    "total_checks": 10,
+    "passed": 9,
+    "failed": 1,
+    "figure_issues_count": 0,
+    "all_passed": false
+  },
+  "recommendations": []
+}

@@ -1,0 +1,21 @@
+# Scope, Related Work, and Positioning {#sec:scope}
+
+## Scope and limitations
+
+This manuscript describes an early, private sidecar package, and three caveats bound every claim in it.
+
+**Single-model measurements.** All benchmarks in [@sec:results] were recorded against the {{BENCH_MODEL}} model at the configuration described in [@sec:experimental_setup]. The package accepts a per-call model override, but nothing here characterizes how the speedups, token ratios, or latency percentiles transfer across models or across provider-side changes to the same model; re-running the two benchmark scripts against another setting is the intended way to extend the measurements, and the render-time token pipeline picks up the new payloads automatically.
+
+**Live-API variance.** The measurements are wall-clock observations of a shared remote service. Run-to-run variation from network conditions and provider load is inherent; the percentile protocol in [@sec:experimental_setup] reports medians and tails rather than single samples, but the values should be read as representative of a healthy session, not as service-level guarantees.
+
+**Early-access documentation basis.** The model-level claims in [@sec:jev_model] rest on a hash-manifested snapshot of the vendor's documentation (snapshot {{DOCS_SNAPSHOT_ID}}) rather than on the vendor's release process. The package documents an early-access surface: wire shapes, model identifiers, and documented patterns can change upstream, and the `docs-verify` command plus a re-scrape ([@sec:reproducibility]) is the mechanism for detecting and absorbing such changes. Behavior not covered by the snapshot is implemented as a stated assumption rather than a verified fact.
+
+**Private sidecar status.** This project is a private sidecar of the surrounding research infrastructure: it is versioned and licensed (MIT) for its own reproducibility, but it makes no archival deposit claims and carries no DOI.
+
+## Related work
+
+**Structured output from generative LLMs.** The mainstream approach to software-consumable model answers is constrained decoding: JSON-schema-constrained generation, function calling, and post-hoc validators over generated text. These techniques constrain the *syntax* of free-text generation but inherit its semantics — a well-formed JSON payload can still encode an overconfident or miscalibrated judgment, and nothing in the decoding contract expresses uncertainty as calibrated probability. The decision-model approach of [@sec:jev_model] differs at the training level: RLCD optimizes for decisions and calibrated probabilities as the output contract itself [@typesafe2026systemoneconcept], rather than for text that a schema hopes to bound.
+
+**RLHF versus RLCD.** RLHF and its verifiable-reward variants adapt a pretrained model by optimizing text quality against human preferences or checkable rewards. RLCD instead optimizes a different output contract — decisions with calibrated probability distributions — which is what makes the confidence field of a `choice` or `score` answer a trustworthy input to routing policy rather than a stylistic flourish [@typesafe2026systemoneconcept; @typesafe2026confidence]. The distinction matters practically: confidence-gated routing ([@sec:methodology]) is only sound if the confidence numbers are calibrated, which is a training-time property, not a prompt-time one.
+
+**Agent decision layers.** Where agent frameworks place the model *in* the control loop — the model chooses its next action — the System One placement is the inverse: code owns control flow and the model supplies atomic judgments at fixed points [@typesafe2026systemone]. Third-party projects in the Jev ecosystem explore this decision-layer space from adjacent angles: an architectural registry for composing Jev-style components [@register2026jev], a router that orchestrates decision calls across application workflows [@orcarouter2026jev], and a standalone evaluation harness for Jev question sets [@elsolitario2026jev]. {{PACKAGE_NAME}} is complementary rather than competitive: it contributes a dependency-light, strictly typed *client and composition library* — the tested plumbing layer these efforts can sit on — together with measured evidence for the batching and confidence-routing patterns the ecosystem's documentation describes qualitatively [@typesafe2026patterns].

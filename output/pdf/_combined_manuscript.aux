@@ -1,0 +1,169 @@
+\relax
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\bibstyle{plainnat}
+\HyPL@Entry{0<</S/D>>}
+\providecommand \oddpage@label [2]{}
+\babel@aux{english}{}
+\HyPL@Entry{1<</S/D>>}
+\citation{typesafe2026systemone,typesafe2026systemoneconcept}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Abstract}{2}{section.1}\protected@file@percent }
+\newlabel{sec:abstract}{{1}{2}{Abstract}{section.1}{}}
+\newlabel{sec:abstract@cref}{{[section][1][]1}{[1][2][]2}{}{}{}}
+\citation{typesafe2026systemone}
+\citation{typesafe2026systemoneconcept}
+\citation{register2026jev}
+\citation{orcarouter2026jev}
+\citation{elsolitario2026jev}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Introduction}{3}{section.2}\protected@file@percent }
+\newlabel{sec:introduction}{{2}{3}{Introduction}{section.2}{}}
+\newlabel{sec:introduction@cref}{{[section][2][]2}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}The problem this package solves}{3}{subsection.2.1}\protected@file@percent }
+\newlabel{the-problem-this-package-solves}{{2.1}{3}{The problem this package solves}{subsection.2.1}{}}
+\newlabel{the-problem-this-package-solves@cref}{{[subsection][1][2]2.1}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Reader's guide}{3}{subsection.2.2}\protected@file@percent }
+\newlabel{readers-guide}{{2.2}{3}{Reader's guide}{subsection.2.2}{}}
+\newlabel{readers-guide@cref}{{[subsection][2][2]2.2}{[1][3][]3}{}{}{}}
+\citation{typesafe2026systemone}
+\citation{typesafe2026systemone}
+\citation{typesafe2026systemoneconcept}
+\citation{register2026jev}
+\citation{orcarouter2026jev}
+\citation{elsolitario2026jev}
+\citation{typesafe2026apidocs}
+\citation{typesafe2026systemone}
+\citation{typesafe2026patterns}
+\citation{typesafe2026systemone}
+\citation{typesafe2026systemoneconcept,typesafe2026confidence}
+\citation{typesafe2026confidence,typesafe2026patterns}
+\@writefile{toc}{\contentsline {section}{\numberline {3}The Jev (System One) Decision Model}{4}{section.3}\protected@file@percent }
+\newlabel{sec:jev_model}{{3}{4}{The Jev (System One) Decision Model}{section.3}{}}
+\newlabel{sec:jev_model@cref}{{[section][3][]3}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}A model class, not a chat endpoint}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{a-model-class-not-a-chat-endpoint}{{3.1}{4}{A model class, not a chat endpoint}{subsection.3.1}{}}
+\newlabel{a-model-class-not-a-chat-endpoint@cref}{{[subsection][1][3]3.1}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}One endpoint, three question primitives}{4}{subsection.3.2}\protected@file@percent }
+\newlabel{one-endpoint-three-question-primitives}{{3.2}{4}{One endpoint, three question primitives}{subsection.3.2}{}}
+\newlabel{one-endpoint-three-question-primitives@cref}{{[subsection][2][3]3.2}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Parallel, composable evaluation semantics}{4}{subsection.3.3}\protected@file@percent }
+\newlabel{parallel-composable-evaluation-semantics}{{3.3}{4}{Parallel, composable evaluation semantics}{subsection.3.3}{}}
+\newlabel{parallel-composable-evaluation-semantics@cref}{{[subsection][3][3]3.3}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}The latency envelope and calibration}{4}{subsection.3.4}\protected@file@percent }
+\newlabel{the-latency-envelope-and-calibration}{{3.4}{4}{The latency envelope and calibration}{subsection.3.4}{}}
+\newlabel{the-latency-envelope-and-calibration@cref}{{[subsection][4][3]3.4}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Methodology: Package Architecture}{6}{section.4}\protected@file@percent }
+\newlabel{sec:methodology}{{4}{6}{Methodology: Package Architecture}{section.4}{}}
+\newlabel{sec:methodology@cref}{{[section][4][]4}{[1][6][]6}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Package layer diagram for daf-jev. The CLI (\breaktt {src/daf\_jev/cli.py}) and the thin orchestration scripts (\texttt {scripts/}, \texttt {benchmarks/}) sit on the application layer; \texttt {compose.py} (pure decision patterns) and \texttt {primitives.py} (typed question builders and \texttt {QuestionSet}) form the logic layer over the wire dataclasses in \texttt {\_types.py}; \texttt {client.py} and \texttt {\_http.py} own the single transport to the System One endpoint, with \texttt {\_retry.py} and \texttt {\_errors.py} providing the pure retry policy and the typed exception hierarchy; \texttt {models.py}, \texttt {config.py}, and \texttt {evaluate.py} enter as side inputs and the batch harness respectively. Boxes are named modules only; no measured values appear in the diagram.}}{6}{figure.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:architecture}{{1}{6}{Package layer diagram for daf-jev. The CLI (\protect \breaktt {src/daf\_jev/cli.py}) and the thin orchestration scripts (\protect \texttt {scripts/}, \protect \texttt {benchmarks/}) sit on the application layer; \protect \texttt {compose.py} (pure decision patterns) and \protect \texttt {primitives.py} (typed question builders and \protect \texttt {QuestionSet}) form the logic layer over the wire dataclasses in \protect \texttt {\_types.py}; \protect \texttt {client.py} and \protect \texttt {\_http.py} own the single transport to the System One endpoint, with \protect \texttt {\_retry.py} and \protect \texttt {\_errors.py} providing the pure retry policy and the typed exception hierarchy; \protect \texttt {models.py}, \protect \texttt {config.py}, and \protect \texttt {evaluate.py} enter as side inputs and the batch harness respectively. Boxes are named modules only; no measured values appear in the diagram}{figure.caption.2}{}}
+\newlabel{fig:architecture@cref}{{[figure][1][]1}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Layered architecture}{6}{subsection.4.1}\protected@file@percent }
+\newlabel{layered-architecture}{{4.1}{6}{Layered architecture}{subsection.4.1}{}}
+\newlabel{layered-architecture@cref}{{[subsection][1][4]4.1}{[1][6][]6}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A \texttt {noul} question yields a calibrated yes/no probability; a \texttt {choice} question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a \texttt {score} question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only --- it carries no measured data.}}{7}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:primitives}{{2}{7}{The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A \protect \texttt {noul} question yields a calibrated yes/no probability; a \protect \texttt {choice} question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a \protect \texttt {score} question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only --- it carries no measured data}{figure.caption.3}{}}
+\newlabel{fig:primitives@cref}{{[figure][2][]2}{[1][6][]7}{}{}{}}
+\citation{typesafe2026patterns}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Typed primitives}{8}{subsection.4.2}\protected@file@percent }
+\newlabel{typed-primitives}{{4.2}{8}{Typed primitives}{subsection.4.2}{}}
+\newlabel{typed-primitives@cref}{{[subsection][2][4]4.2}{[1][6][]8}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Composable decision patterns}{8}{subsection.4.3}\protected@file@percent }
+\newlabel{composable-decision-patterns}{{4.3}{8}{Composable decision patterns}{subsection.4.3}{}}
+\newlabel{composable-decision-patterns@cref}{{[subsection][3][4]4.3}{[1][8][]8}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Parametric illustration of confidence-gated routing as implemented by \breaktt {confidence\_gate()} and \texttt {route()} in \breaktt {src/daf\_jev/compose.py}. The horizontal axis is the model-reported confidence on the unit interval; the three horizontal bands assign an action per confidence region --- automate, review, escalate. The boundary markers are annotated as example thresholds: they illustrate the band semantics and are not fitted or recommended values.}}{8}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:confidence}{{3}{8}{Parametric illustration of confidence-gated routing as implemented by \protect \breaktt {confidence\_gate()} and \protect \texttt {route()} in \protect \breaktt {src/daf\_jev/compose.py}. The horizontal axis is the model-reported confidence on the unit interval; the three horizontal bands assign an action per confidence region --- automate, review, escalate. The boundary markers are annotated as example thresholds: they illustrate the band semantics and are not fitted or recommended values}{figure.caption.4}{}}
+\newlabel{fig:confidence@cref}{{[figure][3][]3}{[1][8][]8}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Design rulings}{8}{subsection.4.4}\protected@file@percent }
+\newlabel{design-rulings}{{4.4}{8}{Design rulings}{subsection.4.4}{}}
+\newlabel{design-rulings@cref}{{[subsection][4][4]4.4}{[1][8][]8}{}{}{}}
+\citation{typesafe2026patterns}
+\gdef \LT@i {\LT@entry
+    {1}{93.92001pt}\LT@entry
+    {1}{146.72002pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{10}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{10}{Results}{section.5}{}}
+\newlabel{sec:results@cref}{{[section][5][]5}{[1][10][]10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Batching speedup and token cost}{10}{subsection.5.1}\protected@file@percent }
+\newlabel{batching-speedup-and-token-cost}{{5.1}{10}{Batching speedup and token cost}{subsection.5.1}{}}
+\newlabel{batching-speedup-and-token-cost@cref}{{[subsection][1][5]5.1}{[1][10][]10}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Batching speedup of the jev-latest model versus sequential single-question calls, measured by \breaktt {benchmarks/bench\_batching.py} on 2026-09-16. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, 20 questions, values in tbl.~\ref {tbl:batching}); the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title in the rendered figure carries the model and run date read from the benchmark JSON itself.}}{10}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:batching}{{4}{10}{Batching speedup of the jev-latest model versus sequential single-question calls, measured by \protect \breaktt {benchmarks/bench\_batching.py} on 2026-09-16. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, 20 questions, values in tbl.~\ref {tbl:batching}); the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title in the rendered figure carries the model and run date read from the benchmark JSON itself}{figure.caption.5}{}}
+\newlabel{fig:batching@cref}{{[figure][4][]4}{[1][10][]10}{}{}{}}
+\gdef \LT@ii {\LT@entry
+    {1}{159.94649pt}\LT@entry
+    {1}{219.81pt}\LT@entry
+    {1}{198.40352pt}}
+\citation{typesafe2026patterns}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Decision-pipeline latency}{11}{subsection.5.2}\protected@file@percent }
+\newlabel{decision-pipeline-latency}{{5.2}{11}{Decision-pipeline latency}{subsection.5.2}{}}
+\newlabel{decision-pipeline-latency@cref}{{[subsection][2][5]5.2}{[1][10][]11}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by \breaktt {benchmarks/bench\_patterns.py} over 6 runs against the jev-latest model on 2026-09-16. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time. Values are tabulated in tbl.~\ref {tbl:latency}.}}{11}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:latency}{{5}{11}{Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by \protect \breaktt {benchmarks/bench\_patterns.py} over 6 runs against the jev-latest model on 2026-09-16. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time. Values are tabulated in tbl.~\ref {tbl:latency}}{figure.caption.6}{}}
+\newlabel{fig:latency@cref}{{[figure][5][]5}{[1][11][]11}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Interpretation}{11}{subsection.5.3}\protected@file@percent }
+\newlabel{interpretation}{{5.3}{11}{Interpretation}{subsection.5.3}{}}
+\newlabel{interpretation@cref}{{[subsection][3][5]5.3}{[1][11][]11}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Experimental Setup}{12}{section.6}\protected@file@percent }
+\newlabel{sec:experimental_setup}{{6}{12}{Experimental Setup}{section.6}{}}
+\newlabel{sec:experimental_setup@cref}{{[section][6][]6}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Software environment}{12}{subsection.6.1}\protected@file@percent }
+\newlabel{software-environment}{{6.1}{12}{Software environment}{subsection.6.1}{}}
+\newlabel{software-environment@cref}{{[subsection][1][6]6.1}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Benchmark configuration}{12}{subsection.6.2}\protected@file@percent }
+\newlabel{benchmark-configuration}{{6.2}{12}{Benchmark configuration}{subsection.6.2}{}}
+\newlabel{benchmark-configuration@cref}{{[subsection][2][6]6.2}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Measurement protocol}{12}{subsection.6.3}\protected@file@percent }
+\newlabel{measurement-protocol}{{6.3}{12}{Measurement protocol}{subsection.6.3}{}}
+\newlabel{measurement-protocol@cref}{{[subsection][3][6]6.3}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Reproducibility Certification}{13}{section.7}\protected@file@percent }
+\newlabel{sec:reproducibility}{{7}{13}{Reproducibility Certification}{section.7}{}}
+\newlabel{sec:reproducibility@cref}{{[section][7][]7}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Artifact inventory and hashing}{13}{subsection.7.1}\protected@file@percent }
+\newlabel{artifact-inventory-and-hashing}{{7.1}{13}{Artifact inventory and hashing}{subsection.7.1}{}}
+\newlabel{artifact-inventory-and-hashing@cref}{{[subsection][1][7]7.1}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Test suite and coverage}{13}{subsection.7.2}\protected@file@percent }
+\newlabel{test-suite-and-coverage}{{7.2}{13}{Test suite and coverage}{subsection.7.2}{}}
+\newlabel{test-suite-and-coverage@cref}{{[subsection][2][7]7.2}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Provenance chain}{13}{subsection.7.3}\protected@file@percent }
+\newlabel{provenance-chain}{{7.3}{13}{Provenance chain}{subsection.7.3}{}}
+\newlabel{provenance-chain@cref}{{[subsection][3][7]7.3}{[1][13][]13}{}{}{}}
+\citation{typesafe2026systemoneconcept}
+\citation{typesafe2026systemoneconcept,typesafe2026confidence}
+\citation{typesafe2026systemone}
+\citation{register2026jev}
+\citation{orcarouter2026jev}
+\citation{elsolitario2026jev}
+\citation{typesafe2026patterns}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Scope, Related Work, and Positioning}{14}{section.8}\protected@file@percent }
+\newlabel{sec:scope}{{8}{14}{Scope, Related Work, and Positioning}{section.8}{}}
+\newlabel{sec:scope@cref}{{[section][8][]8}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scope and limitations}{14}{subsection.8.1}\protected@file@percent }
+\newlabel{scope-and-limitations}{{8.1}{14}{Scope and limitations}{subsection.8.1}{}}
+\newlabel{scope-and-limitations@cref}{{[subsection][1][8]8.1}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Related work}{14}{subsection.8.2}\protected@file@percent }
+\newlabel{related-work}{{8.2}{14}{Related work}{subsection.8.2}{}}
+\newlabel{related-work@cref}{{[subsection][2][8]8.2}{[1][14][]14}{}{}{}}
+\citation{typesafe2026systemone}
+\citation{typesafe2026systemoneconcept}
+\citation{typesafe2026apidocs}
+\citation{typesafe2026confidence}
+\citation{typesafe2026patterns}
+\citation{register2026jev}
+\citation{orcarouter2026jev}
+\citation{elsolitario2026jev}
+\bibdata{references}
+\bibcite{register2026jev}{{1}{2026}{{Claburn}}{{}}}
+\bibcite{orcarouter2026jev}{{2}{2026}{{Corvin}}{{}}}
+\bibcite{elsolitario2026jev}{{3}{2026}{{Morales}}{{}}}
+\bibcite{typesafe2026apidocs}{{4}{2026{a}}{{TypeSafe AI}}{{}}}
+\bibcite{typesafe2026confidence}{{5}{2026{b}}{{TypeSafe AI}}{{}}}
+\bibcite{typesafe2026patterns}{{6}{2026{c}}{{TypeSafe AI}}{{}}}
+\bibcite{typesafe2026systemone}{{7}{2026{d}}{{TypeSafe AI}}{{}}}
+\bibcite{typesafe2026systemoneconcept}{{8}{2026{e}}{{TypeSafe AI}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}References}{15}{section.9}\protected@file@percent }
+\newlabel{sec:references}{{9}{15}{References}{section.9}{}}
+\newlabel{sec:references@cref}{{[section][9][]9}{[1][15][]15}{}{}{}}
+\gdef \@abspage@last{16}

@@ -1,0 +1,623 @@
+"""Figure registry for the daf-jev manuscript.
+
+One ``generate_<name>()`` function per manuscript figure plus
+:func:`generate_all`, orchestrated by the thin
+``scripts/generate_figures.py``. Figures 1-2 (architecture, primitives)
+are data-free diagrams; figures 3-4 (batching, latency) read the latest
+benchmark JSONs from ``output/benchmarks/`` at generation time; figure 5
+(confidence) is a parametric illustration of confidence-gated routing.
+
+Every label, color, and size is a module-level constant below — no magic
+numbers inline. Generation is offline (no network). Missing benchmark
+data raises :class:`FileNotFoundError` naming the missing file; figures 1,
+2, and 5 never touch benchmark data and are always renderable.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+import matplotlib
+
+matplotlib.use("Agg")  # headless PNG rendering; must precede pyplot import
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_confidence", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+
+
+# ---------------------------------------------------------------------------
+# Style constants — single source for every visual parameter
+# ---------------------------------------------------------------------------
+
+DPI = 200
+
+COLOR_LAYER_MAIN = "#2E5E8C"  # daf-jev package layers
+COLOR_LAYER_SIDE = "#7FA6C9"  # side-input modules
+COLOR_EXTERNAL = "#8C8C8C"  # external services
+COLOR_ACCENT = "#C46A2B"  # emphasis / second series
+COLOR_BAND_AUTOMATE = "#BFDCA8"
+COLOR_BAND_REVIEW = "#F2D38B"
+COLOR_BAND_ESCALATE = "#E5A48C"
+COLOR_TEXT = "#222222"
+COLOR_EDGE = "#444444"
+
+SIZE_DIAGRAM = (7.5, 4.6)
+SIZE_CHART = (7.5, 4.2)
+
+FONT_BOX = 9
+FONT_TITLE = 12
+FONT_AXIS = 10
+FONT_ANNOTATE = 9
+
+ARROW_STYLE = "-|>"
+ARROW_LW = 1.4
+
+BENCHMARK_DIR = Path("output") / "benchmarks"
+
+# Meta keys of patterns_*.json that are not pipeline result objects.
+_PATTERN_META_KEYS = frozenset({"name", "date", "model", "runs"})
+
+
+# ---------------------------------------------------------------------------
+# Drawing helpers — thin wrappers over matplotlib primitives
+# ---------------------------------------------------------------------------
+
+
+def _new_diagram(title: str):
+    """Create an axis-off diagram canvas with a title."""
+    fig, ax = plt.subplots(figsize=SIZE_DIAGRAM)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.set_axis_off()
+    ax.set_title(title, fontsize=FONT_TITLE, color=COLOR_TEXT)
+    return fig, ax
+
+
+def _box(
+    ax,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    label: str,
+    *,
+    facecolor: str,
+    sublabel: Optional[str] = None,
+    dashed: bool = False,
+) -> None:
+    """Draw a labeled rounded box with ``(x, y)`` as its lower-left corner."""
+    patch = FancyBboxPatch(
+        (x, y),
+        w,
+        h,
+        boxstyle="round,pad=0.4",
+        linewidth=1.2,
+        edgecolor=COLOR_EDGE,
+        facecolor=facecolor,
+        linestyle="--" if dashed else "-",
+        mutation_aspect=SIZE_DIAGRAM[0] / SIZE_DIAGRAM[1],
+    )
+    ax.add_patch(patch)
+    if sublabel is None:
+        ax.text(x + w / 2, y + h / 2, label, ha="center", va="center", fontsize=FONT_BOX, color=COLOR_TEXT)
+    else:
+        ax.text(x + w / 2, y + h * 0.68, label, ha="center", va="center", fontsize=FONT_BOX, color=COLOR_TEXT, fontweight="bold")
+        ax.text(x + w / 2, y + h * 0.30, sublabel, ha="center", va="center", fontsize=FONT_BOX - 1, color=COLOR_TEXT)
+
+
+def _arrow(ax, start: tuple[float, float], end: tuple[float, float], *, dashed: bool = False) -> None:
+    """Draw a directed arrow between two coordinate points."""
+    ax.add_patch(
+        FancyArrowPatch(
+            start,
+            end,
+            arrowstyle=ARROW_STYLE,
+            mutation_scale=14,
+            linewidth=ARROW_LW,
+            color=COLOR_EDGE,
+            linestyle="--" if dashed else "-",
+            shrinkA=1.5,
+            shrinkB=1.5,
+        )
+    )
+
+
+def _save(fig: plt.Figure, out_dir: Path, filename: str) -> Path:
+    """Save a figure as PNG into *out_dir* and return the written path."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / filename
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Benchmark data loading (figures 3-4; strict, offline)
+# ---------------------------------------------------------------------------
+
+
+def _latest_benchmark(project_root: Path, prefix: str) -> Path:
+    """Return the path of the newest ``<prefix>_*.json`` under ``output/benchmarks``.
+
+    Raises :class:`FileNotFoundError` naming the missing file when none exist.
+    """
+    bench_dir = project_root / BENCHMARK_DIR
+    matches = sorted(bench_dir.glob(f"{prefix}_*.json"))
+    if not matches:
+        raise FileNotFoundError(
+            f"Missing benchmark data: no {bench_dir / f'{prefix}_*.json'} found "
+            f"(expected e.g. '{prefix}_20260916.json'). Run the benchmark script first."
+        )
+    return matches[-1]
+
+
+def _load_benchmark(project_root: Path, prefix: str) -> dict[str, Any]:
+    path = _latest_benchmark(project_root, prefix)
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# Figure 1 — package architecture
+# ---------------------------------------------------------------------------
+
+
+def generate_architecture(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Draw the package layer diagram: entry points down to the TypeSafe API."""
+    fig, ax = _new_diagram("daf-jev package architecture")
+
+    # Layer 4 (top): entry points.
+    _box(ax, 6, 86, 38, 11, "cli.py", facecolor=COLOR_LAYER_MAIN, sublabel="daf-jev command line")
+    _box(ax, 56, 86, 38, 11, "scripts/", facecolor=COLOR_LAYER_MAIN, sublabel="benchmarks, docs snapshot")
+
+    # Layer 3: composition surface.
+    _box(ax, 6, 60, 38, 12, "primitives.py", facecolor=COLOR_LAYER_MAIN, sublabel="noul / choice / score")
+    _box(ax, 56, 60, 38, 12, "compose.py", facecolor=COLOR_LAYER_MAIN, sublabel="routing + decision patterns")
+
+    # Layer 2: transport.
+    _box(ax, 2, 34, 24, 12, "client.py", facecolor=COLOR_LAYER_MAIN, sublabel="JevClient")
+    _box(ax, 30, 34, 22, 12, "_http.py", facecolor=COLOR_LAYER_MAIN, sublabel="transport")
+    _box(ax, 56, 34, 20, 12, "_retry.py", facecolor=COLOR_LAYER_MAIN, sublabel="retry policy")
+    _box(ax, 80, 34, 18, 12, "_errors.py", facecolor=COLOR_LAYER_MAIN, sublabel="typed errors")
+
+    # Layer 1 (bottom): the external API.
+    _box(ax, 20, 6, 60, 12, "TypeSafe Jev API", facecolor=COLOR_EXTERNAL, sublabel="System One")
+
+    # Side inputs (dashed).
+    _box(ax, 2, 12, 14, 10, "models.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
+    _box(ax, 84, 76, 14, 10, "config.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
+    _box(ax, 84, 48, 14, 10, "_types.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
+    _box(ax, 2, 48, 14, 10, "evaluate.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
+
+    # Entry → composition.
+    _arrow(ax, (25, 86), (25, 73))
+    _arrow(ax, (75, 86), (75, 73))
+    _arrow(ax, (40, 66), (58, 66))  # primitives ↔ compose flow
+    _arrow(ax, (58, 66), (40, 66))
+
+    # Composition → transport.
+    _arrow(ax, (25, 60), (16, 47))
+    _arrow(ax, (75, 60), (41, 47))
+    _arrow(ax, (66, 60), (66, 47))
+    _arrow(ax, (16, 60), (16, 47))
+
+    # Transport → API.
+    _arrow(ax, (14, 34), (40, 19))
+    _arrow(ax, (41, 34), (46, 19))
+    _arrow(ax, (66, 34), (52, 19))
+    _arrow(ax, (89, 34), (60, 19))
+
+    # Side inputs (dashed arrows into their consumers).
+    _arrow(ax, (9, 48), (14, 46), dashed=True)  # evaluate → client
+    _arrow(ax, (91, 76), (86, 72), dashed=True)  # config → compose
+    _arrow(ax, (91, 48), (89, 47), dashed=True)  # types → errors
+    _arrow(ax, (9, 22), (14, 34), dashed=True)  # models → client
+    return _save(fig, out_dir, "architecture.png")
+
+
+# ---------------------------------------------------------------------------
+# Figure 2 — the three question primitives
+# ---------------------------------------------------------------------------
+
+
+def generate_primitives(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Diagram the three question types and their typed answer shapes."""
+    fig, ax = _new_diagram("Jev question primitives and typed answers")
+
+    columns = [
+        ("noul", "NoulQuestion", "NoulAnswer", "free-text content\n(no confidence axis)"),
+        ("choice", "ChoiceQuestion", "ChoiceAnswer", "choice + probabilities\n+ confidence"),
+        ("score", "ScoreQuestion", "ScoreAnswer", "score + probabilities\n+ legend + confidence"),
+    ]
+    col_w = 26
+    gap = 9
+    x0 = (100 - 3 * col_w - 2 * gap) / 2
+    for i, (name, qtype, atype, shape) in enumerate(columns):
+        x = x0 + i * (col_w + gap)
+        _box(ax, x, 74, col_w, 12, f"{name}()", facecolor=COLOR_LAYER_MAIN, sublabel=qtype)
+        _box(ax, x, 40, col_w, 14, atype, facecolor=COLOR_LAYER_SIDE, sublabel=shape)
+        _arrow(ax, (x + col_w / 2, 74), (x + col_w / 2, 55))
+        ax.text(x + col_w / 2, 26, "confidence:\n" + ("absent" if name == "noul" else "second decision axis"), ha="center", va="center", fontsize=FONT_ANNOTATE - 1, color=COLOR_TEXT)
+
+    ax.text(50, 96, "", fontsize=FONT_ANNOTATE)
+    return _save(fig, out_dir, "primitives_overview.png")
+
+
+# ---------------------------------------------------------------------------
+# Figure 3 — batching speedup
+# ---------------------------------------------------------------------------
+
+
+def generate_batching(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Bar chart of batching speedup vs N, with token-cost ratio overlay."""
+    root = Path.cwd() if project_root is None else project_root
+    data = _load_benchmark(root, "batching")
+
+    results = sorted(data["results"], key=lambda r: r["n"])
+    ns = [str(r["n"]) for r in results]
+    speedups = [float(r["speedup_ratio"]) for r in results]
+    token_ratios = [float(r["token_cost_ratio"]) for r in results]
+
+    fig, ax = plt.subplots(figsize=SIZE_CHART)
+    bars = ax.bar(ns, speedups, width=0.55, color=COLOR_LAYER_MAIN, label="wall-clock speedup")
+    for bar, value in zip(bars, speedups):
+        ax.annotate(
+            f"{value:.1f}x",
+            (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+            textcoords="offset points",
+            xytext=(0, 4),
+            ha="center",
+            fontsize=FONT_ANNOTATE,
+            color=COLOR_TEXT,
+        )
+
+    ax.set_xlabel("batch size N", fontsize=FONT_AXIS)
+    ax.set_ylabel("speedup vs single calls (x)", fontsize=FONT_AXIS)
+    ax.tick_params(labelsize=FONT_AXIS)
+
+    ax2 = ax.twinx()
+    ax2.plot(ns, token_ratios, color=COLOR_ACCENT, marker="o", linewidth=1.6, label="token-cost ratio")
+    for x_pos, value in zip(range(len(ns)), token_ratios):
+        ax2.annotate(
+            f"{value:.2f}",
+            (x_pos, value),
+            textcoords="offset points",
+            xytext=(8, -10),
+            fontsize=FONT_ANNOTATE - 1,
+            color=COLOR_ACCENT,
+        )
+    ax2.set_ylabel("token-cost ratio (batched / single)", fontsize=FONT_AXIS, color=COLOR_ACCENT)
+    ax2.tick_params(labelsize=FONT_AXIS, colors=COLOR_ACCENT)
+
+    # Title reads model + run date from the benchmark JSON, never hardcoded.
+    ax.set_title(f"Batching speedup — {data['model']} ({data['date']})", fontsize=FONT_TITLE, color=COLOR_TEXT)
+
+    handles = [bars, ax2.lines[0]]
+    ax.legend(handles, [h.get_label() for h in handles], loc="upper left", fontsize=FONT_ANNOTATE)
+
+    fig.tight_layout()
+    return _save(fig, out_dir, "batching_speedup.png")
+
+
+# ---------------------------------------------------------------------------
+# Figure 4 — latency percentiles
+# ---------------------------------------------------------------------------
+
+
+def generate_latency(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Grouped p50/p95 bars per pipeline, labeled from the benchmark JSON."""
+    root = Path.cwd() if project_root is None else project_root
+    data = _load_benchmark(root, "patterns")
+
+    pipelines = [key for key in sorted(data) if key not in _PATTERN_META_KEYS]
+    p50 = [float(data[key]["p50_s"]) for key in pipelines]
+    p95 = [float(data[key]["p95_s"]) for key in pipelines]
+
+    fig, ax = plt.subplots(figsize=SIZE_CHART)
+    x_pos = list(range(len(pipelines)))
+    width = 0.35
+    bars_p50 = ax.bar([x - width / 2 for x in x_pos], p50, width=width, color=COLOR_LAYER_MAIN, label="p50 latency (s)")
+    bars_p95 = ax.bar([x + width / 2 for x in x_pos], p95, width=width, color=COLOR_ACCENT, label="p95 latency (s)")
+    for bars in (bars_p50, bars_p95):
+        for bar in bars:
+            ax.annotate(
+                f"{bar.get_height():.3f}",
+                (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                textcoords="offset points",
+                xytext=(0, 3),
+                ha="center",
+                fontsize=FONT_ANNOTATE - 1,
+                color=COLOR_TEXT,
+            )
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(pipelines, fontsize=FONT_AXIS)
+    ax.set_ylabel("latency (s)", fontsize=FONT_AXIS)
+    ax.tick_params(labelsize=FONT_AXIS)
+    ax.set_title(f"Pipeline latency percentiles — {data['model']} ({data['date']})", fontsize=FONT_TITLE, color=COLOR_TEXT)
+    ax.legend(fontsize=FONT_ANNOTATE)
+
+    fig.tight_layout()
+    return _save(fig, out_dir, "latency_percentiles.png")
+
+
+# ---------------------------------------------------------------------------
+# Figure 5 — confidence-gated routing bands
+# ---------------------------------------------------------------------------
+
+
+def generate_confidence(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Parametric illustration of confidence-gated routing (illustrative thresholds)."""
+    thresholds = (0.6, 0.85)
+    bands = [
+        ("escalate", 0.0, thresholds[0], COLOR_BAND_ESCALATE),
+        ("review", thresholds[0], thresholds[1], COLOR_BAND_REVIEW),
+        ("automate", thresholds[1], 1.0, COLOR_BAND_AUTOMATE),
+    ]
+
+    fig, ax = plt.subplots(figsize=SIZE_CHART)
+    band_height = 1.0
+    for i, (label, lo, hi, color) in enumerate(bands):
+        y = (len(bands) - 1 - i) * band_height
+        ax.add_patch(
+            plt.Rectangle(
+                (lo, y),
+                hi - lo,
+                band_height,
+                facecolor=color,
+                edgecolor=COLOR_EDGE,
+                linewidth=1.0,
+            )
+        )
+        ax.text(
+            (lo + hi) / 2,
+            y + band_height / 2,
+            f"{label}\nconfidence in [{lo:.2f}, {hi:.2f}]",
+            ha="center",
+            va="center",
+            fontsize=FONT_ANNOTATE + 1,
+            color=COLOR_TEXT,
+        )
+
+    for threshold in thresholds:
+        ax.axvline(
+            threshold,
+            color=COLOR_EDGE,
+            linestyle="--",
+            linewidth=1.2,
+            ymin=0,
+            ymax=1,
+        )
+        ax.annotate(
+            f"example threshold\n{threshold:.2f}",
+            (threshold, len(bands) * band_height),
+            textcoords="offset points",
+            xytext=(0, -4),
+            fontsize=FONT_ANNOTATE - 1,
+            color=COLOR_EDGE,
+            ha="center",
+            va="top",
+        )
+
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, len(bands) * band_height)
+    ax.set_xlabel("answer confidence", fontsize=FONT_AXIS)
+    ax.set_yticks([])
+    ax.tick_params(labelsize=FONT_AXIS)
+    ax.set_title("Confidence-gated routing bands", fontsize=FONT_TITLE, color=COLOR_TEXT)
+
+    fig.tight_layout()
+    return _save(fig, out_dir, "confidence_bands.png")
+
+
+def generate_one(name: str, out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Render a single registered figure by name.
+
+    Raises :class:`ValueError` naming the valid choices for an unknown name.
+    """
+    if name not in _REGISTRY:
+        raise ValueError(f"unknown figure name {name!r}; valid names: {', '.join(sorted(_REGISTRY))}")
+    return _REGISTRY[name](out_dir, project_root)
+
+
+
+
+# ---------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------
+
+_REGISTRY: dict[str, Callable[[Path, Optional[Path]], Path]] = {
+    "architecture": generate_architecture,
+    "primitives": generate_primitives,
+    "batching": generate_batching,
+    "latency": generate_latency,
+    "confidence": generate_confidence,
+}
+
+FIGURE_FILENAMES: dict[str, str] = {
+    "architecture": "architecture.png",
+    "primitives": "primitives_overview.png",
+    "batching": "batching_speedup.png",
+    "latency": "latency_percentiles.png",
+    "confidence": "confidence_bands.png",
+}
+
+
+FIGURE_REGISTRY_FILENAME = "figure_registry.json"
+
+_FIGURE_META: tuple[dict[str, str], ...] = (
+    {
+        "label": "fig:architecture",
+        "filename": "architecture.png",
+        "section": "Methodology",
+        "width": "0.85\\textwidth",
+        "caption": (
+            "Package layer diagram for daf-jev. The CLI (src/daf_jev/cli.py) and the "
+            "thin orchestration scripts (scripts/, benchmarks/) sit on the application "
+            "layer; compose.py (pure decision patterns) and primitives.py (typed "
+            "question builders and QuestionSet) form the logic layer over the wire "
+            "dataclasses in _types.py; client.py and _http.py own the single transport "
+            "to the System One endpoint, with _retry.py and _errors.py providing the "
+            "pure retry policy and the typed exception hierarchy. Boxes are named "
+            "modules only; no measured values appear in the diagram."
+        ),
+        "alt_text": (
+            "Module graph of daf-jev arranged as stacked layers: the CLI and "
+            "orchestration scripts on top, the pure composition and typed-primitive "
+            "modules beneath them, the frozen wire dataclasses below that, and the "
+            "client/transport layer with the retry policy and typed exceptions at the "
+            "bottom, with models.py, config.py, and the batch harness entering as side "
+            "inputs."
+        ),
+    },
+    {
+        "label": "fig:primitives",
+        "filename": "primitives_overview.png",
+        "section": "Methodology",
+        "width": "0.85\\textwidth",
+        "caption": (
+            "The three question primitives of the System One surface and the typed "
+            "answer shapes daf-jev parses them into. A noul question yields a "
+            "calibrated yes/no probability; a choice question yields a selected label, "
+            "a full probability distribution over the named options, and a scalar "
+            "confidence; a score question yields a probability-weighted score over "
+            "ordered levels together with the level legend, the level distribution, "
+            "and a confidence. The diagram is a schematic of shapes only — it carries "
+            "no measured data."
+        ),
+        "alt_text": (
+            "Schematic of the three question builders (noul, choice, score) with "
+            "arrows to their typed answer shapes: a yes/no probability, a selected "
+            "label with probability distribution and confidence, and a "
+            "probability-weighted score with level legend, level distribution, and "
+            "confidence."
+        ),
+    },
+    {
+        "label": "fig:batching",
+        "filename": "batching_speedup.png",
+        "section": "Results",
+        "width": "0.85\\textwidth",
+        "caption": (
+            "Batching speedup of the benchmark model versus sequential "
+            "single-question calls, measured by benchmarks/bench_batching.py. Bars "
+            "give the wall-time speedup of one batched call over one sequential call "
+            "per question for each configured batch width; the secondary axis shows "
+            "the token-cost ratio, which falls below unity because the sequential "
+            "strategy re-sends the state once per question. Bars are annotated with "
+            "their values; the title carries the model and run date read from the "
+            "benchmark JSON itself."
+        ),
+        "alt_text": (
+            "Bar chart of wall-time speedup versus sequential calls for each "
+            "configured batch width, with a secondary-axis token-cost ratio; the "
+            "speedup grows with batch width while the token-cost ratio stays below "
+            "unity."
+        ),
+    },
+    {
+        "label": "fig:latency",
+        "filename": "latency_percentiles.png",
+        "section": "Results",
+        "width": "0.85\\textwidth",
+        "caption": (
+            "Median (p50) and tail (p95) end-to-end wall time per decision pipeline, "
+            "measured by benchmarks/bench_patterns.py. Each bar is one pipeline "
+            "(composite scoring, intent routing) with paired p50/p95 groups; axis "
+            "labels are read from the benchmark JSON fields at figure-generation "
+            "time."
+        ),
+        "alt_text": (
+            "Grouped bar chart pairing the median and tail wall times of the "
+            "composite scoring and intent routing decision pipelines."
+        ),
+    },
+    {
+        "label": "fig:confidence",
+        "filename": "confidence_bands.png",
+        "section": "Methodology",
+        "width": "0.8\\textwidth",
+        "caption": (
+            "Parametric illustration of confidence-gated routing as implemented by "
+            "confidence_gate() and route() in src/daf_jev/compose.py. The horizontal "
+            "axis is the model-reported confidence on the unit interval; the three "
+            "horizontal bands assign an action per confidence region — automate, "
+            "review, escalate. The boundary markers are annotated as example "
+            "thresholds: they illustrate the band semantics and are not fitted or "
+            "recommended values."
+        ),
+        "alt_text": (
+            "Confidence axis on the unit interval divided into three horizontal "
+            "bands labelled escalate, review, and automate, with example threshold "
+            "markers between the bands."
+        ),
+    },
+)
+
+
+def write_figure_registry(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Write ``figure_registry.json`` describing every manuscript figure.
+
+    The registry is the engine-facing manifest consumed by template
+    validation: one entry per figure label, mirroring the manuscript's own
+    figure lines (captions, sections, widths). It is static metadata — no
+    measured statistics are embedded.
+
+    Args:
+        out_dir: Destination directory (created if absent); the registry is
+            written alongside the PNGs as :data:`FIGURE_REGISTRY_FILENAME`.
+        project_root: Accepted for signature symmetry with the generator
+            functions; the registry is static and reads nothing from the tree.
+
+    Returns:
+        The written registry path.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    registry: dict[str, Any] = {}
+    for index, meta in enumerate(_FIGURE_META, start=1):
+        registry[meta["label"]] = {
+            "figure_id": f"figure_{index:03d}",
+            "filename": meta["filename"],
+            "caption": meta["caption"],
+            "label": meta["label"],
+            "section": meta["section"],
+            "width": meta["width"],
+            "placement": "h",
+            "generated_by": "daf_jev.figures",
+            "metadata": {
+                "alt_text": meta["alt_text"],
+                "source": "daf-jev benchmark/figure pipeline",
+            },
+        }
+    path = out_dir / FIGURE_REGISTRY_FILENAME
+    path.write_text(
+        json.dumps(registry, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def generate_all(out_dir: Path, project_root: Optional[Path] = None) -> list[Path]:
+    """Render every registered figure as a PNG into *out_dir*.
+
+    Args:
+        out_dir: Destination directory (created if absent).
+        project_root: Project root holding ``output/benchmarks/``; defaults
+            to the current working directory.
+
+    Returns:
+        The written PNG paths, in registry order. As a side effect,
+        ``figure_registry.json`` is written into *out_dir* after the PNGs
+        (see :func:`write_figure_registry`).
+
+    Raises:
+        FileNotFoundError: When a benchmark JSON needed by a data-driven
+            figure is missing; the error names the missing file. Figures
+            1, 2, and 5 are data-free and never trigger this.
+    """
+    paths = [_REGISTRY[name](out_dir, project_root) for name in _REGISTRY]
+    write_figure_registry(out_dir, project_root)
+    return paths

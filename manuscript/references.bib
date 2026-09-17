@@ -1,0 +1,194 @@
+% references.bib — TypeSafe System One models / Jev sources for the daf-jev manuscript.
+%
+% How to cite: these keys are the canonical cite keys for the manuscript prose.
+% docs/models.md documents the crosswalk (key -> source -> used-for) and uses
+% the same keys. All URLs were accessed 2026-09-16 (see urldate). Web sources
+% use @online (biblatex) with url/urldate; fall back to @misc with the same
+% fields if your toolchain does not support @online.
+%
+% Primary (TypeSafe-authored) sources: typesafe2026systemone,
+% typesafe2026systemoneconcept, typesafe2026apidocs, typesafe2026confidence,
+% typesafe2026patterns, typesafe2026primitives, typesafe2026aiprimer,
+% typesafe2026team.
+% Third-party (independent) sources: register2026jev, orcarouter2026jev,
+% elsolitario2026jev, thedecoder2026jev, every2026minivibecheck (independent
+% hands-on evaluation by Every's head of evals).
+
+% ---------------------------------------------------------------- TypeSafe (primary)
+
+@online{typesafe2026systemone,
+  author       = {{TypeSafe AI}},
+  title        = {Introducing System One Models \& Jev},
+  titleaddon   = {TypeSafe AI Blog, Company News, September 15, 2026},
+  year         = {2026},
+  month        = {9},
+  url          = {https://typesafe.ai/blog/introducing-system-one-models-and-jev},
+  urldate      = {2026-09-16},
+  note         = {Launch post by Diogo Almeida announcing System One models, Jev,
+                  the parallel-sampler architecture, RLCD training, latency/cost
+                  envelope, and early access. Canonical key: typesafe2026systemone.},
+}
+
+@online{typesafe2026systemoneconcept,
+  author       = {{TypeSafe AI}},
+  title        = {System One},
+  titleaddon   = {TypeSafe documentation, concepts/system-one},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/concepts/system-one.md},
+  urldate      = {2026-09-16},
+  note         = {Verified against the local snapshot docs/reference/concepts/system-one.md
+                  (snapshot id b79c9cd6008489f1, scraped 2026-09-16T21:19:06Z).},
+}
+
+@online{typesafe2026apidocs,
+  author       = {{TypeSafe AI}},
+  title        = {API reference},
+  titleaddon   = {TypeSafe documentation, api},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/api.md},
+  urldate      = {2026-09-16},
+  note         = {HTTP API for POST /v1/systemone: request/response shapes, the three
+                  answer types, usage tokens, and error/retry semantics. Verified against
+                  local snapshot docs/reference/api.md (snapshot id b79c9cd6008489f1).},
+}
+
+@online{typesafe2026confidence,
+  author       = {{TypeSafe AI}},
+  title        = {Confidence},
+  titleaddon   = {TypeSafe documentation, confidence},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/confidence.md},
+  urldate      = {2026-09-16},
+  note         = {How confidence is derived from the probability distribution; the
+                  three-band act/caution/escalate pattern; risk-scaled thresholds.
+                  Verified against local snapshot docs/reference/confidence.md
+                  (snapshot id b79c9cd6008489f1).},
+}
+
+@online{typesafe2026patterns,
+  author       = {{TypeSafe AI}},
+  title        = {Patterns},
+  titleaddon   = {TypeSafe documentation, patterns (incl. confidence-routing and
+                  composite-scoring pattern pages)},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/patterns.md},
+  urldate      = {2026-09-16},
+  note         = {Composable patterns for building systems on System One models,
+                  e.g. confidence routing and composite scoring. Verified against
+                  local snapshot docs/reference/patterns/ (snapshot id b79c9cd6008489f1).},
+}
+
+@online{typesafe2026primitives,
+  author       = {{TypeSafe AI}},
+  title        = {Primitives (Questions)},
+  titleaddon   = {TypeSafe documentation, primitives (incl. choice, score, noul pages)},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/primitives.md},
+  urldate      = {2026-09-16},
+  note         = {The three question primitives, their typed answers, parallel isolated
+                  evaluation, and the ~32,000-token (~150,000-character) shared request
+                  budget. Verified against local snapshot docs/reference/primitives.md
+                  (snapshot id b79c9cd6008489f1).},
+}
+
+@online{typesafe2026aiprimer,
+  author       = {{TypeSafe AI}},
+  title        = {AI primer},
+  titleaddon   = {TypeSafe documentation, introduction/machine-learning-primer},
+  year         = {2026},
+  url          = {https://docs.typesafe.ai/introduction/machine-learning-primer.md},
+  urldate      = {2026-09-16},
+  note         = {Contrasts RLHF, RLVR, and RLCD as post-training approaches; defines
+                  calibration (0.2 -> ~20\% of outcomes, etc.); notes RLHF co-inventor
+                  Diogo Almeida. Verified against local snapshot
+                  docs/reference/introduction/machine-learning-primer.md
+                  (snapshot id b79c9cd6008489f1).},
+}
+
+@online{typesafe2026team,
+  author       = {{TypeSafe AI}},
+  title        = {Team},
+  titleaddon   = {TypeSafe AI},
+  year         = {2026},
+  url          = {https://typesafe.ai/team},
+  urldate      = {2026-09-16},
+  note         = {Founders: Diogo Almeida (CEO; co-invented RLHF and InstructGPT;
+                  previously Google Brain), Sasha Sheng (COO; ex Meta/FAIR),
+                  Erik Gafni (CTO); team background from OpenAI, Google Brain,
+                  Meta/FAIR, Stripe, Airbnb, Plaid, Docker.},
+}
+
+% ---------------------------------------------------------------- Third-party
+
+@online{register2026jev,
+  author       = {Claburn, Thomas},
+  title        = {TypeSafe AI debuts model for machines that plays Doom},
+  titleaddon   = {'Jev' doesn't chat. It produces typed probabilistic decisions},
+  journaltitle = {The Register},
+  year         = {2026},
+  month        = {9},
+  day          = {16},
+  url          = {https://www.theregister.com/ai-and-ml/2026/09/16/typesafe-ai-debuts-model-for-machines-that-plays-doom/5296711},
+  urldate      = {2026-09-16},
+  note         = {Independent coverage: USD 40M funding, latency/pricing corroboration,
+                  Jevons-paradox naming, and skepticism about the "hallucination-free"
+                  framing.},
+}
+
+@online{orcarouter2026jev,
+  author       = {Corvin, Magnus},
+  title        = {Jev Refuses to Write a Single Word: What TypeSafe AI's Decision Model
+                 Does, and What Nobody Has Verified Yet},
+  journaltitle = {OrcaRouter},
+  year         = {2026},
+  month        = {9},
+  day          = {16},
+  url          = {https://www.orcarouter.ai/blog/jev-typesafe-system-one-what-we-know},
+  urldate      = {2026-09-16},
+  note         = {Independent analysis sorting vendor-claimed vs independently measured
+                  numbers; recounts Every's tests; proposes the diagonal calibration-curve
+                  audit method.},
+}
+
+@online{elsolitario2026jev,
+  author       = {Morales, Andr\'es},
+  title        = {TypeSafe AI's Jev: The Model That Decides Without Text},
+  journaltitle = {El Solitario},
+  year         = {2026},
+  month        = {9},
+  day          = {16},
+  url          = {https://elsolitario.org/en/2026/09/16/typesafe-ai-jev-structured-decision-model/},
+  urldate      = {2026-09-16},
+  note         = {Independent analysis: RLHF/RLVR-vs-RLCD framing, autoregressive-vs-
+                  parallel sampling explanation, launch timeline, and caveats on
+                  vendor-run benchmarks and pricing sustainability.},
+}
+
+@online{thedecoder2026jev,
+  author       = {Schreiner, Maximilian},
+  title        = {Former OpenAI researcher builds an AI model that judges options
+                 instead of writing text},
+  journaltitle = {The Decoder},
+  year         = {2026},
+  month        = {9},
+  day          = {16},
+  url          = {https://the-decoder.com/former-openai-researcher-builds-an-ai-model-that-judges-options-instead-of-writing-text/},
+  urldate      = {2026-09-16},
+  note         = {Independent analysis; notes limits of TypeSafe's published evaluations
+                  and that "no hallucinations" does not mean "no mistakes".},
+}
+
+@online{every2026minivibecheck,
+  author       = {Taylor, Mike},
+  title        = {Mini-Vibe Check: TypeSafe's Jev Judged Everything I've Written in
+                 0.7 Seconds},
+  journaltitle = {Every, Also True for Humans},
+  year         = {2026},
+  month        = {9},
+  day          = {15},
+  url          = {https://every.to/also-true-for-humans/mini-vibe-check-typesafe-s-jev-judged-everything-i-ve-written-in-0-7-seconds},
+  urldate      = {2026-09-16},
+  note         = {Independent hands-on evaluation: 777 judgments across 37 documents in
+                  under 0.7s for about a quarter of a cent; 12-passage defect test vs
+                  Claude Fable 5.1 (6 of 7 defects caught); ~25x faster, ~580x cheaper.},
+}

@@ -1,0 +1,3 @@
+# References {#sec:references}
+
+The bibliography lives in [`manuscript/references.bib`](references.bib) and is resolved by Pandoc — `--natbib` on the PDF path, `--citeproc` for the other editions. Citation keys used throughout this manuscript are fixed by the project's research pass: the primary System One source [@typesafe2026systemone], its concept primer [@typesafe2026systemoneconcept], the API reference [@typesafe2026apidocs], the confidence documentation [@typesafe2026confidence], the decision patterns documentation [@typesafe2026patterns], and the third-party Jev ecosystem works [@register2026jev], [@orcarouter2026jev], and [@elsolitario2026jev]. Every bracketed key in the preceding sections resolves against that file.

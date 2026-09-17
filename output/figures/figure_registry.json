@@ -1,0 +1,72 @@
+{
+  "fig:architecture": {
+    "figure_id": "figure_001",
+    "filename": "architecture.png",
+    "caption": "Package layer diagram for daf-jev. The CLI (src/daf_jev/cli.py) and the thin orchestration scripts (scripts/, benchmarks/) sit on the application layer; compose.py (pure decision patterns) and primitives.py (typed question builders and QuestionSet) form the logic layer over the wire dataclasses in _types.py; client.py and _http.py own the single transport to the System One endpoint, with _retry.py and _errors.py providing the pure retry policy and the typed exception hierarchy. Boxes are named modules only; no measured values appear in the diagram.",
+    "label": "fig:architecture",
+    "section": "Methodology",
+    "width": "0.85\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Module graph of daf-jev arranged as stacked layers: the CLI and orchestration scripts on top, the pure composition and typed-primitive modules beneath them, the frozen wire dataclasses below that, and the client/transport layer with the retry policy and typed exceptions at the bottom, with models.py, config.py, and the batch harness entering as side inputs.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
+  },
+  "fig:primitives": {
+    "figure_id": "figure_002",
+    "filename": "primitives_overview.png",
+    "caption": "The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A noul question yields a calibrated yes/no probability; a choice question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a score question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only — it carries no measured data.",
+    "label": "fig:primitives",
+    "section": "Methodology",
+    "width": "0.85\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Schematic of the three question builders (noul, choice, score) with arrows to their typed answer shapes: a yes/no probability, a selected label with probability distribution and confidence, and a probability-weighted score with level legend, level distribution, and confidence.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
+  },
+  "fig:batching": {
+    "figure_id": "figure_003",
+    "filename": "batching_speedup.png",
+    "caption": "Batching speedup of the benchmark model versus sequential single-question calls, measured by benchmarks/bench_batching.py. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width; the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title carries the model and run date read from the benchmark JSON itself.",
+    "label": "fig:batching",
+    "section": "Results",
+    "width": "0.85\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Bar chart of wall-time speedup versus sequential calls for each configured batch width, with a secondary-axis token-cost ratio; the speedup grows with batch width while the token-cost ratio stays below unity.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
+  },
+  "fig:latency": {
+    "figure_id": "figure_004",
+    "filename": "latency_percentiles.png",
+    "caption": "Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by benchmarks/bench_patterns.py. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time.",
+    "label": "fig:latency",
+    "section": "Results",
+    "width": "0.85\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Grouped bar chart pairing the median and tail wall times of the composite scoring and intent routing decision pipelines.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
+  },
+  "fig:confidence": {
+    "figure_id": "figure_005",
+    "filename": "confidence_bands.png",
+    "caption": "Parametric illustration of confidence-gated routing as implemented by confidence_gate() and route() in src/daf_jev/compose.py. The horizontal axis is the model-reported confidence on the unit interval; the three horizontal bands assign an action per confidence region — automate, review, escalate. The boundary markers are annotated as example thresholds: they illustrate the band semantics and are not fitted or recommended values.",
+    "label": "fig:confidence",
+    "section": "Methodology",
+    "width": "0.8\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Confidence axis on the unit interval divided into three horizontal bands labelled escalate, review, and automate, with example threshold markers between the bands.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
+  }
+}
