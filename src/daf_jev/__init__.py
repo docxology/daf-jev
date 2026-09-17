@@ -27,7 +27,7 @@ from daf_jev._types import (
 )
 from daf_jev.client import AsyncJevClient, JevClient, ModelCard
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # Guard: these names live in sibling modules (primitives.py, compose.py,
 # config.py) built concurrently; import them best-effort so the core API
