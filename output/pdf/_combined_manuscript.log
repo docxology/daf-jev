@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.22)  16 SEP 2026 17:28
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.3.22)  16 SEP 2026 18:36
 entering extended mode
  %&-line parsing enabled.
 **_combined_manuscript.tex
@@ -1619,7 +1619,7 @@ LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/m/n' will be
 
 [2] [3]
 LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/b/n' will be
-(Font)              scaled to size 7.8363pt on input line 441.
+(Font)              scaled to size 7.8363pt on input line 447.
  [4] [5]
 File: ../figures/architecture.png Graphic file (type bmp)
 <../figures/architecture.png>
@@ -1631,69 +1631,31 @@ File: ../figures/confidence_bands.png Graphic file (type bmp)
  [8] [9]
 File: ../figures/batching_speedup.png Graphic file (type bmp)
 <../figures/batching_speedup.png>
-
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 759.
-
-
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 759.
-
-
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 762.
-
-
-[10]
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 810.
-
+ [10]
 File: ../figures/latency_percentiles.png Graphic file (type bmp)
 <../figures/latency_percentiles.png>
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 823.
-
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 823.
-
-
-LaTeX Warning: Reference `tbl:batching' on page 11 undefined on input line 858.
-
-
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 866.
-
-[11]
-
-LaTeX Warning: Reference `tbl:latency' on page 12 undefined on input line 943.
-
-[12]
+ [11]
+File: ../figures/calibration_reliability.png Graphic file (type bmp)
+<../figures/calibration_reliability.png>
+ [12] [13]
 LaTeX Font Info:    Font shape `TU/JuliaMono-Regular(0)/m/it' will be
-(Font)              scaled to size 7.8363pt on input line 976.
- [13] [14] (./_combined_manuscript.bbl)
-
-Package caption Warning: Unused \captionsetup[table] on input line 80.
-See the caption package documentation for explanation.
-
-[15] (./_combined_manuscript.aux
+(Font)              scaled to size 7.8363pt on input line 1119.
+ [14] [15]
+(./_combined_manuscript.bbl) [16] (./_combined_manuscript.aux
 Package cleveref Info: loaded `english' language definitions on input line 9.
 )
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
  )
 Here is how much of TeX's memory you used:
- 30189 strings out of 468168
- 608557 string characters out of 5432815
- 1217580 words of memory out of 5000000
- 58576 multiletter control sequences out of 15000+600000
+ 30212 strings out of 468168
+ 609184 string characters out of 5432815
+ 1224580 words of memory out of 5000000
+ 58598 multiletter control sequences out of 15000+600000
  630258 words of font info for 78 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 90i,7n,117p,1040b,1043s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,9n,117p,1040b,1071s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on _combined_manuscript.pdf (16 pages).
+Output written on _combined_manuscript.pdf (17 pages).

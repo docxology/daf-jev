@@ -43,3 +43,13 @@ Four rulings shaped the codebase and are worth stating as contracts:
 2. **Real stand-ins, no mocks.** The test suite drives the real HTTP transport against a real local HTTP server fixture rather than patching client internals, so retry, timeout, and error-mapping behavior is exercised end to end.
 3. **Pure retry policy.** Backoff timing is a function of the attempt number and the server's retry hint alone — testable without sleeping, and identical across the sync and async clients.
 4. **Snapshotted documentation.** The bundled documentation snapshot carries a manifest of per-page content hashes and a snapshot identifier, and a CLI subcommand re-hashes the tree to detect drift ([@sec:reproducibility]). Prose claims about the model are therefore checkable against an immutable, verified source rather than a moving website.
+
+## Integration surfaces
+
+The Python API is the primary door into the package, but not the only one. Three additional surfaces sit on top of the same layering — transport, client, primitives, composition — and add accessibility rather than logic: each one delegates to the very modules described above and contains no decision code of its own.
+
+- **MCP server** (`src/daf_jev/mcp_server.py`, launched with `daf-jev serve` over the stdio transport). It exposes the core to any MCP-capable agent host through tools that mirror the package one-to-one: `jev_ask` and `jev_evaluate` drive the client's single-call and batch paths, `jev_models` reports the available model surface, `jev_composite_score`, `jev_confidence_gate`, and `jev_tiered_gate` expose the composition patterns, and `jev_docs_verify` re-runs the documentation drift check of Design ruling 4; a `jev://docs/snapshot` resource serves the bundled documentation snapshot itself. The server is a thin adapter — it owns no retry policy, no parsing, and no thresholds.
+- **Agent skill** (`skills/daf-jev/SKILL.md`). A skill manifest that tells a coding agent when and how to reach for the CLI subcommands and composition helpers, so an agent can use the package correctly without reading its source.
+- **Runnable examples** (`examples/`). Four self-contained scripts — `quickstart.py`, `triage_router.py`, `composite_scoring.py`, and `evaluate_corpus.py` — walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer.
+
+None of these surfaces introduces a second implementation of the model semantics: the MCP tools call the same client and compose functions the CLI calls, the skill documents those entry points, and the examples exercise them. A behaviour fixed in the composition layer therefore reaches every consumer at once.

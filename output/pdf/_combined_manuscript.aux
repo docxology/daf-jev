@@ -79,6 +79,9 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Design rulings}{8}{subsection.4.4}\protected@file@percent }
 \newlabel{design-rulings}{{4.4}{8}{Design rulings}{subsection.4.4}{}}
 \newlabel{design-rulings@cref}{{[subsection][4][4]4.4}{[1][8][]8}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Integration surfaces}{9}{subsection.4.5}\protected@file@percent }
+\newlabel{integration-surfaces}{{4.5}{9}{Integration surfaces}{subsection.4.5}{}}
+\newlabel{integration-surfaces@cref}{{[subsection][5][4]4.5}{[1][9][]9}{}{}{}}
 \citation{typesafe2026patterns}
 \gdef \LT@i {\LT@entry
     {1}{93.92001pt}\LT@entry
@@ -92,44 +95,62 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Batching speedup of the jev-latest model versus sequential single-question calls, measured by \breaktt {benchmarks/bench\_batching.py} on 2026-09-16. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, 20 questions, values in tbl.~\ref {tbl:batching}); the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title in the rendered figure carries the model and run date read from the benchmark JSON itself.}}{10}{figure.caption.5}\protected@file@percent }
 \newlabel{fig:batching}{{4}{10}{Batching speedup of the jev-latest model versus sequential single-question calls, measured by \protect \breaktt {benchmarks/bench\_batching.py} on 2026-09-16. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width (5, 10, 20 questions, values in tbl.~\ref {tbl:batching}); the secondary axis shows the token-cost ratio, which falls below unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title in the rendered figure carries the model and run date read from the benchmark JSON itself}{figure.caption.5}{}}
 \newlabel{fig:batching@cref}{{[figure][4][]4}{[1][10][]10}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Wall-time speedup of one batched call versus one sequential call per question, per configured batch width, recorded by \breaktt {benchmarks/bench\_batching.py} against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time.}}{10}{table.1}\protected@file@percent }
+\newlabel{tbl:batching}{{1}{10}{Wall-time speedup of one batched call versus one sequential call per question, per configured batch width, recorded by \protect \breaktt {benchmarks/bench\_batching.py} against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time}{table.1}{}}
+\newlabel{tbl:batching@cref}{{[table][1][]1}{[1][10][]10}{}{}{}}
 \gdef \LT@ii {\LT@entry
     {1}{159.94649pt}\LT@entry
     {1}{219.81pt}\LT@entry
     {1}{198.40352pt}}
-\citation{typesafe2026patterns}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Decision-pipeline latency}{11}{subsection.5.2}\protected@file@percent }
 \newlabel{decision-pipeline-latency}{{5.2}{11}{Decision-pipeline latency}{subsection.5.2}{}}
 \newlabel{decision-pipeline-latency@cref}{{[subsection][2][5]5.2}{[1][10][]11}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by \breaktt {benchmarks/bench\_patterns.py} over 6 runs against the jev-latest model on 2026-09-16. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time. Values are tabulated in tbl.~\ref {tbl:latency}.}}{11}{figure.caption.6}\protected@file@percent }
 \newlabel{fig:latency}{{5}{11}{Median (p50) and tail (p95) end-to-end wall time per decision pipeline, measured by \protect \breaktt {benchmarks/bench\_patterns.py} over 6 runs against the jev-latest model on 2026-09-16. Each bar is one pipeline (composite scoring, intent routing) with paired p50/p95 groups; axis labels are read from the benchmark JSON fields at figure-generation time. Values are tabulated in tbl.~\ref {tbl:latency}}{figure.caption.6}{}}
 \newlabel{fig:latency@cref}{{[figure][5][]5}{[1][11][]11}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Interpretation}{11}{subsection.5.3}\protected@file@percent }
-\newlabel{interpretation}{{5.3}{11}{Interpretation}{subsection.5.3}{}}
-\newlabel{interpretation@cref}{{[subsection][3][5]5.3}{[1][11][]11}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Experimental Setup}{12}{section.6}\protected@file@percent }
-\newlabel{sec:experimental_setup}{{6}{12}{Experimental Setup}{section.6}{}}
-\newlabel{sec:experimental_setup@cref}{{[section][6][]6}{[1][12][]12}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Software environment}{12}{subsection.6.1}\protected@file@percent }
-\newlabel{software-environment}{{6.1}{12}{Software environment}{subsection.6.1}{}}
-\newlabel{software-environment@cref}{{[subsection][1][6]6.1}{[1][12][]12}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Benchmark configuration}{12}{subsection.6.2}\protected@file@percent }
-\newlabel{benchmark-configuration}{{6.2}{12}{Benchmark configuration}{subsection.6.2}{}}
-\newlabel{benchmark-configuration@cref}{{[subsection][2][6]6.2}{[1][12][]12}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Measurement protocol}{12}{subsection.6.3}\protected@file@percent }
-\newlabel{measurement-protocol}{{6.3}{12}{Measurement protocol}{subsection.6.3}{}}
-\newlabel{measurement-protocol@cref}{{[subsection][3][6]6.3}{[1][12][]12}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Reproducibility Certification}{13}{section.7}\protected@file@percent }
-\newlabel{sec:reproducibility}{{7}{13}{Reproducibility Certification}{section.7}{}}
-\newlabel{sec:reproducibility@cref}{{[section][7][]7}{[1][13][]13}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Artifact inventory and hashing}{13}{subsection.7.1}\protected@file@percent }
-\newlabel{artifact-inventory-and-hashing}{{7.1}{13}{Artifact inventory and hashing}{subsection.7.1}{}}
-\newlabel{artifact-inventory-and-hashing@cref}{{[subsection][1][7]7.1}{[1][13][]13}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Test suite and coverage}{13}{subsection.7.2}\protected@file@percent }
-\newlabel{test-suite-and-coverage}{{7.2}{13}{Test suite and coverage}{subsection.7.2}{}}
-\newlabel{test-suite-and-coverage@cref}{{[subsection][2][7]7.2}{[1][13][]13}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Provenance chain}{13}{subsection.7.3}\protected@file@percent }
-\newlabel{provenance-chain}{{7.3}{13}{Provenance chain}{subsection.7.3}{}}
-\newlabel{provenance-chain@cref}{{[subsection][3][7]7.3}{[1][13][]13}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces End-to-end wall time (network round trip plus local composition logic) per decision pipeline, median and tail over 6 runs recorded by \breaktt {benchmarks/bench\_patterns.py} against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time.}}{11}{table.2}\protected@file@percent }
+\newlabel{tbl:latency}{{2}{11}{End-to-end wall time (network round trip plus local composition logic) per decision pipeline, median and tail over 6 runs recorded by \protect \breaktt {benchmarks/bench\_patterns.py} against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time}{table.2}{}}
+\newlabel{tbl:latency@cref}{{[table][2][]2}{[1][11][]11}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Calibration}{11}{subsection.5.3}\protected@file@percent }
+\newlabel{calibration}{{5.3}{11}{Calibration}{subsection.5.3}{}}
+\newlabel{calibration@cref}{{[subsection][3][5]5.3}{[1][11][]11}{}{}{}}
+\gdef \LT@iii {\LT@entry
+    {4}{189.63002pt}\LT@entry
+    {4}{33.78001pt}}
+\citation{typesafe2026patterns}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Calibration summary over 6 states \ensuremath  {\times } 5 repeats recorded by \breaktt {benchmarks/bench\_calibration.py} against the jev-latest model on 2026-09-16. Choice correctness is a self-consistency proxy --- agreement with the modal choice across repeats --- not accuracy against ground truth; the mean pairwise noul gap measures repeat-to-repeat answer stability rather than correctness. Values are injected from the benchmark JSON at render time.}}{12}{table.3}\protected@file@percent }
+\newlabel{tbl:calibration}{{3}{12}{Calibration summary over 6 states \texorpdfstring {\ensuremath {\times }}{x} 5 repeats recorded by \protect \breaktt {benchmarks/bench\_calibration.py} against the jev-latest model on 2026-09-16. Choice correctness is a self-consistency proxy --- agreement with the modal choice across repeats --- not accuracy against ground truth; the mean pairwise noul gap measures repeat-to-repeat answer stability rather than correctness. Values are injected from the benchmark JSON at render time}{table.3}{}}
+\newlabel{tbl:calibration@cref}{{[table][3][]3}{[1][11][]12}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by \breaktt {benchmarks/bench\_calibration.py} over 6 states \ensuremath  {\times } 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats. Because the proxy scores self-agreement rather than verified correctness, the diagonal indicates consistency between stated confidence and repeat-stable behaviour --- not truthfulness.}}{12}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:calibration}{{6}{12}{Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by \protect \breaktt {benchmarks/bench\_calibration.py} over 6 states \texorpdfstring {\ensuremath {\times }}{x} 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats. Because the proxy scores self-agreement rather than verified correctness, the diagonal indicates consistency between stated confidence and repeat-stable behaviour --- not truthfulness}{figure.caption.7}{}}
+\newlabel{fig:calibration@cref}{{[figure][6][]6}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Interpretation}{12}{subsection.5.4}\protected@file@percent }
+\newlabel{interpretation}{{5.4}{12}{Interpretation}{subsection.5.4}{}}
+\newlabel{interpretation@cref}{{[subsection][4][5]5.4}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Experimental Setup}{13}{section.6}\protected@file@percent }
+\newlabel{sec:experimental_setup}{{6}{13}{Experimental Setup}{section.6}{}}
+\newlabel{sec:experimental_setup@cref}{{[section][6][]6}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Software environment}{13}{subsection.6.1}\protected@file@percent }
+\newlabel{software-environment}{{6.1}{13}{Software environment}{subsection.6.1}{}}
+\newlabel{software-environment@cref}{{[subsection][1][6]6.1}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Benchmark configuration}{13}{subsection.6.2}\protected@file@percent }
+\newlabel{benchmark-configuration}{{6.2}{13}{Benchmark configuration}{subsection.6.2}{}}
+\newlabel{benchmark-configuration@cref}{{[subsection][2][6]6.2}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Measurement protocol}{13}{subsection.6.3}\protected@file@percent }
+\newlabel{measurement-protocol}{{6.3}{13}{Measurement protocol}{subsection.6.3}{}}
+\newlabel{measurement-protocol@cref}{{[subsection][3][6]6.3}{[1][13][]13}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Reproducibility Certification}{14}{section.7}\protected@file@percent }
+\newlabel{sec:reproducibility}{{7}{14}{Reproducibility Certification}{section.7}{}}
+\newlabel{sec:reproducibility@cref}{{[section][7][]7}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Artifact inventory and hashing}{14}{subsection.7.1}\protected@file@percent }
+\newlabel{artifact-inventory-and-hashing}{{7.1}{14}{Artifact inventory and hashing}{subsection.7.1}{}}
+\newlabel{artifact-inventory-and-hashing@cref}{{[subsection][1][7]7.1}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Test suite and coverage}{14}{subsection.7.2}\protected@file@percent }
+\newlabel{test-suite-and-coverage}{{7.2}{14}{Test suite and coverage}{subsection.7.2}{}}
+\newlabel{test-suite-and-coverage@cref}{{[subsection][2][7]7.2}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Provenance chain}{14}{subsection.7.3}\protected@file@percent }
+\newlabel{provenance-chain}{{7.3}{14}{Provenance chain}{subsection.7.3}{}}
+\newlabel{provenance-chain@cref}{{[subsection][3][7]7.3}{[1][14][]14}{}{}{}}
 \citation{typesafe2026systemoneconcept}
 \citation{typesafe2026systemoneconcept,typesafe2026confidence}
 \citation{typesafe2026systemone}
@@ -137,15 +158,15 @@
 \citation{orcarouter2026jev}
 \citation{elsolitario2026jev}
 \citation{typesafe2026patterns}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Scope, Related Work, and Positioning}{14}{section.8}\protected@file@percent }
-\newlabel{sec:scope}{{8}{14}{Scope, Related Work, and Positioning}{section.8}{}}
-\newlabel{sec:scope@cref}{{[section][8][]8}{[1][14][]14}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scope and limitations}{14}{subsection.8.1}\protected@file@percent }
-\newlabel{scope-and-limitations}{{8.1}{14}{Scope and limitations}{subsection.8.1}{}}
-\newlabel{scope-and-limitations@cref}{{[subsection][1][8]8.1}{[1][14][]14}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Related work}{14}{subsection.8.2}\protected@file@percent }
-\newlabel{related-work}{{8.2}{14}{Related work}{subsection.8.2}{}}
-\newlabel{related-work@cref}{{[subsection][2][8]8.2}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Scope, Related Work, and Positioning}{15}{section.8}\protected@file@percent }
+\newlabel{sec:scope}{{8}{15}{Scope, Related Work, and Positioning}{section.8}{}}
+\newlabel{sec:scope@cref}{{[section][8][]8}{[1][15][]15}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scope and limitations}{15}{subsection.8.1}\protected@file@percent }
+\newlabel{scope-and-limitations}{{8.1}{15}{Scope and limitations}{subsection.8.1}{}}
+\newlabel{scope-and-limitations@cref}{{[subsection][1][8]8.1}{[1][15][]15}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Related work}{15}{subsection.8.2}\protected@file@percent }
+\newlabel{related-work}{{8.2}{15}{Related work}{subsection.8.2}{}}
+\newlabel{related-work@cref}{{[subsection][2][8]8.2}{[1][15][]15}{}{}{}}
 \citation{typesafe2026systemone}
 \citation{typesafe2026systemoneconcept}
 \citation{typesafe2026apidocs}
@@ -163,7 +184,7 @@
 \bibcite{typesafe2026patterns}{{6}{2026{c}}{{TypeSafe AI}}{{}}}
 \bibcite{typesafe2026systemone}{{7}{2026{d}}{{TypeSafe AI}}{{}}}
 \bibcite{typesafe2026systemoneconcept}{{8}{2026{e}}{{TypeSafe AI}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}References}{15}{section.9}\protected@file@percent }
-\newlabel{sec:references}{{9}{15}{References}{section.9}{}}
-\newlabel{sec:references@cref}{{[section][9][]9}{[1][15][]15}{}{}{}}
-\gdef \@abspage@last{16}
+\@writefile{toc}{\contentsline {section}{\numberline {9}References}{16}{section.9}\protected@file@percent }
+\newlabel{sec:references}{{9}{16}{References}{section.9}{}}
+\newlabel{sec:references@cref}{{[section][9][]9}{[1][16][]16}{}{}{}}
+\gdef \@abspage@last{17}

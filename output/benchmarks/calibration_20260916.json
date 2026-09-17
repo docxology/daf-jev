@@ -1,0 +1,39 @@
+{
+  "name": "calibration",
+  "date": "2026-09-16",
+  "model": "jev-latest",
+  "states": 6,
+  "repeats": 5,
+  "choice": {
+    "ece": 0.073,
+    "brier": 0.0252,
+    "buckets": [
+      {
+        "bucket_lo": 0.5,
+        "bucket_hi": 0.6,
+        "n": 2,
+        "mean_confidence": 0.55,
+        "accuracy": 1.0
+      },
+      {
+        "bucket_lo": 0.6,
+        "bucket_hi": 0.7,
+        "n": 3,
+        "mean_confidence": 0.6666666666666666,
+        "accuracy": 1.0
+      },
+      {
+        "bucket_lo": 0.9,
+        "bucket_hi": 1.0,
+        "n": 25,
+        "mean_confidence": 0.9884,
+        "accuracy": 1.0
+      }
+    ]
+  },
+  "noul_stability": {
+    "mean_pairwise_gap": 0.005
+  },
+  "n_errors": 0,
+  "notes": "correctness proxy = agreement with modal choice (self-consistency), not ground truth"
+}

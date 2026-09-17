@@ -68,5 +68,19 @@
       "alt_text": "Confidence axis on the unit interval divided into three horizontal bands labelled escalate, review, and automate, with example threshold markers between the bands.",
       "source": "daf-jev benchmark/figure pipeline"
     }
+  },
+  "fig:calibration": {
+    "figure_id": "figure_006",
+    "filename": "calibration_reliability.png",
+    "caption": "Reliability of the benchmark model's reported confidence, measured by benchmarks/bench_calibration.py. The same three-option classification question is asked independently once per repeat for each of several distinct states; per confidence bucket, markers plot the mean reported confidence against the observed rate of agreement with the modal (majority) choice — a self-consistency correctness proxy, not ground truth. The dashed diagonal is perfect calibration; bucket sizes are annotated at each marker, and the annotation and title carry the expected calibration error, Brier score, model, and run date read from the benchmark JSON.",
+    "label": "fig:calibration",
+    "section": "Results",
+    "width": "0.85\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Reliability diagram plotting mean reported confidence against observed agreement with the modal choice per confidence bucket, each marker annotated with its bucket size, close to the dashed perfect-calibration diagonal, with the expected calibration error and Brier score annotated in the corner.",
+      "source": "daf-jev benchmark/figure pipeline"
+    }
   }
 }

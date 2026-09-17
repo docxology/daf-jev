@@ -1,16 +1,16 @@
 {
   "algorithm": "shared-combined-markdown-v1",
-  "binding_sha256": "7573aa70cee537dd5f247ea0ed2102e041a3b232cc05c148261064012c416cbb",
+  "binding_sha256": "5a59e2d3de205a79f0670df2b10f859e8293b87d31922793d54a1d300bbf41c0",
   "combined_path": "output/web/_combined_manuscript.md",
-  "combined_sha256": "ea9a9e50edb7cc4edee51c6b3555691026773a71a90f2065ecc23929ca707ed3",
-  "combined_size_bytes": 38113,
+  "combined_sha256": "a858c437e845385722b1739e71ebd12d051c9fc455a742310a5b5f6b1c710452",
+  "combined_size_bytes": 45225,
   "input_root_kind": "hydrated",
   "ordered_inputs": [
     {
       "ordinal": 1,
       "path": "output/manuscript/00_abstract.md",
-      "sha256": "fe7a57999ebbd4cce1a0ffc41ed26fc8884a4ce925af8626363688bfc7145fad",
-      "size_bytes": 1758
+      "sha256": "6d9748fe0fd45a741b5e3ac9d80fe54cc7cedeab50206665d486d0a417ac03f4",
+      "size_bytes": 2122
     },
     {
       "ordinal": 2,
@@ -27,26 +27,26 @@
     {
       "ordinal": 4,
       "path": "output/manuscript/03_methodology.md",
-      "sha256": "7562bfa998b46ab99a1c47f018c9526de82445d96e3e331e11efda4588db74aa",
-      "size_bytes": 7756
+      "sha256": "c64135edefe5c022a0f20c2b9335cb0f8f0624db11ffe7ef8deca3a16faa15f5",
+      "size_bytes": 9631
     },
     {
       "ordinal": 5,
       "path": "output/manuscript/04_results.md",
-      "sha256": "6e6a6243f9f09187ed30261a2360318028dc6563f47bfe8a078b25dfe4d1b90e",
-      "size_bytes": 5501
+      "sha256": "debb5e648fd34f13f074bc29543c006b004c2eae30531b0d098ee64904bd106b",
+      "size_bytes": 8987
     },
     {
       "ordinal": 6,
       "path": "output/manuscript/05_experimental_setup.md",
-      "sha256": "c7f80e7d5852b4bb412173c12a97bba105f0e1971f11db0ef5c0a8fd89760338",
-      "size_bytes": 3481
+      "sha256": "6561cb10e05b8282207011dcfe65d4748f2e3a28a7b481c9c6695ef9660c4fdb",
+      "size_bytes": 3991
     },
     {
       "ordinal": 7,
       "path": "output/manuscript/06_reproducibility.md",
-      "sha256": "698aec65a5fbf2022e4b4ddd119c790809b1665550db12498178729e6667c88a",
-      "size_bytes": 3789
+      "sha256": "083c6122f1fdef87119420eba06f7fcf1e0a21862f069cae8b67e0c249143d77",
+      "size_bytes": 4681
     },
     {
       "ordinal": 8,
@@ -61,7 +61,7 @@
       "size_bytes": 737
     }
   ],
-  "ordered_inputs_sha256": "f615f30eca32f6adcb9a9800f9ece55817de249fef2529e6a0bbdc927b0ea736",
+  "ordered_inputs_sha256": "ff15369bab37ea1fad8706b1aabd26c0b03d099f6ae98c9f1e77352d8adc3c93",
   "project": "ongoing/daf-jev",
   "schema_version": "template-manuscript-composition-v1"
 }

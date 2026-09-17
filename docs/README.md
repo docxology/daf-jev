@@ -16,7 +16,8 @@ conventions. All workers must match its signatures exactly; on
 contradiction, report the delta — do not silently deviate.
 
 Gap note: the contract's module map does not yet describe the manuscript
-pipeline modules (`figures.py`, `manuscript_variables.py`); the root
+pipeline modules (`figures.py`, `manuscript_variables.py`) nor the newer
+additions (`mcp_server.py`, `calibration.py`); the root
 `AGENTS.md` module map is the current on-disk truth for those, and the
 contract should be extended rather than contradicted.
 
@@ -75,3 +76,27 @@ Snapshot pages are the source of record for API behavior questions — read
 them (e.g. `sdk/python/api/exceptions.md`) before changing wire-facing
 code. Do not hand-edit pages: changes are detected as drift by
 `docs-verify`.
+
+## skills/ — agent skill
+
+`skills/daf-jev/SKILL.md` is the agent-facing skill document (when-to-use,
+install, Python API surface, CLI, MCP server, pitfalls); to install it into
+an agent, copy the whole `skills/daf-jev/` directory into the agent's skills
+location — see `skills/README.md`. Documentation only, never imported by
+code.
+
+## examples/ — runnable walkthroughs
+
+`examples/` holds four runnable scripts (quickstart, triage router,
+composite scoring, corpus evaluation — see `examples/README.md`); each
+prints `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves.
+
+## calibration
+
+`src/daf_jev/calibration.py` is pure confidence-calibration statistics
+(`bucket_index`, `reliability_table`, `expected_calibration_error`,
+`brier_score`) over `(confidence, correct)` pairs.
+`benchmarks/bench_calibration.py` feeds it live-API pairs where "correct"
+means agreement with the modal choice across repeats — a self-consistency
+correctness proxy, never ground-truth accuracy; results land in
+`output/benchmarks/calibration_<YYYYMMDD>.json`.

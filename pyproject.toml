@@ -22,12 +22,16 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-timeout>=2.3.0",
     "matplotlib>=3.7",
+    "mcp>=1.2,<2",
 ]
 figures = [
     "matplotlib>=3.7",
 ]
 bench = [
     "rich>=13.0.0",
+]
+mcp = [
+    "mcp>=1.2,<2",
 ]
 
 [project.scripts]

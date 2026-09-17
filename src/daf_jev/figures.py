@@ -25,7 +25,7 @@ matplotlib.use("Agg")  # headless PNG rendering; must precede pyplot import
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_confidence", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +413,102 @@ def generate_confidence(out_dir: Path, project_root: Optional[Path] = None) -> P
     return _save(fig, out_dir, "confidence_bands.png")
 
 
+# ---------------------------------------------------------------------------
+# Figure 6 — calibration reliability
+# ---------------------------------------------------------------------------
+
+
+def generate_calibration(out_dir: Path, project_root: Optional[Path] = None) -> Path:
+    """Reliability curve from the live calibration benchmark (bench_calibration.py).
+
+    Per confidence bucket, markers plot mean reported confidence against the
+    observed rate of agreement with the modal choice — a self-consistency
+    correctness proxy, not ground truth. The dashed diagonal is perfect
+    calibration; the title and annotation carry the model, run date, ECE,
+    and Brier score read from the benchmark JSON.
+    """
+    root = Path.cwd() if project_root is None else project_root
+    data = _load_benchmark(root, "calibration")
+
+    choice = data.get("choice") or {}
+    buckets = list(choice.get("buckets") or [])
+
+    fig, ax = plt.subplots(figsize=SIZE_CHART)
+    ax.plot(
+        [0.0, 1.0], [0.0, 1.0],
+        linestyle="--", color=COLOR_EXTERNAL, linewidth=1.2,
+        label="perfect calibration",
+    )
+    if buckets:
+        xs = [float(bucket["mean_confidence"]) for bucket in buckets]
+        ys = [float(bucket["accuracy"]) for bucket in buckets]
+        ax.plot(
+            xs, ys,
+            color=COLOR_LAYER_MAIN, marker="o", linewidth=1.6,
+            label="observed reliability",
+        )
+        for bucket in buckets:
+            x = float(bucket["mean_confidence"])
+            y = float(bucket["accuracy"])
+            # Keep size labels inside the axes near the top-right corner.
+            if x >= 0.95 or y >= 0.95:
+                offset, ha = (-6, -14), "right"
+            else:
+                offset, ha = (5, -9), "left"
+            ax.annotate(
+                f"n={int(bucket['n'])}",
+                (x, y),
+                textcoords="offset points",
+                xytext=offset,
+                ha=ha,
+                fontsize=FONT_ANNOTATE - 1,
+                color=COLOR_TEXT,
+            )
+
+    ece = choice.get("ece")
+    brier = choice.get("brier")
+    if ece is not None and brier is not None:
+        ax.text(
+            0.03, 0.97,
+            f"ECE = {float(ece):.4f}\nBrier = {float(brier):.4f}",
+            transform=ax.transAxes, ha="left", va="top",
+            fontsize=FONT_ANNOTATE, color=COLOR_TEXT,
+        )
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.set_xlabel("mean reported confidence in bucket", fontsize=FONT_AXIS)
+    ax.set_ylabel("observed accuracy (modal agreement)", fontsize=FONT_AXIS)
+    ax.tick_params(labelsize=FONT_AXIS)
+    # Title reads model + run date from the benchmark JSON, never hardcoded.
+    ax.set_title(
+        f"Confidence calibration reliability — {data['model']} ({data['date']})",
+        fontsize=FONT_TITLE, color=COLOR_TEXT,
+    )
+    ax.legend(loc="lower right", fontsize=FONT_ANNOTATE)
+
+    fig.tight_layout()
+    return _save(fig, out_dir, "calibration_reliability.png")
+
+
+_REGISTRY: dict[str, Callable[[Path, Optional[Path]], Path]] = {
+    "architecture": generate_architecture,
+    "primitives": generate_primitives,
+    "batching": generate_batching,
+    "latency": generate_latency,
+    "confidence": generate_confidence,
+    "calibration": generate_calibration,
+}
+
+FIGURE_FILENAMES: dict[str, str] = {
+    "architecture": "architecture.png",
+    "primitives": "primitives_overview.png",
+    "batching": "batching_speedup.png",
+    "latency": "latency_percentiles.png",
+    "confidence": "confidence_bands.png",
+    "calibration": "calibration_reliability.png",
+}
+
+
 def generate_one(name: str, out_dir: Path, project_root: Optional[Path] = None) -> Path:
     """Render a single registered figure by name.
 
@@ -422,28 +518,6 @@ def generate_one(name: str, out_dir: Path, project_root: Optional[Path] = None) 
         raise ValueError(f"unknown figure name {name!r}; valid names: {', '.join(sorted(_REGISTRY))}")
     return _REGISTRY[name](out_dir, project_root)
 
-
-
-
-# ---------------------------------------------------------------------------
-# Registry
-# ---------------------------------------------------------------------------
-
-_REGISTRY: dict[str, Callable[[Path, Optional[Path]], Path]] = {
-    "architecture": generate_architecture,
-    "primitives": generate_primitives,
-    "batching": generate_batching,
-    "latency": generate_latency,
-    "confidence": generate_confidence,
-}
-
-FIGURE_FILENAMES: dict[str, str] = {
-    "architecture": "architecture.png",
-    "primitives": "primitives_overview.png",
-    "batching": "batching_speedup.png",
-    "latency": "latency_percentiles.png",
-    "confidence": "confidence_bands.png",
-}
 
 
 FIGURE_REGISTRY_FILENAME = "figure_registry.json"
@@ -553,6 +627,31 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
             "Confidence axis on the unit interval divided into three horizontal "
             "bands labelled escalate, review, and automate, with example threshold "
             "markers between the bands."
+        ),
+    },
+    {
+        "label": "fig:calibration",
+        "filename": "calibration_reliability.png",
+        "section": "Results",
+        "width": "0.85\\textwidth",
+        "caption": (
+            "Reliability of the benchmark model's reported confidence, measured "
+            "by benchmarks/bench_calibration.py. The same three-option "
+            "classification question is asked independently once per repeat for "
+            "each of several distinct states; per confidence bucket, markers "
+            "plot the mean reported confidence against the observed rate of "
+            "agreement with the modal (majority) choice — a self-consistency "
+            "correctness proxy, not ground truth. The dashed diagonal is "
+            "perfect calibration; bucket sizes are annotated at each marker, "
+            "and the annotation and title carry the expected calibration error, "
+            "Brier score, model, and run date read from the benchmark JSON."
+        ),
+        "alt_text": (
+            "Reliability diagram plotting mean reported confidence against "
+            "observed agreement with the modal choice per confidence bucket, "
+            "each marker annotated with its bucket size, close to the dashed "
+            "perfect-calibration diagonal, with the expected calibration error "
+            "and Brier score annotated in the corner."
         ),
     },
 )

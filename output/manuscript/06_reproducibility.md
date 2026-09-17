@@ -4,14 +4,18 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Artifact inventory and hashing
 
-- **Figures.** The five figures of this manuscript are generated into `output/figures/` by `src/daf_jev/figures.py` (one `generate_<name>()` function per figure plus `generate_all(out_dir)`), orchestrated by `scripts/generate_figures.py`:
+- **Figures.** The six figures of this manuscript are generated into `output/figures/` by `src/daf_jev/figures.py` (one `generate_<name>()` function per figure plus `generate_all(out_dir)`), orchestrated by `scripts/generate_figures.py`:
 
   ```bash
   uv run python scripts/generate_figures.py            # all figures
   uv run python scripts/generate_figures.py --only batching_speedup
   ```
 
-  The data-driven figures read `output/benchmarks/batching_*.json` and `output/benchmarks/patterns_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The two schematic figures and the parametric confidence-band illustration require no data and no network.
+  The data-driven figures read `output/benchmarks/batching_*.json`, `output/benchmarks/patterns_*.json`, and `output/benchmarks/calibration_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The two schematic figures and the parametric confidence-band illustration require no data and no network.
+
+- **Figure registry.** Every figure is recorded in `output/figures/figure_registry.json` — six entries, one per figure, each mapping the manuscript's cross-reference label (`fig:architecture` through `fig:calibration`) to its filename, caption, section, and layout width — so the figure set itself is a versioned data artifact rather than a convention.
+
+- **Calibration benchmark payloads.** The calibration run writes `output/benchmarks/calibration_<date>.json` (per-bucket reliability data, expected calibration error, Brier score, the mean pairwise noul gap, and a `notes` field stating the self-consistency proxy semantics); `benchmarks/bench_calibration.py` regenerates it live, and the reliability figure `output/figures/calibration_reliability.png` is rendered from the same payload by `generate_calibration()` in `src/daf_jev/figures.py`.
 
 - **Manuscript variables.** All dynamic values reach the prose as double-brace token placeholders, computed by `src/daf_jev/manuscript_variables.py::generate_variables(project_root)` and written to `output/data/manuscript_variables.json` by the thin orchestrator `scripts/z_generate_manuscript_variables.py`, which then renders substituted copies of every section into `output/manuscript/`. Running in strict mode fails if analysis outputs are missing; the `--allow-draft` flag substitutes draft sentinels instead of failing, for early-stage renders only.
 
@@ -24,15 +28,15 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Test suite and coverage
 
-The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 15 test files — 214 unit tests and 2 live tests — collected with:
+The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 17 test files — 256 unit tests and 2 live tests — collected with:
 
 ```bash
 uv run pytest tests/unit --cov=src     # unit suite under the coverage gate
 JEV_API_KEY=... uv run pytest tests/live   # live tests against the real API
 ```
 
-Measured coverage over the package source stands at 94.87, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
+Measured coverage over the package source stands at 92.16, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
 
 ## Provenance chain
 
-The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T00:27:59Z.
+The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T01:36:24Z.

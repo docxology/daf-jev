@@ -288,9 +288,15 @@ speedups of 3.98, 8.77, and 18.55 across the configured batch widths,
 with a token-cost ratio of 4.22 at the widest setting; end-to-end
 decision pipelines (network round trip plus composition logic) complete
 at a median wall time of 0.133 for composite scoring and 0.129 for
-intent routing against the jev-latest model. Every numeric value in this
-manuscript is generated from the same analysis outputs as the figures
-and tables, so the prose cannot drift from the data.
+intent routing against the jev-latest model. Decision quality is
+validated as well as speed: a self-consistency calibration benchmark
+reports an expected calibration error of 0.0730 and a Brier score of
+0.0252 over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats against the jev-latest model, and the
+same core is exposed to non-Python consumers through an MCP server
+(\texttt{daf-jev\ serve}), an agent skill, and a set of runnable
+examples. Every numeric value in this manuscript is generated from the
+same analysis outputs as the figures and tables, so the prose cannot
+drift from the data.
 
 \textbf{Keywords:} decision models, LLM APIs, calibrated confidence,
 batching, confidence-gated routing, Python client, reproducible research
@@ -715,19 +721,63 @@ Four rulings shaped the codebase and are worth stating as contracts:
   a moving website.
 \end{enumerate}
 
+\subsection{Integration surfaces}\label{integration-surfaces}
+
+The Python API is the primary door into the package, but not the only
+one. Three additional surfaces sit on top of the same layering ---
+transport, client, primitives, composition --- and add accessibility
+rather than logic: each one delegates to the very modules described
+above and contains no decision code of its own.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{MCP server} (\breaktt{src/daf\_jev/mcp\_server.py}, launched
+  with \texttt{daf-jev\ serve} over the stdio transport). It exposes the
+  core to any MCP-capable agent host through tools that mirror the
+  package one-to-one: \texttt{jev\_ask} and \texttt{jev\_evaluate} drive
+  the client's single-call and batch paths, \texttt{jev\_models} reports
+  the available model surface, \breaktt{jev\_composite\_score},
+  \breaktt{jev\_confidence\_gate}, and \texttt{jev\_tiered\_gate} expose
+  the composition patterns, and \texttt{jev\_docs\_verify} re-runs the
+  documentation drift check of Design ruling 4; a
+  \breaktt{jev://docs/snapshot} resource serves the bundled documentation
+  snapshot itself. The server is a thin adapter --- it owns no retry
+  policy, no parsing, and no thresholds.
+\item
+  \textbf{Agent skill} (\breaktt{skills/daf-jev/SKILL.md}). A skill
+  manifest that tells a coding agent when and how to reach for the CLI
+  subcommands and composition helpers, so an agent can use the package
+  correctly without reading its source.
+\item
+  \textbf{Runnable examples} (\texttt{examples/}). Four self-contained
+  scripts --- \texttt{quickstart.py}, \breaktt{triage\_router.py},
+  \breaktt{composite\_scoring.py}, and \breaktt{evaluate\_corpus.py} ---
+  walk the typical integration path from a first call to a batch
+  evaluation, doubling as executable documentation of the composition
+  layer.
+\end{itemize}
+
+None of these surfaces introduces a second implementation of the model
+semantics: the MCP tools call the same client and compose functions the
+CLI calls, the skill documents those entry points, and the examples
+exercise them. A behaviour fixed in the composition layer therefore
+reaches every consumer at once.
+
 \newpage
 
 \section{Results}\label{sec:results}
 
-This section reports the two live-API benchmarks that quantify the
+This section reports the three live-API benchmarks that quantify the
 design claims of sec.~\ref{sec:methodology}: the batching benchmark,
 which reproduces the documented parallel-questions pattern
-\citep{typesafe2026patterns}, and the decision-pattern latency
-benchmark. Both run against the real jev-latest model; every value below
-is injected from the benchmark outputs at render time, and the figures
-are regenerated from the same JSON files, so prose, tables, and figures
-share one source of truth. The results reported here were recorded on
-2026-09-16.
+\citep{typesafe2026patterns}, the decision-pattern latency benchmark,
+and the self-consistency calibration benchmark. All run against the real
+jev-latest model; every value below is injected from the benchmark
+outputs at render time, and the figures are regenerated from the same
+JSON files, so prose, tables, and figures share one source of truth. The
+batching and latency results reported here were recorded on 2026-09-16;
+the calibration results on 2026-09-16.
 
 \subsection{Batching speedup and token
 cost}\label{batching-speedup-and-token-cost}
@@ -764,8 +814,16 @@ grows with batch width, as expected from the round-trip accounting: the
 fixed per-call overhead is amortized over more questions, and the state
 is transmitted once rather than once per question.
 
-{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}ll@{}}
+\caption{Wall-time speedup of one batched call versus one sequential
+call per question, per configured batch width, recorded by
+\protect\breaktt{benchmarks/bench\_batching.py} against the jev-latest
+model on 2026-09-16. Values are injected from the benchmark JSON at
+render time.}\label{tbl:batching}\tabularnewline
+\toprule\noalign{}
+Questions per batch & Wall-time speedup vs sequential \\
+\midrule\noalign{}
+\endfirsthead
 \toprule\noalign{}
 Questions per batch & Wall-time speedup vs sequential \\
 \midrule\noalign{}
@@ -776,13 +834,6 @@ Questions per batch & Wall-time speedup vs sequential \\
 10 & 8.77 \\
 20 & 18.55 \\
 \end{longtable}
-}
-
-:: Wall-time speedup of one batched call versus one sequential call per
-question, per configured batch width, recorded by
-\breaktt{benchmarks/bench\_batching.py} against the jev-latest model on
-2026-09-16. Values are injected from the benchmark JSON at render time.
-\{\#tbl:batching\}
 
 Token cost moves in the same direction. At the widest configured batch
 width the batched strategy consumes a token ratio of 4.22 relative to
@@ -823,11 +874,25 @@ time. Values are tabulated in
 tbl.~\ref{tbl:latency}.}\label{fig:latency}
 \end{figure}
 
-{\def\LTcaptype{none} % do not increment counter
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.2778}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3750}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3472}}@{}}
+\caption{End-to-end wall time (network round trip plus local composition
+logic) per decision pipeline, median and tail over 6 runs recorded by
+\protect\breaktt{benchmarks/bench\_patterns.py} against the jev-latest
+model on 2026-09-16. Values are injected from the benchmark JSON at
+render time.}\label{tbl:latency}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Pipeline
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Median wall time, p50 (s)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Tail wall time, p95 (s)
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Pipeline
@@ -843,17 +908,80 @@ Tail wall time, p95 (s)
 composite\_score & 0.133 & 0.242 \\
 intent\_routing & 0.129 & 0.152 \\
 \end{longtable}
-}
 
-:: End-to-end wall time (network round trip plus local composition
-logic) per decision pipeline, median and tail over 6 runs recorded by
-\breaktt{benchmarks/bench\_patterns.py} against the jev-latest model on
-2026-09-16. Values are injected from the benchmark JSON at render time.
-\{\#tbl:latency\}
+\subsection{Calibration}\label{calibration}
+
+Latency says nothing about whether the composed decisions are
+trustworthy, so the third benchmark measures how far the model's
+reported confidence tracks its own agreement behaviour.
+\breaktt{benchmarks/bench\_calibration.py} runs 6 short states 5 times
+each against the jev-latest model and scores choice answers under a
+\emph{self-consistency proxy}: a sample counts as correct when it agrees
+with the modal choice across the repeats of the same state. Because a
+yes/no probability carries no per-sample label to agree with, noul
+answers are scored for repeat-to-repeat stability instead, via the mean
+absolute gap between every pair of repeated answers. No external ground
+truth is consulted anywhere in this benchmark --- the correctness proxy
+is self-agreement, not verified outcomes.
+
+tbl.~\ref{tbl:calibration} reports the aggregate scores over the run,
+and fig.~\ref{fig:calibration} plots the reliability curve per
+confidence bucket.
+
+\begin{longtable}[]{@{}ll@{}}
+\caption{Calibration summary over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats recorded by
+\protect\breaktt{benchmarks/bench\_calibration.py} against the jev-latest
+model on 2026-09-16. Choice correctness is a self-consistency proxy ---
+agreement with the modal choice across repeats --- not accuracy against
+ground truth; the mean pairwise noul gap measures repeat-to-repeat
+answer stability rather than correctness. Values are injected from the
+benchmark JSON at render time.}\label{tbl:calibration}\tabularnewline
+\toprule\noalign{}
+Metric & Value \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Metric & Value \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Expected calibration error (choice, proxy) & 0.0730 \\
+Brier score (choice, proxy) & 0.0252 \\
+Mean pairwise noul gap & 0.0050 \\
+\end{longtable}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.85\linewidth,height=0.5\textheight,keepaspectratio,alt={Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by benchmarks/bench\_calibration.py over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats. Because the proxy scores self-agreement rather than verified correctness, the diagonal indicates consistency between stated confidence and repeat-stable behaviour --- not truthfulness.}]{../figures/calibration_reliability.png}
+\caption{Reliability diagram of choice-answer confidence under the
+self-consistency proxy, measured by
+\protect\breaktt{benchmarks/bench\_calibration.py} over 6 states \texorpdfstring{\ensuremath{\times}}{x} 5
+repeats against the jev-latest model on 2026-09-16. Each point is a
+confidence bucket plotting mean reported confidence against proxy
+accuracy, where proxy accuracy is agreement with the modal choice across
+repeats. Because the proxy scores self-agreement rather than verified
+correctness, the diagonal indicates consistency between stated
+confidence and repeat-stable behaviour --- not
+truthfulness.}\label{fig:calibration}
+\end{figure}
+
+The expected calibration error of 0.0730 and the Brier score of 0.0252
+indicate that reported choice confidence is broadly consistent with the
+proxy labels, and the mean pairwise noul gap of 0.0050 shows that
+repeated noul answers on the same state are nearly identical. These
+claims extend exactly as far as the proxy does. Self-consistency can
+establish that the model is stable across repeats and that its
+confidence ordering is internally coherent; it cannot certify that the
+answers are correct about the world, because the proxy labels are
+generated by the same model whose calibration is being measured. The
+benchmark is therefore evidence of calibrated, repeatable decision
+behaviour under a reproducible proxy --- a necessary, not sufficient,
+condition for deploying these gates on real decisions.
 
 \subsection{Interpretation}\label{interpretation}
 
-Three observations tie the measurements back to the design rulings of
+Four observations tie the measurements back to the design rulings of
 sec.~\ref{sec:methodology}. First, the batching speedups in
 tbl.~\ref{tbl:batching} confirm that the parallel-sampler semantics
 translate directly into wall-clock savings: the batched strategy is
@@ -868,7 +996,13 @@ millisecond-scale latency envelope (sec.~\ref{sec:jev_model}): the
 pure-logic composition layer adds no measurable latency beyond the
 network round trip, which is precisely what allows confidence-gated
 routing to run inline on interactive request paths rather than in a
-background queue.
+background queue. Fourth, the calibration summary in
+tbl.~\ref{tbl:calibration} supports the calibrated-decision premise of
+the confidence-gated patterns described in sec.~\ref{sec:methodology}
+--- reported choice confidence aligns with repeat-stable behaviour, and
+noul answers are stable across repeats --- under the self-consistency
+proxy semantics stated in the Calibration section, and only as far as
+those semantics extend.
 
 \newpage
 
@@ -897,12 +1031,11 @@ verifiable.
 
 \subsection{Benchmark configuration}\label{benchmark-configuration}
 
-Both benchmarks execute against the real jev-latest model with a live
-API key resolved through the package's credential precedence chain
-(injected mapping, then process environment, then the project
-\texttt{.env} file). Without a key, both scripts print a skip notice and
-exit successfully --- they are benchmarks, not tests, and never run
-inside the test suite.
+All benchmarks execute against the real jev-latest model with a live API
+key resolved through the package's credential precedence chain (injected
+mapping, then process environment, then the project \texttt{.env} file).
+Without a key, the scripts print a skip notice and exit successfully ---
+they are benchmarks, not tests, and never run inside the test suite.
 
 \begin{itemize}
 \tightlist
@@ -925,13 +1058,23 @@ inside the test suite.
   \texttt{output/benchmarks/patterns\_\textless{}date\textgreater{}.json}.
   An asynchronous mode executes the same runs concurrently through
   \texttt{AsyncJevClient} and compares against the sequential wall time.
+\item
+  \textbf{Calibration benchmark}
+  (\breaktt{benchmarks/bench\_calibration.py}) --- runs 6 short states 5
+  times each against the jev-latest model, scores choice answers under
+  the self-consistency proxy (agreement with the modal choice across
+  repeats) and noul answers by mean pairwise stability, and writes the
+  expected calibration error, Brier score, per-bucket reliability data,
+  and the mean pairwise noul gap to
+  \texttt{output/benchmarks/calibration\_\textless{}date\textgreater{}.json},
+  together with a \texttt{notes} field stating the proxy semantics.
 \end{itemize}
 
-Both scripts take \texttt{-\/-runs} and \texttt{-\/-model} arguments;
-the defaults are recorded as data under the \texttt{experiment:} block
-of \breaktt{manuscript/config.yaml}, which is the same file the
-manuscript-variable generator reads --- configuration, prose, and
-figures cannot disagree about the protocol.
+All benchmark scripts take \texttt{-\/-runs} and \texttt{-\/-model}
+arguments; the defaults are recorded as data under the
+\texttt{experiment:} block of \breaktt{manuscript/config.yaml}, which is
+the same file the manuscript-variable generator reads --- configuration,
+prose, and figures cannot disagree about the protocol.
 
 \subsection{Measurement protocol}\label{measurement-protocol}
 
@@ -944,7 +1087,7 @@ the numbers in tbl.~\ref{tbl:latency} are conservative upper bounds on
 what an integrating application would add to its request path. Token
 totals are read from the response usage records, not estimated.
 
-This manuscript was generated at 2026-09-17T00:27:59Z; the rendered
+This manuscript was generated at 2026-09-17T01:36:24Z; the rendered
 values in sec.~\ref{sec:results} correspond to the benchmark JSONs
 current at that timestamp, and the figure generators resolve ``latest''
 the same way (latest by filename date) so that re-rendering after a new
@@ -965,7 +1108,7 @@ hashing}\label{artifact-inventory-and-hashing}
 
 \begin{itemize}
 \item
-  \textbf{Figures.} The five figures of this manuscript are generated
+  \textbf{Figures.} The six figures of this manuscript are generated
   into \texttt{../figures/} by \breaktt{src/daf\_jev/figures.py} (one
   \texttt{generate\_\textless{}name\textgreater{}()} function per figure
   plus \breaktt{generate\_all(out\_dir)}), orchestrated by
@@ -979,12 +1122,30 @@ hashing}\label{artifact-inventory-and-hashing}
 \end{Shaded}
 
   The data-driven figures read
-  \breaktt{output/benchmarks/batching\_*.json} and
-  \breaktt{output/benchmarks/patterns\_*.json}, resolving ``latest'' by
-  filename date; a missing benchmark file is reported as a clear error
-  naming the missing file rather than silently producing an empty chart.
-  The two schematic figures and the parametric confidence-band
+  \breaktt{output/benchmarks/batching\_*.json},
+  \breaktt{output/benchmarks/patterns\_*.json}, and
+  \breaktt{output/benchmarks/calibration\_*.json}, resolving ``latest''
+  by filename date; a missing benchmark file is reported as a clear
+  error naming the missing file rather than silently producing an empty
+  chart. The two schematic figures and the parametric confidence-band
   illustration require no data and no network.
+\item
+  \textbf{Figure registry.} Every figure is recorded in
+  \breaktt{../figures/figure\_registry.json} --- six entries, one per
+  figure, each mapping the manuscript's cross-reference label
+  (\breaktt{fig:architecture} through \texttt{fig:calibration}) to its
+  filename, caption, section, and layout width --- so the figure set
+  itself is a versioned data artifact rather than a convention.
+\item
+  \textbf{Calibration benchmark payloads.} The calibration run writes
+  \texttt{output/benchmarks/calibration\_\textless{}date\textgreater{}.json}
+  (per-bucket reliability data, expected calibration error, Brier score,
+  the mean pairwise noul gap, and a \texttt{notes} field stating the
+  self-consistency proxy semantics);
+  \breaktt{benchmarks/bench\_calibration.py} regenerates it live, and the
+  reliability figure \breaktt{../figures/calibration\_reliability.png} is
+  rendered from the same payload by \breaktt{generate\_calibration()} in
+  \breaktt{src/daf\_jev/figures.py}.
 \item
   \textbf{Manuscript variables.} All dynamic values reach the prose as
   double-brace token placeholders, computed by
@@ -1017,7 +1178,7 @@ hashing}\label{artifact-inventory-and-hashing}
 The test suite follows the no-mock convention: unit tests drive the real
 transport against a real local HTTP server fixture, and live tests hit
 the real API only when a key is present in the environment (they skip
-with a notice otherwise). The suite comprises 15 test files --- 214 unit
+with a notice otherwise). The suite comprises 17 test files --- 256 unit
 tests and 2 live tests --- collected with:
 
 \begin{Shaded}
@@ -1027,7 +1188,7 @@ tests and 2 live tests --- collected with:
 \end{Highlighting}
 \end{Shaded}
 
-Measured coverage over the package source stands at 94.87, enforced by
+Measured coverage over the package source stands at 92.16, enforced by
 the coverage gate configured in \texttt{pyproject.toml}. Test and
 collection counts are computed at variable-generation time by collecting
 the suite; if collection is unavailable in a given environment, the
@@ -1046,7 +1207,7 @@ the renderer consumes the substituted copies. No numeric fact in this
 paper has a hand-maintained copy; the environment of record is
 \breaktt{macOS-26.6.2-arm64-arm-64bit-Mach-O} under 3.14.6, and the
 rendered edition is version 0.2.0 of this manuscript, generated at
-2026-09-17T00:27:59Z.
+2026-09-17T01:36:24Z.
 
 \newpage
 

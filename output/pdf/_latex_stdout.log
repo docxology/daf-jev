@@ -125,50 +125,8 @@ ictionary-english.trsl) [1] (./_combined_manuscript.toc
 (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msa.cfg)
 (/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd)
 (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msb.cfg)) [1]
-[2] [3] [4] [5] [6] [7] [8] [9]
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 759.
-
-
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 759.
-
-
-
-LaTeX Warning: Reference `tbl:batching' on page 10 undefined on input line 762.
-
-
-[10]
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 810.
-
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 823.
-
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 823.
-
-
-LaTeX Warning: Reference `tbl:batching' on page 11 undefined on input line 858.
-
-
-
-LaTeX Warning: Reference `tbl:latency' on page 11 undefined on input line 866.
-
-[11]
-
-LaTeX Warning: Reference `tbl:latency' on page 12 undefined on input line 943.
-
-[12] [13] [14] (./_combined_manuscript.bbl)
-
-Package caption Warning: Unused \captionsetup[table] on input line 80.
-See the caption package documentation for explanation.
-
-[15] (./_combined_manuscript.aux)
-
-LaTeX Warning: There were undefined references.
-
- )
+[2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13] [14] [15]
+(./_combined_manuscript.bbl) [16] (./_combined_manuscript.aux) )
 (see the transcript file for additional information)
-Output written on _combined_manuscript.pdf (16 pages).
+Output written on _combined_manuscript.pdf (17 pages).
 Transcript written on _combined_manuscript.log.

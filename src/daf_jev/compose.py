@@ -13,7 +13,7 @@ from typing import Optional, TypeVar
 
 from daf_jev._types import ChoiceAnswer, ScoreAnswer
 
-__all__ = ["composite_score", "confidence_gate", "route", "pick"]
+__all__ = ["composite_score", "confidence_gate", "route", "pick", "tiered_gate"]
 
 T = TypeVar("T")
 
@@ -158,3 +158,39 @@ def pick(
         for qid, answer in choices.items()
         if getattr(answer, "choice", None) is not None
     }
+
+
+def tiered_gate(
+    answer: object,
+    *,
+    high: float = 0.85,
+    low: float = 0.6,
+    high_label: str = "automate",
+    middle_label: str = "review",
+    low_label: str = "escalate",
+) -> str:
+    """Route on confidence against two thresholds.
+
+    Two-threshold confidence routing: confidence ``>= high`` returns
+    ``high_label`` (automate), ``>= low`` returns ``middle_label`` (review),
+    otherwise ``low_label`` (escalate). ``answer`` must carry a ``confidence``
+    field (Choice or Score answers do; Noul answers do not and raise
+    ``TypeError``).
+    """
+    if low > high:
+        raise ValueError(f"low ({low}) must not exceed high ({high})")
+    if not (high_label and middle_label and low_label):
+        raise ValueError("labels must be non-empty strings")
+
+    confidence = getattr(answer, "confidence", None)
+    if confidence is None:
+        raise TypeError(
+            f"{type(answer).__name__} carries no confidence "
+            "(noul answers do not); tiered_gate requires a Choice or Score answer"
+        )
+
+    if confidence >= high:
+        return high_label
+    if confidence >= low:
+        return middle_label
+    return low_label

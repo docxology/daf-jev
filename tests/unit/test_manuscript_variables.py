@@ -99,6 +99,29 @@ _PATTERNS_JSON = {
     },
 }
 
+
+_CALIBRATION_JSON = {
+    "name": "calibration",
+    "date": "2026-09-16",
+    "model": "jev-test",
+    "states": 6,
+    "repeats": 5,
+    "choice": {
+        "ece": 0.0312,
+        "brier": 0.15,
+        "buckets": [
+            {"bucket_lo": 0.5, "bucket_hi": 0.6, "n": 3,
+             "mean_confidence": 0.55, "accuracy": 0.6667},
+            {"bucket_lo": 0.9, "bucket_hi": 1.0, "n": 4,
+             "mean_confidence": 0.95, "accuracy": 1.0},
+        ],
+    },
+    "noul_stability": {"mean_pairwise_gap": 0.025},
+    "n_errors": 0,
+    "notes": "correctness proxy = agreement with modal choice "
+             "(self-consistency), not ground truth",
+}
+
 _INIT_PY = '''"""Fake daf-jev package."""
 
 __all__ = ["alpha", "beta"]
@@ -137,6 +160,7 @@ def _write_analysis_outputs(root: Path) -> None:
     bench_dir.mkdir(parents=True, exist_ok=True)
     (bench_dir / "batching_20260916.json").write_text(json.dumps(_BATCHING_JSON), encoding="utf-8")
     (bench_dir / "patterns_20260916.json").write_text(json.dumps(_PATTERNS_JSON), encoding="utf-8")
+    (bench_dir / "calibration_20260916.json").write_text(json.dumps(_CALIBRATION_JSON), encoding="utf-8")
     figures_dir = root / "output" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     (figures_dir / "b.png").write_bytes(b"png")
@@ -201,6 +225,14 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
     assert variables["BENCH_PATTERNS_ROUTING_P50_S"] == "0.110"
     assert variables["BENCH_PATTERNS_ROUTING_P95_S"] == "0.130"
 
+    assert variables["BENCH_CALIB_MODEL"] == "jev-test"
+    assert variables["BENCH_CALIB_DATE"] == "2026-09-16"
+    assert variables["BENCH_CALIB_STATES"] == "6"
+    assert variables["BENCH_CALIB_REPEATS"] == "5"
+    assert variables["BENCH_CALIB_ECE"] == "0.0312"
+    assert variables["BENCH_CALIB_BRIER"] == "0.1500"
+    assert variables["BENCH_CALIB_MEAN_GAP"] == "0.0250"
+
     assert variables["PLATFORM"] == platform.platform()
     assert variables["PYTHON_VERSION"] == platform.python_version()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", variables["GENERATION_TIMESTAMP"])
@@ -211,7 +243,7 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
 def test_generate_variables_token_count_stable(fake_project: Path) -> None:
     """The contracted variable set must not silently grow or shrink."""
     variables = generate_variables(fake_project)
-    assert len(variables) == 39
+    assert len(variables) == 46
 
 
 def test_generate_variables_timestamp_honors_source_date_epoch(
@@ -257,6 +289,13 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
         "BENCH_PATTERNS_COMPOSITE_P95_S",
         "BENCH_PATTERNS_ROUTING_P50_S",
         "BENCH_PATTERNS_ROUTING_P95_S",
+        "BENCH_CALIB_MODEL",
+        "BENCH_CALIB_DATE",
+        "BENCH_CALIB_STATES",
+        "BENCH_CALIB_REPEATS",
+        "BENCH_CALIB_ECE",
+        "BENCH_CALIB_BRIER",
+        "BENCH_CALIB_MEAN_GAP",
     ):
         assert variables[token] == "N/A", token
     assert variables["CONFIG_KEYWORDS"] == ""
@@ -273,6 +312,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
         ("docs/reference/MANIFEST.json", "MANIFEST.json"),
         ("output/benchmarks/batching_20260916.json", "batching"),
         ("output/benchmarks/patterns_20260916.json", "patterns"),
+        ("output/benchmarks/calibration_20260916.json", "calibration"),
     ],
 )
 def test_generate_variables_strict_missing_analysis_output_raises(

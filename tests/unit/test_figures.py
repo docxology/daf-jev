@@ -18,6 +18,7 @@ from daf_jev.figures import (
     generate_all,
     generate_architecture,
     generate_batching,
+    generate_calibration,
     generate_confidence,
     generate_latency,
     generate_one,
@@ -33,6 +34,7 @@ EXPECTED_PNGS = {
     "batching": "batching_speedup.png",
     "latency": "latency_percentiles.png",
     "confidence": "confidence_bands.png",
+    "calibration": "calibration_reliability.png",
 }
 
 EXPECTED_REGISTRY_KEYS = {f"fig:{name}" for name in EXPECTED_PNGS}
@@ -42,6 +44,7 @@ EXPECTED_REGISTRY_SECTIONS = {
     "fig:batching": "Results",
     "fig:latency": "Results",
     "fig:confidence": "Methodology",
+    "fig:calibration": "Results",
 }
 EXPECTED_REGISTRY_WIDTHS = {
     "fig:confidence": "0.8\\textwidth",
@@ -108,6 +111,33 @@ def _patterns_payload() -> dict:
     }
 
 
+def _calibration_payload() -> dict:
+    """Synthetic calibration benchmark with the real JSON schema."""
+    return {
+        "name": "calibration",
+        "date": "2026-09-16",
+        "model": "jev-test",
+        "states": 6,
+        "repeats": 5,
+        "choice": {
+            "ece": 0.0312,
+            "brier": 0.15,
+            "buckets": [
+                {"bucket_lo": 0.5, "bucket_hi": 0.6, "n": 3,
+                 "mean_confidence": 0.55, "accuracy": 0.6667},
+                {"bucket_lo": 0.6, "bucket_hi": 0.7, "n": 5,
+                 "mean_confidence": 0.65, "accuracy": 0.8},
+                {"bucket_lo": 0.9, "bucket_hi": 1.0, "n": 4,
+                 "mean_confidence": 0.95, "accuracy": 1.0},
+            ],
+        },
+        "noul_stability": {"mean_pairwise_gap": 0.025},
+        "n_errors": 0,
+        "notes": "correctness proxy = agreement with modal choice "
+                 "(self-consistency), not ground truth",
+    }
+
+
 def _write_benchmark(root: Path, name: str, payload: dict) -> None:
     bench_dir = root / "output" / "benchmarks"
     bench_dir.mkdir(parents=True, exist_ok=True)
@@ -117,6 +147,7 @@ def _write_benchmark(root: Path, name: str, payload: dict) -> None:
 def _write_benchmarks(root: Path) -> None:
     _write_benchmark(root, "batching", _batching_payload())
     _write_benchmark(root, "patterns", _patterns_payload())
+    _write_benchmark(root, "calibration", _calibration_payload())
 
 
 @pytest.fixture()
@@ -136,7 +167,7 @@ def _assert_valid_png(path: Path) -> None:
 # --------------------------------------------------------------- generate_all ---
 
 
-def test_generate_all_writes_all_five_pngs(fake_project: Path, tmp_path: Path) -> None:
+def test_generate_all_writes_all_six_pngs(fake_project: Path, tmp_path: Path) -> None:
     out_dir = tmp_path / "figures"
     paths = generate_all(out_dir, project_root=fake_project)
 
@@ -180,8 +211,31 @@ def test_confidence_figure_is_data_free(tmp_path: Path) -> None:
     _assert_valid_png(path)
 
 
-# ------------------------------------------------------------ generate_one ---
+def test_calibration_figure_is_byte_deterministic(fake_project: Path, tmp_path: Path) -> None:
+    """The reliability figure renders byte-identically from the same JSON."""
+    first = tmp_path / "first"
+    second = tmp_path / "second"
 
+    path_a = generate_calibration(first, project_root=fake_project)
+    path_b = generate_calibration(second, project_root=fake_project)
+
+    assert path_a == first / "calibration_reliability.png"
+    assert path_b == second / "calibration_reliability.png"
+    assert path_a.read_bytes() == path_b.read_bytes()
+
+
+def test_missing_calibration_benchmark_raises_file_not_found(tmp_path: Path) -> None:
+    """The calibration figure needs its benchmark JSON; the error names it."""
+    root = tmp_path / "partial"
+    root.mkdir()
+    _write_benchmark(root, "batching", _batching_payload())
+    _write_benchmark(root, "patterns", _patterns_payload())
+
+    with pytest.raises(FileNotFoundError, match="calibration"):
+        generate_calibration(tmp_path / "out", project_root=root)
+
+
+# ------------------------------------------------------------ generate_one ---
 
 @pytest.mark.parametrize(
     ("generate", "filename"),
@@ -191,6 +245,7 @@ def test_confidence_figure_is_data_free(tmp_path: Path) -> None:
         (generate_batching, "batching_speedup.png"),
         (generate_latency, "latency_percentiles.png"),
         (generate_confidence, "confidence_bands.png"),
+        (generate_calibration, "calibration_reliability.png"),
     ],
 )
 def test_each_registered_figure_renders(

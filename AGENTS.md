@@ -43,11 +43,11 @@ here.
   - `models.py` — `pick_model(cards, *, contains=None, prefer="latest")`;
     pure selection over the models listing (no I/O); `ValueError` on empty
     input, no match after filtering, or unknown `prefer`.
-  - `figures.py` — matplotlib figure registry: 5 named figures
-    (`architecture`, `primitives`, `batching`, `latency`, `confidence`) +
-    `figure_registry.json` emission; data-driven figures read the newest
-    `output/benchmarks/*.json`.
-  - `manuscript_variables.py` — `generate_variables` / `save_variables`: 39
+  - `figures.py` — matplotlib figure registry: 6 named figures
+    (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
+    `calibration`) + `figure_registry.json` emission; data-driven figures
+    read the newest `output/benchmarks/*.json`.
+  - `manuscript_variables.py` — `generate_variables` / `save_variables`: 46
     `{{TOKEN}}` manuscript variables derived from pyproject, docs MANIFEST,
     test counts, and benchmark JSONs; zero hardcoded result values.
   - `config.py` — `load_dotenv`, `resolve_api_key` (injected env >
@@ -57,13 +57,22 @@ here.
     `load_settings`.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
-    `--concurrency`, `--model`, `--include-records`), `docs-verify`; JSON to
-    stdout, exit 0/1/2.
+    `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
+    (`--transport stdio` — the only choice); JSON to stdout, exit 0/1/2.
+  - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
+    `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
+    `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify` + the
+    `jev://docs/snapshot` resource; stdio transport only; imports `mcp` at
+    module import (optional `mcp` extra — never import from core modules).
+  - `calibration.py` — pure calibration statistics over `(confidence,
+    correct)` pairs: `bucket_index`, `reliability_table`,
+    `expected_calibration_error`, `brier_score`; no I/O.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
-  (14 files, 214 tests collected — per module plus CLI, scraper, and the
-  v0.2 evaluate/models/figures/manuscript_variables modules),
-  `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`).
+  (16 files, 256 tests collected — per module plus CLI, scraper, and the
+  v0.2 evaluate/models/figures/manuscript_variables, calibration, and
+  mcp_server modules), `tests/live/test_live_api.py` (2 tests,
+  `@pytest.mark.live`).
 - `scripts/scrape_docs.py` — standalone stdlib re-scraper for the docs
   snapshot; CLI: `--index-url`, `--out-dir`, `--check`, `--manifest PATH`
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
@@ -76,6 +85,13 @@ here.
   and (inside the template checkout) substitutes `{{TOKEN}}`s into
   `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
   analysis outputs are missing.
+- `examples/` — four runnable walkthroughs (`quickstart.py`,
+  `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`) +
+  `README.md`; each prints `SKIP: JEV_API_KEY not set` and exits 0 without a
+  key (see invariants).
+- `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
+  Markdown skill) + `README.md` (install notes). Documentation only — never
+  imported by code.
 - `manuscript/` — 9 sections (`00_abstract.md` … `07_scope_and_related_work.md`,
   `99_references.md`) + `preamble.md` + `config.yaml` + `references.bib`
   (13 entries). Prose only: every measured number is a `{{TOKEN}}`
@@ -88,13 +104,14 @@ here.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
-  JSONs), `figures/` (5 PNGs + `figure_registry.json`), `data/`
+  JSONs), `figures/` (6 PNGs + `figure_registry.json`), `data/`
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
 - `pyproject.toml` — setuptools build, version 0.2.0, `httpx` + `pyyaml`
-  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib),
-  `figures` (matplotlib), `bench` (rich) extras, console script
+  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
+  `figures` (matplotlib), `bench` (rich), and `mcp` (`mcp>=1.2,<2`, for
+  `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
 
 ## Invariants and gotchas
@@ -137,11 +154,11 @@ here.
   after the PNGs (`scripts/generate_figures.py` inherits this); template
   validation (`stage_04_validate.py`) checks the registry, so a figures
   rebuild that omits it fails validation. Data-driven figures (`batching`,
-  `latency`) raise `FileNotFoundError` naming the missing benchmark JSON
-  rather than fabricating data; `architecture`, `primitives`, and
-  `confidence` are data-free and always render.
+  `latency`, `calibration`) raise `FileNotFoundError` naming the missing
+  benchmark JSON rather than fabricating data; `architecture`, `primitives`,
+  and `confidence` are data-free and always render.
 - **`{{TOKEN}}` no-hardcode manuscript protocol.** Every measured number in
-  `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 39 tokens live in
+  `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 46 tokens live in
   `output/data/manuscript_variables.json` (generated by
   `scripts/z_generate_manuscript_variables.py` from pyproject, the docs
   MANIFEST, test collection counts, and the benchmark JSONs — no hardcoded
@@ -167,20 +184,42 @@ here.
 - Python >= 3.10, stdlib + `httpx` (+ `pyyaml`) only; the `.env` loader is
   a tiny built-in in `config.py`, no python-dotenv dependency. `matplotlib`
   is required only for the `figures` extra.
+- **MCP tools are JSON-safe across the wire.** Every `mcp_server` tool
+  returns plain dict/list/str/float only — dataclasses are converted with
+  `dataclasses.asdict` before returning; nothing non-JSON-serializable may
+  cross the MCP boundary. FastMCP runs over **stdio only** (other transports
+  are unsupported by design; the CLI exposes `--transport stdio` as the sole
+  choice). The `mcp` package is an optional extra — never import
+  `daf_jev.mcp_server` (or `mcp`) from core modules; `mcp_server.py` and
+  `cli.py`'s `serve` import it lazily.
+- **Calibration proxy semantics.** `bench_calibration.py`'s correctness
+  signal is agreement with the modal choice across repeats (self-consistency
+  proxy), NOT ground truth. Never present its ECE/Brier/reliability figures
+  as ground-truth accuracy calibration in prose, docs, or figure captions;
+  the JSON's `notes` field and the `fig:calibration` caption carry the
+  caveat.
+- **Examples skip without a key.** Every `examples/` script prints
+  `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves (process
+  env, then project `.env`); keep new examples to this contract.
+- **`skills/` is documentation.** `skills/daf-jev/SKILL.md` is agent-facing
+  documentation, never imported by code; keep it consistent with
+  `README.md` and `docs/ARCHITECTURE.md` facts.
 
 ## Verification commands
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 214 tests, coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # 256 tests, coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests; skipped without key
 uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
+uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
 uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mismatch
 python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # offline
+uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
-uv run python scripts/generate_figures.py   # 5 PNGs + figure_registry.json -> output/figures/
-uv run python scripts/z_generate_manuscript_variables.py   # 39 tokens + injection
+uv run python scripts/generate_figures.py   # 6 PNGs + figure_registry.json -> output/figures/
+uv run python scripts/z_generate_manuscript_variables.py   # 46 tokens + injection
 
 # Render + validate from the template checkout (leaf symlink must exist):
 cd /Volumes/external_drive/Git/template && \
@@ -188,4 +227,8 @@ cd /Volumes/external_drive/Git/template && \
 cd /Volumes/external_drive/Git/template && \
   uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
 # -> output/pdf/daf-jev_combined.pdf; 9 validation checks
+
+# MCP server full handshake needs the mcp extra: uv sync --extra mcp, then
+# connect any MCP client to `daf-jev serve` over stdio.
+python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
 ```

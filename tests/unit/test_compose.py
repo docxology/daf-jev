@@ -6,7 +6,7 @@ import pytest
 
 from daf_jev import ChoiceAnswer, NoulAnswer, ScoreAnswer, composite_score, confidence_gate
 from daf_jev import route
-from daf_jev.compose import pick
+from daf_jev.compose import pick, tiered_gate
 
 
 def _score_answer(
@@ -226,3 +226,58 @@ def test_pick_skips_answers_without_choice() -> None:
         "severity": _score_answer({"0": 1.0}),
     }
     assert pick(actions, answers) == {"tone": "auto-reply"}
+
+
+# ----------------------------------------------------------- tiered_gate -----
+
+
+def test_tiered_gate_automates_at_or_above_high_threshold() -> None:
+    assert tiered_gate(_choice_answer("calm", 0.9)) == "automate"
+    # Exactly at the high threshold routes to the high label (>= semantics).
+    assert tiered_gate(_choice_answer("calm", 0.85)) == "automate"
+
+
+def test_tiered_gate_reviews_between_thresholds() -> None:
+    assert tiered_gate(_choice_answer("escalate", 0.7)) == "review"
+    # Exactly at the low threshold is still the middle tier (>= semantics).
+    assert tiered_gate(_choice_answer("escalate", 0.6)) == "review"
+
+
+def test_tiered_gate_escalates_below_low_threshold() -> None:
+    assert tiered_gate(_choice_answer("human", 0.3)) == "escalate"
+
+
+def test_tiered_gate_custom_thresholds_and_labels() -> None:
+    answer = _choice_answer("calm", 0.75)
+    kwargs = {
+        "high": 0.9,
+        "low": 0.5,
+        "high_label": "send",
+        "middle_label": "check",
+        "low_label": "human",
+    }
+    assert tiered_gate(_choice_answer("calm", 0.95), **kwargs) == "send"
+    assert tiered_gate(answer, **kwargs) == "check"
+    assert tiered_gate(_choice_answer("calm", 0.2), **kwargs) == "human"
+
+
+def test_tiered_gate_rejects_inverted_thresholds() -> None:
+    with pytest.raises(ValueError):
+        tiered_gate(_choice_answer("calm", 0.7), high=0.6, low=0.9)
+
+
+def test_tiered_gate_rejects_empty_labels() -> None:
+    with pytest.raises(ValueError):
+        tiered_gate(_choice_answer("calm", 0.7), high_label="")
+    with pytest.raises(ValueError):
+        tiered_gate(_choice_answer("calm", 0.7), low_label="")
+
+
+def test_tiered_gate_rejects_answers_without_confidence() -> None:
+    with pytest.raises(TypeError):
+        tiered_gate(NoulAnswer(0.9))
+
+
+def test_tiered_gate_accepts_score_answers() -> None:
+    answer = _score_answer({"0": 0.5, "1": 0.5}, confidence=0.7)
+    assert tiered_gate(answer) == "review"

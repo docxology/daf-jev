@@ -3,8 +3,8 @@
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
 (System One) API**. One HTTP endpoint, three question primitives, and a set of
 pure-logic composition patterns built on top of the answers — plus a
-concurrent batch evaluation harness, a figure registry, and a reproducible
-manuscript pipeline.
+concurrent batch evaluation harness, an MCP server, a figure registry, and a
+reproducible manuscript pipeline.
 
 ## What it provides
 
@@ -28,9 +28,17 @@ manuscript pipeline.
   `AsyncJevClient`) without aborting the batch: per-state failures are
   captured in `EvaluationRecord.error`. `summary()` aggregates per-question
   means/p95s; `to_json()` serializes records.
-- **Figures & manuscript** — a matplotlib figure registry (5 figures +
+- **Calibration** — pure reliability statistics in `daf_jev.calibration`
+  (`bucket_index`, `reliability_table`, `expected_calibration_error`,
+  `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
+  benchmark (`benchmarks/bench_calibration.py`).
+- **Figures & manuscript** — a matplotlib figure registry (6 figures +
   `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
   9-section manuscript in `manuscript/` free of hardcoded results.
+- **MCP server** — `daf-jev serve` exposes the toolkit as seven MCP tools
+  (`jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
+  `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`) plus a
+  `jev://docs/snapshot` resource, over stdio (see [MCP server](#mcp-server)).
 
 Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` for
 figures). Managed with `uv`.
@@ -71,6 +79,24 @@ from daf_jev import confidence_gate, composite_score
 value = composite_score(resp.scores["severity"])   # expected value over level indices
 verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 ```
+
+## Examples
+
+Four runnable scripts live in `examples/` (walkthrough per script in
+[`examples/README.md`](examples/README.md)). Each resolves the API key from
+the environment or `.env` and — when no key is found — prints
+`SKIP: JEV_API_KEY not set` and exits 0, so all four are offline-safe:
+
+```bash
+python examples/quickstart.py         # one mixed ask call; answers, usage, request id
+python examples/triage_router.py      # tiered_gate + route over one choice answer
+python examples/composite_scoring.py  # composite_score + confidence_gate
+python examples/evaluate_corpus.py    # Evaluator over an inline four-state corpus
+```
+
+All four take `--model NAME` (default: `JEV_MODEL`, then
+`TYPESAFE_DEFAULT_MODEL`, then `jev-latest`); `evaluate_corpus.py` also takes
+`--concurrency N` (default 2).
 
 ## Evaluating a corpus
 
@@ -135,6 +161,48 @@ uv run daf-jev docs-verify     # re-hash docs/reference/ against MANIFEST.json
 All commands print JSON to stdout; exit 0 on success, 2 on usage error, 1 on
 runtime error.
 
+## MCP server
+
+`daf-jev serve` runs the toolkit as a Model Context Protocol (MCP) server
+over stdio — the default and only supported transport. The server needs the
+official `mcp` SDK, shipped in the optional `mcp` dependency group:
+
+```bash
+uv sync --extra mcp
+uv run daf-jev serve          # stdio; --transport stdio is the only choice
+```
+
+Tools (each returns JSON-safe values; keys resolve per call from env or
+`.env`, and a missing API key surfaces as a tool error):
+
+| Tool | What it does |
+| --- | --- |
+| `jev_ask` | one mixed noul/choice/score API call over a state |
+| `jev_evaluate` | run a fixed question set over many states concurrently (summary) |
+| `jev_models` | list model cards, optionally filtered/picked |
+| `jev_composite_score` | expected level value from a probability dict (no API call) |
+| `jev_confidence_gate` | one-threshold confidence routing (no API call) |
+| `jev_tiered_gate` | two-threshold automate/review/escalate routing (no API call) |
+| `jev_docs_verify` | re-hash `docs/reference/` against its manifest (no API call) |
+| resource `jev://docs/snapshot` | `{page_count, snapshot_id, scraped_at, index_sha256}` summary of the docs manifest |
+
+Point any MCP client at the server with a stdio config, e.g.:
+
+```json
+{
+  "mcpServers": {
+    "daf-jev": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/daf-jev", "daf-jev", "serve"],
+      "env": { "JEV_API_KEY": "sk-..." }
+    }
+  }
+}
+```
+
+`env` may be omitted when a `.env` file is present in the server's working
+directory; credentials are never returned in tool output.
+
 ## Configuration
 
 Everything resolves from the environment (injected env mapping > process env
@@ -162,16 +230,17 @@ hardcoded in the prose.
 
 ```bash
 uv sync --extra figures
-uv run python scripts/generate_figures.py    # 5 figures + figure_registry.json -> output/figures/
+uv run python scripts/generate_figures.py    # 6 figures + figure_registry.json -> output/figures/
 uv run python scripts/generate_figures.py --only batching   # single figure by name
 ```
 
 Figures `architecture`, `primitives`, and `confidence` are drawn from code;
-`batching` and `latency` read the newest `output/benchmarks/*.json`.
+`batching`, `latency`, and `calibration` read the newest
+`output/benchmarks/*.json`.
 
 ```bash
 uv run python scripts/z_generate_manuscript_variables.py
-# 39 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
+# 46 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
 # substitution into output/manuscript/ (inside the template checkout)
 ```
 
@@ -195,7 +264,7 @@ of 2026-09-16).
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 214 unit tests; coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # 256 unit tests; coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```
 
@@ -212,6 +281,29 @@ Latest recorded results (2026-09-16, `output/benchmarks/`): batching is
 3.5x–20.5x faster (N=5→20) and 2.8x–4.2x cheaper in tokens; decision-pattern
 pipelines run at ~0.12 s p50.
 
+### Calibration benchmark
+
+`benchmarks/bench_calibration.py` measures how well the live model's
+reported confidence tracks its behavior, plus noul answer stability:
+
+```bash
+JEV_API_KEY=... uv run python benchmarks/bench_calibration.py
+# flags: --states N (default 6), --repeats N (default 5), --model NAME
+```
+
+It repeats one three-option classification question per state and treats
+agreement with the modal (majority) choice across repeats as a
+**self-consistency correctness proxy — not ground-truth accuracy** — so the
+resulting error figures quantify confidence-vs-self-consistency, not
+confidence-vs-correctness. The `(confidence, correct)` pairs feed the pure
+`daf_jev.calibration` functions; a noul question repeated the same way
+yields a mean pairwise |Δnoul| stability metric. Results land in
+`output/benchmarks/calibration_<YYYYMMDD>.json` (latest recorded:
+2026-09-16, `jev-latest`, 6 states x 5 repeats — ECE 0.0730, Brier 0.0252,
+mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
+it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
+state's repeats into `n_errors` instead of aborting the batch.
+
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the authoritative design
@@ -220,3 +312,8 @@ pipelines run at ~0.12 s p50.
   One models and Jev, with primary vs third-party claims flagged.
 - [`docs/`](docs/README.md) — index, including the 108-page hashed snapshot
   of docs.typesafe.ai in `docs/reference/`.
+- [`skills/daf-jev/SKILL.md`](skills/daf-jev/SKILL.md) — the agent skill for
+  this toolkit (when-to-use, API surface, CLI, MCP server, pitfalls). To use
+  it with an agent outside the repo, copy the whole `skills/daf-jev/`
+  directory into the agent's skills location — see
+  [`skills/README.md`](skills/README.md).

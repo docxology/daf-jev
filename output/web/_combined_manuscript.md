@@ -1,6 +1,6 @@
 # Abstract {#sec:abstract}
 
-Large language models are usually consumed as text generators, yet a growing class of applications needs them as *decision components*: bounded, typed answers that software can branch on. This manuscript presents daf-jev, a composable Python toolkit for the TypeSafe Jev (System One) decision model [@typesafe2026systemone; @typesafe2026systemoneconcept]. The package reduces the entire decision surface to three typed question primitives — `noul` (a calibrated yes/no), `choice` (a labelled pick with a full probability distribution and a confidence), and `score` (a rating over ordered levels with a probability-weighted expected value) — all carried by a single HTTP endpoint. Pure-logic composition patterns (`composite_score`, `confidence_gate`, `route`/`pick`) turn typed answers into executable decisions with no additional network traffic, and a batch `Evaluator` fans a fixed question set out over many states through either the synchronous or the asynchronous client. Two live-API benchmarks quantify the practical payoff of this design. Batching a batch's worth of questions into one call yields wall-time speedups of 3.98, 8.77, and 18.55 across the configured batch widths, with a token-cost ratio of 4.22 at the widest setting; end-to-end decision pipelines (network round trip plus composition logic) complete at a median wall time of 0.133 for composite scoring and 0.129 for intent routing against the jev-latest model. Every numeric value in this manuscript is generated from the same analysis outputs as the figures and tables, so the prose cannot drift from the data.
+Large language models are usually consumed as text generators, yet a growing class of applications needs them as *decision components*: bounded, typed answers that software can branch on. This manuscript presents daf-jev, a composable Python toolkit for the TypeSafe Jev (System One) decision model [@typesafe2026systemone; @typesafe2026systemoneconcept]. The package reduces the entire decision surface to three typed question primitives — `noul` (a calibrated yes/no), `choice` (a labelled pick with a full probability distribution and a confidence), and `score` (a rating over ordered levels with a probability-weighted expected value) — all carried by a single HTTP endpoint. Pure-logic composition patterns (`composite_score`, `confidence_gate`, `route`/`pick`) turn typed answers into executable decisions with no additional network traffic, and a batch `Evaluator` fans a fixed question set out over many states through either the synchronous or the asynchronous client. Two live-API benchmarks quantify the practical payoff of this design. Batching a batch's worth of questions into one call yields wall-time speedups of 3.98, 8.77, and 18.55 across the configured batch widths, with a token-cost ratio of 4.22 at the widest setting; end-to-end decision pipelines (network round trip plus composition logic) complete at a median wall time of 0.133 for composite scoring and 0.129 for intent routing against the jev-latest model. Decision quality is validated as well as speed: a self-consistency calibration benchmark reports an expected calibration error of 0.0730 and a Brier score of 0.0252 over 6 states × 5 repeats against the jev-latest model, and the same core is exposed to non-Python consumers through an MCP server (`daf-jev serve`), an agent skill, and a set of runnable examples. Every numeric value in this manuscript is generated from the same analysis outputs as the figures and tables, so the prose cannot drift from the data.
 
 **Keywords:** decision models, LLM APIs, calibrated confidence, batching, confidence-gated routing, Python client, reproducible research
 
@@ -128,6 +128,16 @@ Four rulings shaped the codebase and are worth stating as contracts:
 3. **Pure retry policy.** Backoff timing is a function of the attempt number and the server's retry hint alone — testable without sleeping, and identical across the sync and async clients.
 4. **Snapshotted documentation.** The bundled documentation snapshot carries a manifest of per-page content hashes and a snapshot identifier, and a CLI subcommand re-hashes the tree to detect drift ([@sec:reproducibility]). Prose claims about the model are therefore checkable against an immutable, verified source rather than a moving website.
 
+## Integration surfaces
+
+The Python API is the primary door into the package, but not the only one. Three additional surfaces sit on top of the same layering — transport, client, primitives, composition — and add accessibility rather than logic: each one delegates to the very modules described above and contains no decision code of its own.
+
+- **MCP server** (`src/daf_jev/mcp_server.py`, launched with `daf-jev serve` over the stdio transport). It exposes the core to any MCP-capable agent host through tools that mirror the package one-to-one: `jev_ask` and `jev_evaluate` drive the client's single-call and batch paths, `jev_models` reports the available model surface, `jev_composite_score`, `jev_confidence_gate`, and `jev_tiered_gate` expose the composition patterns, and `jev_docs_verify` re-runs the documentation drift check of Design ruling 4; a `jev://docs/snapshot` resource serves the bundled documentation snapshot itself. The server is a thin adapter — it owns no retry policy, no parsing, and no thresholds.
+- **Agent skill** (`skills/daf-jev/SKILL.md`). A skill manifest that tells a coding agent when and how to reach for the CLI subcommands and composition helpers, so an agent can use the package correctly without reading its source.
+- **Runnable examples** (`examples/`). Four self-contained scripts — `quickstart.py`, `triage_router.py`, `composite_scoring.py`, and `evaluate_corpus.py` — walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer.
+
+None of these surfaces introduces a second implementation of the model semantics: the MCP tools call the same client and compose functions the CLI calls, the skill documents those entry points, and the examples exercise them. A behaviour fixed in the composition layer therefore reaches every consumer at once.
+
 
 
 ```{=latex}
@@ -137,7 +147,7 @@ Four rulings shaped the codebase and are worth stating as contracts:
 
 # Results {#sec:results}
 
-This section reports the two live-API benchmarks that quantify the design claims of [@sec:methodology]: the batching benchmark, which reproduces the documented parallel-questions pattern [@typesafe2026patterns], and the decision-pattern latency benchmark. Both run against the real jev-latest model; every value below is injected from the benchmark outputs at render time, and the figures are regenerated from the same JSON files, so prose, tables, and figures share one source of truth. The results reported here were recorded on 2026-09-16.
+This section reports the three live-API benchmarks that quantify the design claims of [@sec:methodology]: the batching benchmark, which reproduces the documented parallel-questions pattern [@typesafe2026patterns], the decision-pattern latency benchmark, and the self-consistency calibration benchmark. All run against the real jev-latest model; every value below is injected from the benchmark outputs at render time, and the figures are regenerated from the same JSON files, so prose, tables, and figures share one source of truth. The batching and latency results reported here were recorded on 2026-09-16; the calibration results on 2026-09-16.
 
 ## Batching speedup and token cost
 
@@ -155,7 +165,7 @@ The batching benchmark compares two strategies over the same state and question 
 | 10 | 8.77 |
 | 20 | 18.55 |
 
-:: Wall-time speedup of one batched call versus one sequential call per question, per configured batch width, recorded by `benchmarks/bench_batching.py` against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time. {#tbl:batching}
+: Wall-time speedup of one batched call versus one sequential call per question, per configured batch width, recorded by `benchmarks/bench_batching.py` against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time. {#tbl:batching}
 
 Token cost moves in the same direction. At the widest configured batch width the batched strategy consumes a token ratio of 4.22 relative to the sequential strategy: the state paragraph dominates the input tokens of a single-question call, so re-sending it per question makes the sequential strategy strictly more expensive in addition to being slower.
 
@@ -175,11 +185,29 @@ Each pipeline is executed 6 times; [@tbl:latency] reports the median (p50) and t
 | composite_score | 0.133 | 0.242 |
 | intent_routing | 0.129 | 0.152 |
 
-:: End-to-end wall time (network round trip plus local composition logic) per decision pipeline, median and tail over 6 runs recorded by `benchmarks/bench_patterns.py` against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time. {#tbl:latency}
+: End-to-end wall time (network round trip plus local composition logic) per decision pipeline, median and tail over 6 runs recorded by `benchmarks/bench_patterns.py` against the jev-latest model on 2026-09-16. Values are injected from the benchmark JSON at render time. {#tbl:latency}
+
+## Calibration
+
+Latency says nothing about whether the composed decisions are trustworthy, so the third benchmark measures how far the model's reported confidence tracks its own agreement behaviour. `benchmarks/bench_calibration.py` runs 6 short states 5 times each against the jev-latest model and scores choice answers under a *self-consistency proxy*: a sample counts as correct when it agrees with the modal choice across the repeats of the same state. Because a yes/no probability carries no per-sample label to agree with, noul answers are scored for repeat-to-repeat stability instead, via the mean absolute gap between every pair of repeated answers. No external ground truth is consulted anywhere in this benchmark — the correctness proxy is self-agreement, not verified outcomes.
+
+[@tbl:calibration] reports the aggregate scores over the run, and [@fig:calibration] plots the reliability curve per confidence bucket.
+
+| Metric | Value |
+|--------|-------|
+| Expected calibration error (choice, proxy) | 0.0730 |
+| Brier score (choice, proxy) | 0.0252 |
+| Mean pairwise noul gap | 0.0050 |
+
+: Calibration summary over 6 states × 5 repeats recorded by `benchmarks/bench_calibration.py` against the jev-latest model on 2026-09-16. Choice correctness is a self-consistency proxy — agreement with the modal choice across repeats — not accuracy against ground truth; the mean pairwise noul gap measures repeat-to-repeat answer stability rather than correctness. Values are injected from the benchmark JSON at render time. {#tbl:calibration}
+
+![Reliability diagram of choice-answer confidence under the self-consistency proxy, measured by `benchmarks/bench_calibration.py` over 6 states × 5 repeats against the jev-latest model on 2026-09-16. Each point is a confidence bucket plotting mean reported confidence against proxy accuracy, where proxy accuracy is agreement with the modal choice across repeats. Because the proxy scores self-agreement rather than verified correctness, the diagonal indicates consistency between stated confidence and repeat-stable behaviour — not truthfulness.](../figures/calibration_reliability.png){#fig:calibration width=85%}
+
+The expected calibration error of 0.0730 and the Brier score of 0.0252 indicate that reported choice confidence is broadly consistent with the proxy labels, and the mean pairwise noul gap of 0.0050 shows that repeated noul answers on the same state are nearly identical. These claims extend exactly as far as the proxy does. Self-consistency can establish that the model is stable across repeats and that its confidence ordering is internally coherent; it cannot certify that the answers are correct about the world, because the proxy labels are generated by the same model whose calibration is being measured. The benchmark is therefore evidence of calibrated, repeatable decision behaviour under a reproducible proxy — a necessary, not sufficient, condition for deploying these gates on real decisions.
 
 ## Interpretation
 
-Three observations tie the measurements back to the design rulings of [@sec:methodology]. First, the batching speedups in [@tbl:batching] confirm that the parallel-sampler semantics translate directly into wall-clock savings: the batched strategy is faster at every configured width, and the gap widens with width exactly as the round-trip accounting predicts. Second, the token-cost ratio below unity at the widest width shows that batching is not merely faster but cheaper, because the state is transmitted once — so the pattern documented in the primary source [@typesafe2026patterns] holds end to end for a third-party client implementation. Third, the pipeline latencies in [@tbl:latency] sit within the model's millisecond-scale latency envelope ([@sec:jev_model]): the pure-logic composition layer adds no measurable latency beyond the network round trip, which is precisely what allows confidence-gated routing to run inline on interactive request paths rather than in a background queue.
+Four observations tie the measurements back to the design rulings of [@sec:methodology]. First, the batching speedups in [@tbl:batching] confirm that the parallel-sampler semantics translate directly into wall-clock savings: the batched strategy is faster at every configured width, and the gap widens with width exactly as the round-trip accounting predicts. Second, the token-cost ratio below unity at the widest width shows that batching is not merely faster but cheaper, because the state is transmitted once — so the pattern documented in the primary source [@typesafe2026patterns] holds end to end for a third-party client implementation. Third, the pipeline latencies in [@tbl:latency] sit within the model's millisecond-scale latency envelope ([@sec:jev_model]): the pure-logic composition layer adds no measurable latency beyond the network round trip, which is precisely what allows confidence-gated routing to run inline on interactive request paths rather than in a background queue. Fourth, the calibration summary in [@tbl:calibration] supports the calibrated-decision premise of the confidence-gated patterns described in [@sec:methodology] — reported choice confidence aligns with repeat-stable behaviour, and noul answers are stable across repeats — under the self-consistency proxy semantics stated in the Calibration section, and only as far as those semantics extend.
 
 
 
@@ -200,18 +228,19 @@ The model-level claims in [@sec:jev_model] are grounded in a local, hash-manifes
 
 ## Benchmark configuration
 
-Both benchmarks execute against the real jev-latest model with a live API key resolved through the package's credential precedence chain (injected mapping, then process environment, then the project `.env` file). Without a key, both scripts print a skip notice and exit successfully — they are benchmarks, not tests, and never run inside the test suite.
+All benchmarks execute against the real jev-latest model with a live API key resolved through the package's credential precedence chain (injected mapping, then process environment, then the project `.env` file). Without a key, the scripts print a skip notice and exit successfully — they are benchmarks, not tests, and never run inside the test suite.
 
 - **Batching benchmark** (`benchmarks/bench_batching.py`) — for each configured batch width (5, 10, 20 questions, as recorded under `experiment.batching_n_values` in `manuscript/config.yaml`), it compares one batched call against the same number of sequential single-question calls over a fixed state paragraph and a mixed noul/choice/score question set, repeating each strategy for the configured number of runs and recording wall time and token totals to `output/benchmarks/batching_<date>.json`.
 - **Decision-pattern benchmark** (`benchmarks/bench_patterns.py`) — runs the composite-score and intent-routing pipelines 6 times each (default recorded under `experiment.patterns_runs`), reporting mean, median, and tail wall times plus token totals to `output/benchmarks/patterns_<date>.json`. An asynchronous mode executes the same runs concurrently through `AsyncJevClient` and compares against the sequential wall time.
+- **Calibration benchmark** (`benchmarks/bench_calibration.py`) — runs 6 short states 5 times each against the jev-latest model, scores choice answers under the self-consistency proxy (agreement with the modal choice across repeats) and noul answers by mean pairwise stability, and writes the expected calibration error, Brier score, per-bucket reliability data, and the mean pairwise noul gap to `output/benchmarks/calibration_<date>.json`, together with a `notes` field stating the proxy semantics.
 
-Both scripts take `--runs` and `--model` arguments; the defaults are recorded as data under the `experiment:` block of `manuscript/config.yaml`, which is the same file the manuscript-variable generator reads — configuration, prose, and figures cannot disagree about the protocol.
+All benchmark scripts take `--runs` and `--model` arguments; the defaults are recorded as data under the `experiment:` block of `manuscript/config.yaml`, which is the same file the manuscript-variable generator reads — configuration, prose, and figures cannot disagree about the protocol.
 
 ## Measurement protocol
 
 Percentiles follow the benchmark helper shared by both scripts: the reported tail statistic is the value at the ceiling-rank position of the ordered sample, computed over the recorded runs rather than a sliding window. Wall time covers the full pipeline — transport, retries (none should occur in a healthy run), parsing, and composition logic — so the numbers in [@tbl:latency] are conservative upper bounds on what an integrating application would add to its request path. Token totals are read from the response usage records, not estimated.
 
-This manuscript was generated at 2026-09-17T00:27:59Z; the rendered values in [@sec:results] correspond to the benchmark JSONs current at that timestamp, and the figure generators resolve "latest" the same way (latest by filename date) so that re-rendering after a new benchmark run updates prose, tables, and figures together.
+This manuscript was generated at 2026-09-17T01:36:24Z; the rendered values in [@sec:results] correspond to the benchmark JSONs current at that timestamp, and the figure generators resolve "latest" the same way (latest by filename date) so that re-rendering after a new benchmark run updates prose, tables, and figures together.
 
 
 
@@ -226,14 +255,18 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Artifact inventory and hashing
 
-- **Figures.** The five figures of this manuscript are generated into `../figures/` by `src/daf_jev/figures.py` (one `generate_<name>()` function per figure plus `generate_all(out_dir)`), orchestrated by `scripts/generate_figures.py`:
+- **Figures.** The six figures of this manuscript are generated into `../figures/` by `src/daf_jev/figures.py` (one `generate_<name>()` function per figure plus `generate_all(out_dir)`), orchestrated by `scripts/generate_figures.py`:
 
   ```bash
   uv run python scripts/generate_figures.py            # all figures
   uv run python scripts/generate_figures.py --only batching_speedup
   ```
 
-  The data-driven figures read `output/benchmarks/batching_*.json` and `output/benchmarks/patterns_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The two schematic figures and the parametric confidence-band illustration require no data and no network.
+  The data-driven figures read `output/benchmarks/batching_*.json`, `output/benchmarks/patterns_*.json`, and `output/benchmarks/calibration_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The two schematic figures and the parametric confidence-band illustration require no data and no network.
+
+- **Figure registry.** Every figure is recorded in `../figures/figure_registry.json` — six entries, one per figure, each mapping the manuscript's cross-reference label (`fig:architecture` through `fig:calibration`) to its filename, caption, section, and layout width — so the figure set itself is a versioned data artifact rather than a convention.
+
+- **Calibration benchmark payloads.** The calibration run writes `output/benchmarks/calibration_<date>.json` (per-bucket reliability data, expected calibration error, Brier score, the mean pairwise noul gap, and a `notes` field stating the self-consistency proxy semantics); `benchmarks/bench_calibration.py` regenerates it live, and the reliability figure `../figures/calibration_reliability.png` is rendered from the same payload by `generate_calibration()` in `src/daf_jev/figures.py`.
 
 - **Manuscript variables.** All dynamic values reach the prose as double-brace token placeholders, computed by `src/daf_jev/manuscript_variables.py::generate_variables(project_root)` and written to `output/data/manuscript_variables.json` by the thin orchestrator `scripts/z_generate_manuscript_variables.py`, which then renders substituted copies of every section into `output/manuscript/`. Running in strict mode fails if analysis outputs are missing; the `--allow-draft` flag substitutes draft sentinels instead of failing, for early-stage renders only.
 
@@ -246,18 +279,18 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Test suite and coverage
 
-The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 15 test files — 214 unit tests and 2 live tests — collected with:
+The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 17 test files — 256 unit tests and 2 live tests — collected with:
 
 ```bash
 uv run pytest tests/unit --cov=src     # unit suite under the coverage gate
 JEV_API_KEY=... uv run pytest tests/live   # live tests against the real API
 ```
 
-Measured coverage over the package source stands at 94.87, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
+Measured coverage over the package source stands at 92.16, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
 
 ## Provenance chain
 
-The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `../figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T00:27:59Z.
+The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `../figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T01:36:24Z.
 
 
 

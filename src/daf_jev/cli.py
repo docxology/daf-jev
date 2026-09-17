@@ -417,6 +417,13 @@ def _cmd_docs_verify(args: argparse.Namespace) -> int:
     return 0 if summary["ok"] else 1
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    from daf_jev.mcp_server import main as serve_main
+
+    serve_main()
+    return 0
+
+
 # ------------------------------------------------------------------- parser
 
 
@@ -511,6 +518,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_verify.add_argument("--pretty", action="store_true", help="pretty-printed JSON output")
     p_verify.set_defaults(func=_cmd_docs_verify)
+    p_serve = sub.add_parser(
+        "serve", help="serve the daf-jev MCP server (stdio transport)"
+    )
+    p_serve.add_argument(
+        "--transport",
+        choices=["stdio"],
+        default="stdio",
+        help="MCP transport (only 'stdio' is supported)",
+    )
+    p_serve.set_defaults(func=_cmd_serve)
 
     return parser
 

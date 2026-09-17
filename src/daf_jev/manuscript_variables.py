@@ -175,30 +175,31 @@ def _pytest_collected(project_root: Path, test_dir: str) -> Optional[int]:
 
 
 def _coverage_percent(project_root: Path) -> Optional[float]:
-    """Aggregate covered / total statements from an existing ``.coverage``.
+    """Return the enforced coverage percentage from an existing ``.coverage``.
 
-    Uses the coverage python API (no subprocess). Returns None when the
-    data file is missing or empty.
+    Delegates to ``coverage.Coverage.report()`` so the number is computed by
+    the same machinery the gate uses (branch mode, exclude_lines, and omit
+    patterns all come from ``pyproject.toml``) — no hand-rolled aggregation
+    to drift out of sync. Returns None when the data file is missing or the
+    report covers nothing.
     """
     data_file = project_root / _COVERAGE_PATH
     if not data_file.is_file():
         return None
+    import io
+    from contextlib import redirect_stdout
+
     import coverage
 
-    cov = coverage.Coverage(data_file=str(data_file))
+    cov = coverage.Coverage(data_file=str(data_file), config_file=str(project_root / "pyproject.toml"))
     cov.load()
-    data = cov.get_data()
-    total = covered = 0
-    for measured in data.measured_files():
-        try:
-            _path, statements, _excluded, missing, _format = cov.analysis2(measured)
-        except Exception:  # unanalyzable measured file — skip it
-            continue
-        total += len(statements)
-        covered += len(statements) - len(missing)
-    if total == 0:
+    if not cov.get_data().measured_files():
         return None
-    return covered / total * 100.0
+    with redirect_stdout(io.StringIO()) as _sink:
+        pct = cov.report(show_missing=False)
+    if pct is None or pct <= 0:
+        return None
+    return float(pct)
 
 
 def _latest_benchmark(project_root: Path, prefix: str, *, strict: bool) -> Optional[Path]:
@@ -237,6 +238,18 @@ def _bench_value(source: dict[str, Any], *keys: str) -> Optional[Any]:
             return None
         value = value[key]
     return value
+
+
+def _opt_str(source: dict[str, Any], key: str) -> str:
+    """String value of *key*, or ``N/A`` when absent."""
+    value = source.get(key) if isinstance(source, dict) else None
+    return str(value) if value is not None else _NA
+
+
+def _opt_float(source: dict[str, Any], *keys: str) -> Optional[float]:
+    """Nested float at *keys*, or None when any level is missing."""
+    value = _bench_value(source, *keys)
+    return None if value is None else float(value)
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +353,18 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["BENCH_PATTERNS_COMPOSITE_P95_S"] = _pattern_seconds("composite_score_pipeline", "p95_s")
     variables["BENCH_PATTERNS_ROUTING_P50_S"] = _pattern_seconds("intent_routing", "p50_s")
     variables["BENCH_PATTERNS_ROUTING_P95_S"] = _pattern_seconds("intent_routing", "p95_s")
+
+    calibration = _load_benchmark(project_root, "calibration", strict=strict)
+    variables["BENCH_CALIB_MODEL"] = _opt_str(calibration, "model")
+    variables["BENCH_CALIB_DATE"] = _opt_str(calibration, "date")
+    variables["BENCH_CALIB_STATES"] = _opt_str(calibration, "states")
+    variables["BENCH_CALIB_REPEATS"] = _opt_str(calibration, "repeats")
+    variables["BENCH_CALIB_ECE"] = _fmt(_opt_float(calibration, "choice", "ece"), ".4f")
+    variables["BENCH_CALIB_BRIER"] = _fmt(_opt_float(calibration, "choice", "brier"), ".4f")
+    variables["BENCH_CALIB_MEAN_GAP"] = _fmt(
+        _opt_float(calibration, "noul_stability", "mean_pairwise_gap"), ".4f"
+    )
+
 
     # ---- Provenance ----
     variables["GENERATION_TIMESTAMP"] = _build_timestamp()

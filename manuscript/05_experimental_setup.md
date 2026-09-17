@@ -10,12 +10,13 @@ The model-level claims in [@sec:jev_model] are grounded in a local, hash-manifes
 
 ## Benchmark configuration
 
-Both benchmarks execute against the real {{BENCH_MODEL}} model with a live API key resolved through the package's credential precedence chain (injected mapping, then process environment, then the project `.env` file). Without a key, both scripts print a skip notice and exit successfully — they are benchmarks, not tests, and never run inside the test suite.
+All benchmarks execute against the real {{BENCH_MODEL}} model with a live API key resolved through the package's credential precedence chain (injected mapping, then process environment, then the project `.env` file). Without a key, the scripts print a skip notice and exit successfully — they are benchmarks, not tests, and never run inside the test suite.
 
 - **Batching benchmark** (`benchmarks/bench_batching.py`) — for each configured batch width ({{CONFIG_BATCHING_N5}}, {{CONFIG_BATCHING_N10}}, {{CONFIG_BATCHING_N20}} questions, as recorded under `experiment.batching_n_values` in `manuscript/config.yaml`), it compares one batched call against the same number of sequential single-question calls over a fixed state paragraph and a mixed noul/choice/score question set, repeating each strategy for the configured number of runs and recording wall time and token totals to `output/benchmarks/batching_<date>.json`.
 - **Decision-pattern benchmark** (`benchmarks/bench_patterns.py`) — runs the composite-score and intent-routing pipelines {{BENCH_PATTERNS_RUNS}} times each (default recorded under `experiment.patterns_runs`), reporting mean, median, and tail wall times plus token totals to `output/benchmarks/patterns_<date>.json`. An asynchronous mode executes the same runs concurrently through `AsyncJevClient` and compares against the sequential wall time.
+- **Calibration benchmark** (`benchmarks/bench_calibration.py`) — runs {{BENCH_CALIB_STATES}} short states {{BENCH_CALIB_REPEATS}} times each against the {{BENCH_CALIB_MODEL}} model, scores choice answers under the self-consistency proxy (agreement with the modal choice across repeats) and noul answers by mean pairwise stability, and writes the expected calibration error, Brier score, per-bucket reliability data, and the mean pairwise noul gap to `output/benchmarks/calibration_<date>.json`, together with a `notes` field stating the proxy semantics.
 
-Both scripts take `--runs` and `--model` arguments; the defaults are recorded as data under the `experiment:` block of `manuscript/config.yaml`, which is the same file the manuscript-variable generator reads — configuration, prose, and figures cannot disagree about the protocol.
+All benchmark scripts take `--runs` and `--model` arguments; the defaults are recorded as data under the `experiment:` block of `manuscript/config.yaml`, which is the same file the manuscript-variable generator reads — configuration, prose, and figures cannot disagree about the protocol.
 
 ## Measurement protocol
 
