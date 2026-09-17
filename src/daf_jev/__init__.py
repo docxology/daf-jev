@@ -26,6 +26,8 @@ from daf_jev._types import (
     parse_response,
 )
 from daf_jev.client import AsyncJevClient, JevClient, ModelCard
+from daf_jev.ledger import UsageLedger, UsageSnapshot
+from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
 __version__ = "0.3.0"
 
@@ -89,5 +91,10 @@ __all__ = [
     "pick_model",
     "Evaluator",
     "EvaluationRecord",
+    "UsageLedger",
+    "UsageSnapshot",
+    "CircuitBreaker",
+    "CircuitOpenError",
+    "CircuitState",
     "__version__",
 ]
