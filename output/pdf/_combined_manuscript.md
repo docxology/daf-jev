@@ -194,7 +194,7 @@ This section records the environment, configuration, and measurement protocol be
 
 ## Software environment
 
-All measurements were taken with daf-jev version 0.1.0, running under 3.14.6 on the platform reported as `macOS-26.6.2-arm64-arm-64bit-Mach-O`. The package targets Python 3.10 or newer and depends, at runtime, only on `httpx` for transport and `pyyaml` for configuration parsing; the benchmark scripts additionally use the standard library. The development toolchain is `uv`-managed, and the unit test suite is executed with `pytest` under a coverage gate.
+All measurements were taken with daf-jev version 0.2.0, running under 3.14.6 on the platform reported as `macOS-26.6.2-arm64-arm-64bit-Mach-O`. The package targets Python 3.10 or newer and depends, at runtime, only on `httpx` for transport and `pyyaml` for configuration parsing; the benchmark scripts additionally use the standard library. The development toolchain is `uv`-managed, and the unit test suite is executed with `pytest` under a coverage gate.
 
 The model-level claims in [@sec:jev_model] are grounded in a local, hash-manifested snapshot of the TypeSafe documentation (snapshot b79c9cd6008489f1, 108 pages) rather than the live website, so the primary-source basis of this manuscript is itself versioned and verifiable.
 
@@ -211,7 +211,7 @@ Both scripts take `--runs` and `--model` arguments; the defaults are recorded as
 
 Percentiles follow the benchmark helper shared by both scripts: the reported tail statistic is the value at the ceiling-rank position of the ordered sample, computed over the recorded runs rather than a sliding window. Wall time covers the full pipeline — transport, retries (none should occur in a healthy run), parsing, and composition logic — so the numbers in [@tbl:latency] are conservative upper bounds on what an integrating application would add to its request path. Token totals are read from the response usage records, not estimated.
 
-This manuscript was generated at 2026-09-17T00:04:14Z; the rendered values in [@sec:results] correspond to the benchmark JSONs current at that timestamp, and the figure generators resolve "latest" the same way (latest by filename date) so that re-rendering after a new benchmark run updates prose, tables, and figures together.
+This manuscript was generated at 2026-09-17T00:27:59Z; the rendered values in [@sec:results] correspond to the benchmark JSONs current at that timestamp, and the figure generators resolve "latest" the same way (latest by filename date) so that re-rendering after a new benchmark run updates prose, tables, and figures together.
 
 
 
@@ -253,11 +253,11 @@ uv run pytest tests/unit --cov=src     # unit suite under the coverage gate
 JEV_API_KEY=... uv run pytest tests/live   # live tests against the real API
 ```
 
-Measured coverage over the package source stands at 94.05, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
+Measured coverage over the package source stands at 94.87, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
 
 ## Provenance chain
 
-The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `../figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T00:04:14Z.
+The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `../figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.6, and the rendered edition is version 0.2.0 of this manuscript, generated at 2026-09-17T00:27:59Z.
 
 
 

@@ -6,10 +6,30 @@ Documentation for daf-jev.
 
 `docs/ARCHITECTURE.md` (v1, 2026-09-16) is the **single source of truth**
 for the package build: wire facts (endpoint, question/answer shapes, error
-statuses, retry semantics), environment variables, module-by-module
-signatures, the no-mock test convention, and benchmark conventions. All
-workers must match its signatures exactly; on contradiction, report the
-delta — do not silently deviate.
+statuses, retry semantics), environment variables (including the v0.2
+`resolve_retry` / `resolve_timeout` overrides — `JEV_MAX_ATTEMPTS`,
+`JEV_BACKOFF_BASE`, `JEV_BACKOFF_MAX`, `JEV_JITTER`, `JEV_TIMEOUT`),
+module-by-module signatures (including the v0.2 additions `models.py` /
+`pick_model`, per-call `timeout` / `request_headers` on `ask`, and the
+`Evaluator` exports), the no-mock test convention, and benchmark
+conventions. All workers must match its signatures exactly; on
+contradiction, report the delta — do not silently deviate.
+
+Gap note: the contract's module map does not yet describe the manuscript
+pipeline modules (`figures.py`, `manuscript_variables.py`); the root
+`AGENTS.md` module map is the current on-disk truth for those, and the
+contract should be extended rather than contradicted.
+
+## models.md — sourced model reference
+
+`docs/models.md` is a technical reference on System One models and Jev:
+what the models are, how Jev is built and trained, how calibration works,
+and where the vendor's claims have (and have not) been corroborated. Every
+factual claim carries a source link and an access date; primary (TypeSafe
+docs snapshot) and third-party claims are flagged distinctly. Its cite-key
+crosswalk matches the BibTeX keys in `manuscript/references.bib`
+(`typesafe2026systemone`, `register2026jev`, …). Documentation, not a
+benchmark — do not quote its numbers in code or tests.
 
 ## reference/ — TypeSafe docs snapshot
 

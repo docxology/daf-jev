@@ -2,7 +2,9 @@
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
 (System One) API**. One HTTP endpoint, three question primitives, and a set of
-pure-logic composition patterns built on top of the answers.
+pure-logic composition patterns built on top of the answers — plus a
+concurrent batch evaluation harness, a figure registry, and a reproducible
+manuscript pipeline.
 
 ## What it provides
 
@@ -13,13 +15,25 @@ pure-logic composition patterns built on top of the answers.
 - **Client** — `JevClient` / `AsyncJevClient` wrapping
   `POST https://api.typesafe.ai/v1/systemone`, with retries (429/529,
   exponential backoff, `Retry-After`), typed error mapping, and a
-  `models()` listing.
+  `models()` listing. Retry policy, default timeout, and default model
+  resolve from the environment (see [Configuration](#configuration)); every
+  `ask` call also accepts a per-call `timeout` override and extra
+  `request_headers` (merged over the defaults for that call only).
 - **Composition patterns** — pure functions over answers:
   `composite_score` (probability-weighted expected value over score levels),
   `confidence_gate` (auto-escalate low-confidence answers), `route` /
   `pick` (intent routing by choice).
+- **Evaluation** — `Evaluator` runs a fixed question set over many states
+  concurrently (thread pool for `JevClient`, `asyncio` semaphore for
+  `AsyncJevClient`) without aborting the batch: per-state failures are
+  captured in `EvaluationRecord.error`. `summary()` aggregates per-question
+  means/p95s; `to_json()` serializes records.
+- **Figures & manuscript** — a matplotlib figure registry (5 figures +
+  `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
+  9-section manuscript in `manuscript/` free of hardcoded results.
 
-Dependencies: Python >= 3.10, `httpx`, `pyyaml`. Managed with `uv`.
+Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` for
+figures). Managed with `uv`.
 
 ## Quickstart
 
@@ -58,6 +72,45 @@ value = composite_score(resp.scores["severity"])   # expected value over level i
 verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 ```
 
+## Evaluating a corpus
+
+Run a fixed question set over many states, concurrently, with per-state error
+capture (`evaluate` never aborts the batch on one bad state).
+
+CLI — `--questions-file` is a YAML mapping of id to a spec string or a native
+question mapping; `--states-file` is one state per line (blank lines skipped)
+or a JSON array of strings:
+
+```bash
+uv run daf-jev evaluate \
+  --questions-file questions.yaml \
+  --states-file states.txt \
+  --concurrency 8 \
+  --include-records
+```
+
+Python — pass a sync or async client; bare `str` states get `state_0000`-style
+ids. An `AsyncJevClient` is single-use through `evaluate()`: the Evaluator
+closes the async session when the batch completes (its keep-alive connections
+are bound to the private event loop).
+
+```python
+from daf_jev import Evaluator, JevClient, QuestionSet, noul, score
+
+questions = QuestionSet().add(
+    "billing", noul("Is this about a billing problem?")
+).add(
+    "severity", score("How severe?", ["minor", "noticeable", "blocking"]),
+)
+
+with JevClient() as client:
+    evaluator = Evaluator(client, questions, concurrency=8)
+    records = evaluator.evaluate(["state one text", "state two text", ...])
+
+summary = evaluator.summary(records)      # per-question means/p95s + usage
+print(evaluator.to_json(records))         # per-state records incl. errors/latency
+```
+
 ## CLI
 
 ```bash
@@ -68,7 +121,13 @@ uv run daf-jev ask \
   --question severity=score:How severe?:minor,noticeable,blocking \
   --pretty
 
-uv run daf-jev models          # list available models
+uv run daf-jev models                       # list available models
+uv run daf-jev models --pick latest         # pick one (latest|first|last)
+uv run daf-jev models --pick latest --contains jev
+
+uv run daf-jev evaluate \
+  --questions-file questions.yaml --states-file states.txt \
+  --concurrency 8 --include-records
 
 uv run daf-jev docs-verify     # re-hash docs/reference/ against MANIFEST.json
 ```
@@ -76,11 +135,67 @@ uv run daf-jev docs-verify     # re-hash docs/reference/ against MANIFEST.json
 All commands print JSON to stdout; exit 0 on success, 2 on usage error, 1 on
 runtime error.
 
+## Configuration
+
+Everything resolves from the environment (injected env mapping > process env
+> `.env` file); unset or invalid values fall back to the defaults below.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `JEV_API_KEY` / `TYPESAFE_API_KEY` | API key | none (error when no transport injected) |
+| `JEV_BASE_URL` / `TYPESAFE_BASE_URL` | API base URL override | `https://api.typesafe.ai` |
+| `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL` | default model | `jev-latest` |
+| `JEV_MAX_ATTEMPTS` | max attempts incl. the initial request (int >= 1) | `3` |
+| `JEV_BACKOFF_BASE` | base backoff delay in seconds (float > 0) | `0.5` |
+| `JEV_BACKOFF_MAX` | backoff cap in seconds | `8.0` |
+| `JEV_JITTER` | uniform ± jitter on the delay (float >= 0) | `0.1` |
+| `JEV_TIMEOUT` | default request timeout in seconds (positive float) | none (transport default) |
+
+Per-field: a bad value keeps only that field's default. Per-call `timeout=`
+and `request_headers=` on `ask()` win over all of the above for that call.
+
+## Figures and manuscript
+
+The repo renders its own paper: 9 manuscript sections under `manuscript/`,
+with every measured number injected as a `{{TOKEN}}` placeholder — nothing is
+hardcoded in the prose.
+
+```bash
+uv sync --extra figures
+uv run python scripts/generate_figures.py    # 5 figures + figure_registry.json -> output/figures/
+uv run python scripts/generate_figures.py --only batching   # single figure by name
+```
+
+Figures `architecture`, `primitives`, and `confidence` are drawn from code;
+`batching` and `latency` read the newest `output/benchmarks/*.json`.
+
+```bash
+uv run python scripts/z_generate_manuscript_variables.py
+# 39 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
+# substitution into output/manuscript/ (inside the template checkout)
+```
+
+Rendering and validation run from the template checkout, which resolves the
+project through a **leaf symlink**
+`template/projects/ongoing/daf-jev -> ../../../projects/ongoing/Code_Tools/daf-jev`
+(created 2026-09-16; intermediate symlinks are rejected by design):
+
+```bash
+cd /Volumes/external_drive/Git/template
+uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
+uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
+```
+
+Stage 04 runs 9 validation checks (all PASS as of 2026-09-16, including the
+figure registry and rendered provenance). The rendered PDF lands at
+`output/pdf/daf-jev_combined.pdf` (479.4 KB, 16 pages, 5 embedded figures as
+of 2026-09-16).
+
 ## Tests and benchmarks
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 136 unit tests; coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # 214 unit tests; coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```
 
@@ -101,5 +216,7 @@ pipelines run at ~0.12 s p50.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the authoritative design
   contract (wire facts, module signatures, test and benchmark conventions).
+- [`docs/models.md`](docs/models.md) — sourced technical reference on System
+  One models and Jev, with primary vs third-party claims flagged.
 - [`docs/`](docs/README.md) — index, including the 108-page hashed snapshot
   of docs.typesafe.ai in `docs/reference/`.

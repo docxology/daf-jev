@@ -1,8 +1,8 @@
 {
   "algorithm": "shared-combined-markdown-v1",
-  "binding_sha256": "b16e0ed8fc4bf13b520d7b61c979488a0d686985a0cfbf80490e17dad94e92a9",
+  "binding_sha256": "7573aa70cee537dd5f247ea0ed2102e041a3b232cc05c148261064012c416cbb",
   "combined_path": "output/web/_combined_manuscript.md",
-  "combined_sha256": "3ce8d2a8e3fb7f95bb71311cdcde2cb2db73f2969b51ac8e8b54e07d40372be1",
+  "combined_sha256": "ea9a9e50edb7cc4edee51c6b3555691026773a71a90f2065ecc23929ca707ed3",
   "combined_size_bytes": 38113,
   "input_root_kind": "hydrated",
   "ordered_inputs": [
@@ -39,13 +39,13 @@
     {
       "ordinal": 6,
       "path": "output/manuscript/05_experimental_setup.md",
-      "sha256": "3a10e8cd7236b8e6da5820aa0a5dc7baa79bdb039ff9acfa98b83fdd4c7e18e3",
+      "sha256": "c7f80e7d5852b4bb412173c12a97bba105f0e1971f11db0ef5c0a8fd89760338",
       "size_bytes": 3481
     },
     {
       "ordinal": 7,
       "path": "output/manuscript/06_reproducibility.md",
-      "sha256": "a4236a9bd46834a585f133a8106281c0588669002f88df2df9350b4c0f2bb88d",
+      "sha256": "698aec65a5fbf2022e4b4ddd119c790809b1665550db12498178729e6667c88a",
       "size_bytes": 3789
     },
     {
@@ -61,7 +61,7 @@
       "size_bytes": 737
     }
   ],
-  "ordered_inputs_sha256": "13fcdf372d698b9acf9d58dafc649dbbc08ec41244bdd1b2138fd45389b1c324",
+  "ordered_inputs_sha256": "f615f30eca32f6adcb9a9800f9ece55817de249fef2529e6a0bbdc927b0ea736",
   "project": "ongoing/daf-jev",
   "schema_version": "template-manuscript-composition-v1"
 }
