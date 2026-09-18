@@ -42,6 +42,10 @@ reproducible manuscript pipeline.
   `cooldown_seconds`, then admits a single recovery probe. It wraps any
   callable, never sleeps, and takes an injectable clock; it complements the
   per-request retry policy.
+- **Decider** — the decision-point loop as one reusable class: observe a
+  state, compose a batched ask, gate the answers, and fail open to a
+  deterministic fallback, with a call/token budget, a per-decision cache,
+  a consecutive-failure latch, and JSON-safe event receipts.
 - **Calibration** — pure reliability statistics in `daf_jev.calibration`
   (`bucket_index`, `reliability_table`, `expected_calibration_error`,
   `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
@@ -118,10 +122,10 @@ verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 
 ## Examples
 
-Five runnable scripts live in `examples/` (walkthrough per script in
+Six runnable scripts live in `examples/` (walkthrough per script in
 [`examples/README.md`](examples/README.md)). Each resolves the API key from
 the environment or `.env` and — when no key is found — prints
-`SKIP: JEV_API_KEY not set` and exits 0, so all five are offline-safe:
+`SKIP: JEV_API_KEY not set` and exits 0, so all six are offline-safe:
 
 ```bash
 python examples/quickstart.py         # one mixed ask call; answers, usage, request id
@@ -129,9 +133,10 @@ python examples/triage_router.py      # tiered_gate + route over one choice answ
 python examples/composite_scoring.py  # composite_score + confidence_gate
 python examples/evaluate_corpus.py    # Evaluator over an inline four-state corpus
 python examples/gated_fallback.py     # heuristic-first: model called only when it adds value
+python examples/decider_loop.py       # decision-point loop: gate, budget, fail-open fallback
 ```
 
-All five take `--model NAME` (default: `JEV_MODEL`, then
+All six take `--model NAME` (default: `JEV_MODEL`, then
 `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`); `evaluate_corpus.py` also takes
 `--concurrency N` (default 2).
 
@@ -213,6 +218,59 @@ probe is admitted. It never sleeps — wait out the cooldown in your own loop
 (`exc.remaining_seconds` reports what is left) — and composes with the
 per-request retry policy.
 
+## Decision-point decider
+
+`Decider` distills the recurring decision-point loop — observe a state,
+compose a batched ask, gate the answers, fail open to a deterministic
+fallback — into one reusable class over injected I/O:
+
+```mermaid
+flowchart LR
+    S["state"] --> D["Decider"]
+    D --> Q["questions(state)"]
+    Q --> A["ask (once, behind<br/>breaker + budget)"]
+    A --> G["gate(answers)"]
+    G -->|accepted| M["map_answers -> action"]
+    G -->|rejected| F["fallback(state)"]
+    A -->|error / no key / budget| F
+    F --> OUT["action"]
+    M --> OUT
+```
+
+```python
+from daf_jev import Budget, ConfidenceGate, Decider, choice
+
+def fallback(state: str) -> str:
+    return "hold"                      # deterministic floor action
+
+decider = Decider(
+    client,                             # any object with .ask(state, questions, timeout=)
+    render_state=str,
+    questions=lambda state: {
+        "route": choice("Pick an action.", {"act": None, "hold": "wait"})
+    },
+    map_answers=lambda state, resp: resp.choices["route"].choice,
+    fallback=fallback,
+    gate=ConfidenceGate("route", threshold=0.7),
+    budget=Budget(max_calls=100),
+    on_event=lambda event: print(event.to_dict()),   # JSON-safe receipt
+)
+action = decider.decide("state text")   # never raises
+```
+
+`decide()` never raises: every failure — no API key, client construction,
+budget exhaustion, compose/ask/gate/mapping errors, an open circuit, or
+too many consecutive failures — falls back to the floor action and is
+classified into a closed reason taxonomy on the emitted `DecisionEvent`
+(`not_asked`, `no_key`, `client_error`, `latched`, `budget`, `breaker`,
+`compose_error`, `ask_error`, `gate`, `mapping_error`). The default client
+is single-attempt per ask (`JevClient(env=env, retry=RetryPolicy(
+max_attempts=1))`), so worst-case blocking is one timeout, never timeout x
+retries; consumers wanting retries pass their own `client_factory`. With a
+`ConfidenceGate` configured, `decider.calibration_pairs()` accumulates
+`(declared confidence, gate-accepted)` pairs — a self-consistency proxy to
+feed into `daf_jev.calibration`.
+
 ## CLI
 
 ```bash
@@ -250,7 +308,7 @@ flowchart TB
         CLI["CLI<br/>ask · evaluate · models · docs-verify"]
         MCP["MCP server (stdio)<br/>jev_ask · jev_evaluate · jev_models<br/>jev_composite_score · jev_confidence_gate<br/>jev_tiered_gate · jev_docs_verify"]
         SKILL["agent skill<br/>skills/daf-jev/SKILL.md"]
-        EX["examples/<br/>4 runnable scripts"]
+        EX["examples/<br/>6 runnable scripts"]
     end
     CLI --> K["JevClient / compose / calibration"]
     MCP --> K

@@ -1,6 +1,6 @@
 # daf-jev examples
 
-Five runnable scripts showing the core patterns of the toolkit. Each script:
+Six runnable scripts showing the core patterns of the toolkit. Each script:
 
 - resolves credentials with `daf_jev.load_settings()` — from `JEV_API_KEY`
   or `TYPESAFE_API_KEY` (env or a `.env` file in the current directory);
@@ -64,10 +64,25 @@ lane. `UsageLedger` totals the requests and tokens the run actually spent.
 python examples/gated_fallback.py [--model NAME]
 ```
 
+### `decider_loop.py`
+
+The decision-point loop as one `Decider`: typed hooks
+(`render_state` / `questions` / `map_answers` / `fallback`), a
+`ConfidenceGate` that rejects low-confidence answers into the fallback, a
+`Budget(max_calls=...)` bounding the ask attempts, and a JSON `on_event`
+receipt per decision (`model` / `cache` / `fallback` with a classified
+reason). The floor action is a deterministic keyword-majority label over
+the same lexicons the choice question uses. Prints each demo message's
+action, the event log, and the usage snapshot.
+
+```sh
+python examples/decider_loop.py [--model NAME]
+```
+
 ## Notes
 
 - Optional helpers are imported defensively, so a checkout mid-build that
   lacks them fails with a clear message instead of a raw traceback.
 - Network calls go to `JEV_BASE_URL` / `TYPESAFE_BASE_URL`
-  (default `https://api.typesafe.ai`). All five scripts are offline-safe:
+  (default `https://api.typesafe.ai`). All six scripts are offline-safe:
   without a key they do nothing but print the SKIP line.

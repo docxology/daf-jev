@@ -28,6 +28,7 @@ from daf_jev._types import (
 from daf_jev.client import AsyncJevClient, JevClient, ModelCard
 from daf_jev.ledger import UsageLedger, UsageSnapshot
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
+from daf_jev.decider import Budget, ConfidenceGate, DecisionEvent, Decider
 
 __version__ = "0.3.0"
 
@@ -96,5 +97,9 @@ __all__ = [
     "CircuitBreaker",
     "CircuitOpenError",
     "CircuitState",
+    "Budget",
+    "ConfidenceGate",
+    "DecisionEvent",
+    "Decider",
     "__version__",
 ]

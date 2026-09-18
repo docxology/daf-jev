@@ -153,6 +153,46 @@ contradictions (report the delta; do not silently deviate).
   always runs outside the lock and the breaker never sleeps — the same
   pure-computation philosophy as `RetryPolicy`. Default OFF: `JevClient`
   is not wired to it.
+- `decider.py` — decision-point decider: the observe -> compose -> ask ->
+  gate -> fail-open -> act loop as one reusable class. Pure orchestration
+  over injected I/O; `decide()` never raises (the fallback hook is the
+  floor and must not raise).
+  - `DecisionEvent(source, reason, error, latency_s, usage, request_id)`
+    frozen dataclass with a JSON-safe `to_dict()`; `source` is
+    `"model"` / `"cache"` / `"fallback"`, `reason` follows the closed
+    fallback taxonomy: `not_asked`, `no_key` (latched for the Decider's
+    lifetime), `client_error` (latched), `latched`
+    (`max_consecutive_failures` reached), `budget`, `breaker`,
+    `compose_error`, `ask_error` (counts toward the latch), `gate`,
+    `mapping_error` (counts toward the latch).
+  - `ConfidenceGate(answer_id, threshold)` — frozen; threshold validated
+    in [0, 1] else `ValueError`. Returns None to accept, a rejection
+    reason otherwise; noul answers (no confidence attr) are not gated.
+  - `Budget(max_calls=None, max_input_tokens=None, max_output_tokens=None,
+    max_total_tokens=None, attempts=0)` — at least one threshold required
+    else `ValueError`; `charge()` once per ask attempt (success or
+    failure); `exceeded(usage: UsageSnapshot)` returns a human-readable
+    reason when any limit is met/passed; JSON-safe `to_dict()`.
+  - `Decider(Generic[S, T])(client=None, *, render_state, questions,
+    map_answers, fallback, gate=None, should_ask=None, budget=None,
+    cache=None, cache_key=None, ledger=None, breaker=None, timeout=None,
+    max_consecutive_failures=3, client_factory=None, env=None,
+    clock=time.monotonic, on_event=None)` — `client`/`client_factory`
+    mutually exclusive, `cache`/`cache_key` together, latch >= 1,
+    timeout > 0 (else `ValueError`). `decide()` order: cache hit ->
+    `should_ask` -> client resolution (latching: injected client;
+    factory called once, exception latches `client_error`; default path
+    resolves the key — None latches `no_key`, else
+    `JevClient(env=env, retry=RetryPolicy(max_attempts=1))`, single
+    attempt per ask so worst-case blocking is one timeout) -> budget gate
+    -> compose (`compose_error`) -> one ask behind the optional breaker
+    (`CircuitOpenError` -> `breaker`; other exceptions count toward the
+    latch, reason `ask_error`) -> ledger record + failure-counter reset ->
+    gate (`gate`) -> map (`mapping_error`, counts toward the latch) ->
+    cache store + `"model"` event. Extra surface: `last_event`,
+    `usage_snapshot()`, `calibration_pairs()` (declared-confidence /
+    gate-accepted pairs when the gate is a `ConfidenceGate` — a
+    self-consistency proxy, NOT correctness), `dead` property.
 - `cli.py` — argparse (stdlib), thin. `main(argv=None) -> int`.
   - `daf-jev ask --state-file FILE | --state TEXT [--question ID=SPEC ...] [--model M]
     [--json | --pretty]` where SPEC is `noul:<instructions>` |
@@ -169,7 +209,8 @@ contradictions (report the delta; do not silently deviate).
   noul, choice, score, QuestionSet, composite_score, confidence_gate, route,
   Settings, load_settings, resolve_retry, resolve_timeout, pick_model,
   Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
-  CircuitOpenError, CircuitState, __version__`.
+  CircuitOpenError, CircuitState, Budget, ConfidenceGate, DecisionEvent,
+  Decider, __version__`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
@@ -188,7 +229,10 @@ contradictions (report the delta; do not silently deviate).
   math (deterministic via injected jitter seed or jitter=0), errors from status,
   client ask/models/response parsing + views, primitives builders, compose functions,
   config precedence (injected env > os.environ > .env fixture file), CLI via capsys
-  (exit codes, JSON out, `docs-verify` against a temp fixture manifest).
+  (exit codes, JSON out, `docs-verify` against a temp fixture manifest),
+  decider loop end-to-end over the stub server (`tests/unit/test_decider.py`:
+  happy path, cache, budget, breaker, consecutive-failure latch, gate,
+  mapping/compose errors, no-key/client-error latching, event receipts).
 - `tests/live/test_live_api.py` — `@pytest.mark.live` +
   `pytest.mark.skipif(not os.environ.get("JEV_API_KEY"), reason="JEV_API_KEY not set")`.
   Real API: mixed noul/choice/score call over a small state, assert shape and
