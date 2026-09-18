@@ -336,10 +336,13 @@ uv run python scripts/z_generate_manuscript_variables.py
 # substitution into output/manuscript/ (inside the template checkout)
 ```
 
-Rendering and validation run from the template checkout, which resolves the
-project through a **leaf symlink**
+Rendering and validation run from the template checkout, which previously
+resolved the project through a **leaf symlink**
 `template/projects/ongoing/daf-jev -> ../../../projects/ongoing/Code_Tools/daf-jev`
-(created 2026-09-16; intermediate symlinks are rejected by design):
+(created 2026-09-16; intermediate symlinks are rejected by design). The
+leaf symlink was **removed 2026-09-18 by owner decision**, so
+template-pipeline render/validate is currently blocked (see AGENTS.md,
+render-path invariant):
 
 ```bash
 cd /Volumes/external_drive/Git/template

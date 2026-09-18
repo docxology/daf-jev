@@ -117,13 +117,13 @@ here.
 
 ## Invariants and gotchas
 
-- **Self-versioned, local-only git repo** (branch `main`, initial commit
-  `72c3bdc`, **no configured remote**). Commit meaningful changes locally —
-  the template's provenance validation requires git-tracked worktree files.
-  Publishing goes through the release remote (see the Published Zenodo
-  deposit / Public release remote invariants below), never by pushing this
-  lane repo itself. Never `git add` any path under this lane into an OUTER
-  repo (`../../AGENTS.md`, `../AGENTS.md`).
+- **Self-versioned git repo, canonical checkout in the flat mirror**
+  (branch `main`; remote `origin` → https://github.com/docxology/daf-jev;
+  local `main` fast-forwarded to `origin/main` @ `86ea7e3` 2026-09-18).
+  Commit meaningful changes locally — the template's provenance validation
+  requires git-tracked worktree files — and push to `origin` for
+  owner-approved publication (2026-09-18). Never `git add` any path under
+  this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
 - **Published Zenodo deposit (v0.3.0).** The v0.3.0 release is archived as
   Zenodo deposit id **22816188** (version DOI
   `10.5281/zenodo.22816188`, record
@@ -165,13 +165,14 @@ here.
   (2026-09-16, captured at variable-generation time into
   `output/data/manuscript_variables.json`); raw `.coverage` data is not
   retained on disk.
-- **Leaf render symlink contract.** The template engine resolves
-  `--project` through
-  `template/projects/ongoing/daf-jev -> ../../../projects/ongoing/Code_Tools/daf-jev`
-  (managed lifecycle leaf symlink, created 2026-09-16). Intermediate
-  symlinks (e.g. resolving through `ongoing/Code_Tools`) are rejected by
-  design — recreate the leaf symlink if rendering/validation fails to find
-  the project; never substitute a non-leaf alias.
+- **Render path (no leaf alias).** The former managed lifecycle leaf symlink
+  `template/projects/ongoing/daf-jev -> .../Code_Tools/daf-jev` was removed
+  2026-09-18 by owner decision. The template's project-path confinement
+  rejects intermediate symlinks (e.g. resolving through
+  `ongoing/Code_Tools`) by design, so `--project ongoing/daf-jev`
+  render/validate via the template pipeline is currently blocked.
+  Re-create a leaf symlink only with owner say-so; never substitute a
+  non-leaf alias.
 - **`figure_registry.json` must be emitted with the figures.**
   `figures.generate_all()` always writes it into the figures directory
   after the PNGs (`scripts/generate_figures.py` inherits this); template
@@ -245,7 +246,8 @@ uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
 uv run python scripts/z_generate_manuscript_variables.py   # 46 tokens + injection
 
-# Render + validate from the template checkout (leaf symlink must exist):
+# Render + validate from the template checkout (currently blocked: the leaf
+# symlink was removed 2026-09-18 — see the render-path invariant above):
 cd /Volumes/external_drive/Git/template && \
   uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
 cd /Volumes/external_drive/Git/template && \
