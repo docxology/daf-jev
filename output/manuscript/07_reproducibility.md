@@ -8,7 +8,7 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
   ```bash
   uv run python scripts/generate_figures.py            # all figures
-  uv run python scripts/generate_figures.py --only batching_speedup
+  uv run python scripts/generate_figures.py --only batching
   ```
 
   The data-driven figures read `output/benchmarks/batching_*.json`, `output/benchmarks/patterns_*.json`, and `output/benchmarks/calibration_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The same rule applies to the graphical abstract of [@sec:abstract], which composes the latest batching, latency, and calibration payloads into its live-outputs panel. The two schematic figures and the parametric confidence-band illustration require no data and no network.
@@ -28,15 +28,15 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Test suite and coverage
 
-The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 19 test files — 294 unit tests and 2 live tests — collected with:
+The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 20 test files — 433 unit tests and 2 live tests — collected with:
 
 ```bash
 uv run pytest tests/unit --cov=src     # unit suite under the coverage gate
 JEV_API_KEY=... uv run pytest tests/live   # live tests against the real API
 ```
 
-Measured coverage over the package source stands at 92.85, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
+Measured coverage over the package source stands at 95.62, enforced by the coverage gate configured in `pyproject.toml`. Test and collection counts are computed at variable-generation time by collecting the suite; if collection is unavailable in a given environment, the corresponding values are reported as draft sentinels rather than fabricated.
 
 ## Provenance chain
 
-The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.4, and the rendered edition is version 0.3.0 of this manuscript, generated at 2026-09-17T21:43:21Z.
+The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.4, and the rendered edition is version 0.3.0 of this manuscript, generated at 2026-09-21T21:10:08Z.

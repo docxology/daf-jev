@@ -47,11 +47,13 @@ The MCP extra (`pip install "daf-jev[mcp]"` or `uv sync --extra mcp`) is the onl
 
 ## Worked examples
 
-Four self-contained scripts under `examples/` walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer:
+Six self-contained scripts under `examples/` walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer:
 
 - **`quickstart.py`** — the shortest path to a typed answer: build a question set, make one call, read the typed answers;
 - **`triage_router.py`** — confidence-gated routing end to end: a `choice` call dispatched by `route()` with a fallback for low-confidence answers;
 - **`composite_scoring.py`** — a `score` call turned into a comparable scalar by `composite_score()` and verdict-banded by `confidence_gate()`;
-- **`evaluate_corpus.py`** — the batch `Evaluator` over many states, with per-state failure capture and summary aggregates.
+- **`evaluate_corpus.py`** — the batch `Evaluator` over many states, with per-state failure capture and summary aggregates;
+- **`decider_loop.py`** — the decision-point loop end to end: observe → compose → ask → gate → fail-open, with typed hooks, a deterministic lexicon as the floor action, a `Budget` bound, and JSON decision receipts;
+- **`gated_fallback.py`** — a deterministic keyword heuristic answering first, with the model called only when the heuristic is not confident enough, `confidence_gate(below="escalate")` as the final escalation lane, and a `UsageLedger` accounting every model call the fallback makes.
 
 Each script runs against the real endpoint when an API key is present and prints a clear skip notice otherwise, matching the benchmark convention of [@sec:experimental_setup].
