@@ -8,12 +8,13 @@ version = "0.3.0"
 license = {text = "MIT"}
 description = "Modular, composable Python client and decision toolkit for the TypeSafe Jev (System One) API"
 authors = [
-    {name = "docxology"},
+    {name = "Daniel Ari Friedman"},
 ]
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.27.0",
     "pyyaml>=6.0",
+    "tomli>=1.1.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,9 @@ dev = [
     "pytest-timeout>=2.3.0",
     "matplotlib>=3.7",
     "mcp>=1.2,<2",
+    "mypy>=1.19",
+    "types-PyYAML>=6.0",
+    "ruff>=0.16.8",
 ]
 figures = [
     "matplotlib>=3.7",
@@ -68,3 +72,36 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
 ]
+exclude_also = [
+    '^\s*\.\.\.\s*$',  # protocol method stubs (never executed)
+]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E4", "E7", "E9",  # pycodestyle errors (line-length not enforced)
+    "F",               # pyflakes
+    "I",               # isort
+    "B",               # flake8-bugbear
+    "UP",              # pyupgrade
+    "SIM",             # flake8-simplify
+    "RUF",             # ruff-specific
+]
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+follow_imports_for_stubs = true
+
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*", "matplotlib", "matplotlib.*", "cycler", "cycler.*", "kiwisolver", "kiwisolver.*"]
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["tomllib", "tomli"]
+ignore_missing_imports = true
+
