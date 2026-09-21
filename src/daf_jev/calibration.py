@@ -8,11 +8,17 @@ No I/O.
 from collections.abc import Iterable
 
 __all__ = [
-    "bucket_index",
-    "reliability_table",
-    "expected_calibration_error",
     "brier_score",
+    "bucket_index",
+    "expected_calibration_error",
+    "reliability_table",
 ]
+
+
+def _check_confidence(confidence: float) -> None:
+    """Reject a confidence outside [0, 1] (NaN fails the chained comparison)."""
+    if not 0.0 <= confidence <= 1.0:
+        raise ValueError(f"confidence {confidence!r} is outside [0, 1]")
 
 
 def bucket_index(confidence: float, n_buckets: int = 10) -> int:
@@ -22,8 +28,7 @@ def bucket_index(confidence: float, n_buckets: int = 10) -> int:
     final bucket, which is closed at 1.0. Raises ``ValueError`` when
     ``confidence`` is outside [0, 1] or ``n_buckets`` is less than 1.
     """
-    if not 0.0 <= confidence <= 1.0:
-        raise ValueError(f"confidence {confidence!r} is outside [0, 1]")
+    _check_confidence(confidence)
     if n_buckets < 1:
         raise ValueError(f"n_buckets must be at least 1, got {n_buckets}")
     return min(int(confidence * n_buckets), n_buckets - 1)
@@ -59,7 +64,7 @@ def reliability_table(
         b["acc"] += 1.0 if correct else 0.0
 
     table = []
-    for i, b in enumerate(buckets):
+    for _, b in enumerate(buckets):
         if b["n"] == 0:
             continue
         table.append(
@@ -79,7 +84,7 @@ def expected_calibration_error(
     *,
     n_buckets: int = 10,
 ) -> float:
-    """Expected calibration error: Σ (n_b/N)·|acc_b − conf_b|.
+    """Expected calibration error: Σ (n_b/N)·|acc_b - conf_b|.
 
     Empty buckets contribute nothing. Raises ``ValueError`` when ``pairs`` is
     empty or ``n_buckets`` is less than 1.
@@ -90,11 +95,16 @@ def expected_calibration_error(
 
 
 def brier_score(pairs: Iterable[tuple[float, bool]]) -> float:
-    """Mean of (confidence − correct)² over (confidence, correct) pairs.
+    """Mean of (confidence - correct)² over (confidence, correct) pairs.
 
-    Raises ``ValueError`` when ``pairs`` is empty.
+    Raises ``ValueError`` when ``pairs`` is empty or any confidence lies
+    outside [0, 1] (NaN included), matching :func:`bucket_index`.
     """
     pairs = list(pairs)
     if not pairs:
         raise ValueError("pairs must not be empty")
-    return sum((conf - (1.0 if correct else 0.0)) ** 2 for conf, correct in pairs) / len(pairs)
+    for confidence, _correct in pairs:
+        _check_confidence(confidence)
+    return sum(
+        (conf - (1.0 if correct else 0.0)) ** 2 for conf, correct in pairs
+    ) / len(pairs)

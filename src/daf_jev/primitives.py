@@ -2,7 +2,9 @@
 
 Free functions :func:`noul`, :func:`choice`, :func:`score` build the frozen
 wire dataclasses from :mod:`daf_jev._types`, validating eagerly so mistakes
-surface at construction time rather than at request time.
+surface at construction time rather than at request time. ``instructions``
+must be JSON content (a ``str``, ``list``, or ``dict``); the builders raise
+``ValueError`` for anything else.
 :class:`QuestionSet` is a ``Mapping[str, Question]`` container that composes
 questions for a single ``ask`` call. No I/O.
 """
@@ -10,18 +12,33 @@ questions for a single ``ask`` call. No I/O.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Optional
 
-from daf_jev._types import ChoiceQuestion, NoulQuestion, Question, ScoreQuestion
+from daf_jev._types import (
+    ChoiceQuestion,
+    JSONContent,
+    NoulQuestion,
+    Question,
+    ScoreQuestion,
+)
 
-__all__ = ["noul", "choice", "score", "QuestionSet"]
+__all__ = ["QuestionSet", "choice", "noul", "score"]
+
+
+def _checked_instructions(instructions: object) -> JSONContent:
+    """Validate builder ``instructions`` as JSON content (str, list, dict)."""
+    if not isinstance(instructions, (str, list, dict)):
+        raise ValueError(
+            "instructions must be a str, list, or dict (JSON content), got "
+            f"{type(instructions).__name__}"
+        )
+    return instructions
 
 
 def noul(
     instructions: object,
     *,
-    true_desc: Optional[str] = None,
-    false_desc: Optional[str] = None,
+    true_desc: str | None = None,
+    false_desc: str | None = None,
 ) -> NoulQuestion:
     """Build a yes/no question.
 
@@ -32,12 +49,14 @@ def noul(
     criteria = None
     if true_desc is not None or false_desc is not None:
         criteria = {"true": true_desc, "false": false_desc}
-    return NoulQuestion(instructions=instructions, criteria=criteria)
+    return NoulQuestion(
+        instructions=_checked_instructions(instructions), criteria=criteria
+    )
 
 
 def choice(
     instructions: object,
-    options: Mapping[str, Optional[str]],
+    options: Mapping[str, str | None],
 ) -> ChoiceQuestion:
     """Build a multiple-choice question.
 
@@ -47,7 +66,9 @@ def choice(
     criteria = dict(options)
     if not criteria:
         raise ValueError("choice() requires at least one option")
-    return ChoiceQuestion(instructions=instructions, criteria=criteria)
+    return ChoiceQuestion(
+        instructions=_checked_instructions(instructions), criteria=criteria
+    )
 
 
 def score(instructions: object, levels: Sequence[str]) -> ScoreQuestion:
@@ -59,7 +80,9 @@ def score(instructions: object, levels: Sequence[str]) -> ScoreQuestion:
     criteria = list(levels)
     if len(criteria) < 2:
         raise ValueError("score() requires at least 2 levels")
-    return ScoreQuestion(instructions=instructions, criteria=criteria)
+    return ScoreQuestion(
+        instructions=_checked_instructions(instructions), criteria=criteria
+    )
 
 
 class QuestionSet(Mapping[str, Question]):
@@ -73,7 +96,7 @@ class QuestionSet(Mapping[str, Question]):
                      .score("severity", ["Cosmetic", "Broken", "Blocking"])
     """
 
-    def __init__(self, questions: Optional[Mapping[str, Question]] = None) -> None:
+    def __init__(self, questions: Mapping[str, Question] | None = None) -> None:
         self._questions: dict[str, Question] = dict(questions) if questions else {}
 
     # -- Mapping protocol ---------------------------------------------------
@@ -92,12 +115,12 @@ class QuestionSet(Mapping[str, Question]):
 
     # -- Mutation -----------------------------------------------------------
 
-    def add(self, id: str, q: Question) -> "QuestionSet":
+    def add(self, id: str, q: Question) -> QuestionSet:
         """Add (or replace) ``q`` under ``id``; returns ``self``."""
         self._questions[id] = q
         return self
 
-    def merge(self, other: Mapping[str, Question]) -> "QuestionSet":
+    def merge(self, other: Mapping[str, Question]) -> QuestionSet:
         """Merge every question from ``other`` into this set; returns ``self``.
 
         Ids already present are overwritten by ``other``'s entries.
@@ -119,18 +142,18 @@ class QuestionSet(Mapping[str, Question]):
         id: str,
         instructions: object,
         *,
-        true_desc: Optional[str] = None,
-        false_desc: Optional[str] = None,
-    ) -> "QuestionSet":
+        true_desc: str | None = None,
+        false_desc: str | None = None,
+    ) -> QuestionSet:
         return self.add(id, noul(instructions, true_desc=true_desc, false_desc=false_desc))
 
     def choice(
         self,
         id: str,
         instructions: object,
-        options: Mapping[str, Optional[str]],
-    ) -> "QuestionSet":
+        options: Mapping[str, str | None],
+    ) -> QuestionSet:
         return self.add(id, choice(instructions, options))
 
-    def score(self, id: str, instructions: object, levels: Sequence[str]) -> "QuestionSet":
+    def score(self, id: str, instructions: object, levels: Sequence[str]) -> QuestionSet:
         return self.add(id, score(instructions, levels))

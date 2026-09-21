@@ -15,24 +15,22 @@ import dataclasses
 import math
 import time
 from collections import Counter
-from typing import Any, Iterable, Mapping, Optional, Sequence, Union
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from daf_jev._errors import TypeSafeError
 from daf_jev._types import (
     ChoiceAnswer,
-    ChoiceQuestion,
     JSONContent,
     NoulAnswer,
-    NoulQuestion,
     ScoreAnswer,
-    ScoreQuestion,
     SystemOneResponse,
 )
 from daf_jev.client import AsyncJevClient, JevClient
 
 __all__ = ["EvaluationRecord", "Evaluator"]
 
-StateInput = Union[str, tuple[str, JSONContent]]
+StateInput = str | tuple[str, JSONContent]
 
 
 @dataclasses.dataclass
@@ -41,8 +39,8 @@ class EvaluationRecord:
 
     state_id: str
     state: JSONContent
-    response: Optional[SystemOneResponse]
-    error: Optional[str]
+    response: SystemOneResponse | None
+    error: str | None
     latency_s: float
 
 
@@ -80,11 +78,11 @@ class Evaluator:
 
     def __init__(
         self,
-        client: Any,
+        client: JevClient | AsyncJevClient,
         questions: Mapping[str, Any],
         *,
         concurrency: int = 4,
-        model: Optional[str] = None,
+        model: str | None = None,
     ) -> None:
         if concurrency < 1:
             raise ValueError(f"concurrency must be >= 1, got {concurrency}")
@@ -92,7 +90,7 @@ class Evaluator:
         self._questions = dict(questions)
         self._concurrency = concurrency
         self._model = model
-        self._records: Optional[list[EvaluationRecord]] = None
+        self._records: list[EvaluationRecord] | None = None
 
     # ------------------------------------------------------------- driving
 
@@ -118,9 +116,9 @@ class Evaluator:
                 )
 
         if isinstance(self._client, AsyncJevClient):
-            records = self._run_async(self._evaluate_async(items))
+            records = self._run_async(self._evaluate_async(items, self._client))
         elif isinstance(self._client, JevClient):
-            records = self._evaluate_sync(items)
+            records = self._evaluate_sync(items, self._client)
         else:
             raise TypeError(
                 "client must be a JevClient or AsyncJevClient, got "
@@ -142,13 +140,12 @@ class Evaluator:
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             return pool.submit(asyncio.run, coro).result()
 
-    def _ask(self, state: JSONContent) -> SystemOneResponse:
-        return self._client.ask(state, self._questions, model=self._model)
-
-    def _record_of(self, state_id: str, state: JSONContent) -> EvaluationRecord:
+    def _record_of(
+        self, client: JevClient, state_id: str, state: JSONContent
+    ) -> EvaluationRecord:
         start = time.perf_counter()
         try:
-            response = self._ask(state)
+            response = client.ask(state, self._questions, model=self._model)
         except Exception as exc:  # per-state failure: never aborts the batch
             return EvaluationRecord(
                 state_id, state, None, _error_text(exc), time.perf_counter() - start
@@ -158,7 +155,9 @@ class Evaluator:
         )
 
     async def _evaluate_async(
-        self, items: Sequence[tuple[str, JSONContent]]
+        self,
+        items: Sequence[tuple[str, JSONContent]],
+        client: AsyncJevClient,
     ) -> list[EvaluationRecord]:
         semaphore = asyncio.Semaphore(self._concurrency)
 
@@ -166,7 +165,9 @@ class Evaluator:
             async with semaphore:
                 start = time.perf_counter()
                 try:
-                    response = await self._ask(state)
+                    response = await client.ask(
+                        state, self._questions, model=self._model
+                    )
                 except Exception as exc:
                     return EvaluationRecord(
                         state_id,
@@ -179,26 +180,31 @@ class Evaluator:
                     state_id, state, response, None, time.perf_counter() - start
                 )
 
-        records = list(
-            await asyncio.gather(
-                *(run(state_id, state) for state_id, state in items)
+        try:
+            return list(
+                await asyncio.gather(
+                    *(run(state_id, state) for state_id, state in items)
+                )
             )
-        )
-        # evaluate() drives the async client on a private event loop, so
-        # its pooled keep-alive connections are bound to a loop that dies
-        # with this batch; close the async session cleanly here rather
-        # than leaving the caller with a poisoned client.
-        await self._client.close()
-        return records
+        finally:
+            # evaluate() drives the async client on a private event loop, so
+            # its pooled keep-alive connections are bound to a loop that dies
+            # with this batch; close the async session cleanly here rather
+            # than leaving the caller with a poisoned client. Running in a
+            # finally also closes the session when the gather is cancelled
+            # or a task fails mid-batch.
+            await client.close()
 
     def _evaluate_sync(
-        self, items: Sequence[tuple[str, JSONContent]]
+        self,
+        items: Sequence[tuple[str, JSONContent]],
+        client: JevClient,
     ) -> list[EvaluationRecord]:
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self._concurrency
         ) as pool:
             futures = [
-                pool.submit(self._record_of, state_id, state)
+                pool.submit(self._record_of, client, state_id, state)
                 for state_id, state in items
             ]
             return [future.result() for future in futures]
@@ -206,7 +212,7 @@ class Evaluator:
     # ------------------------------------------------------------ analysis
 
     def _records_or_last(
-        self, records: Optional[Sequence[EvaluationRecord]]
+        self, records: Sequence[EvaluationRecord] | None
     ) -> Sequence[EvaluationRecord]:
         if records is None:
             if self._records is None:
@@ -215,55 +221,56 @@ class Evaluator:
         return records
 
     def summary(
-        self, records: Optional[Sequence[EvaluationRecord]] = None
+        self, records: Sequence[EvaluationRecord] | None = None
     ) -> dict[str, Any]:
-        """Aggregate records (default: the last :meth:`evaluate` result)."""
+        """Aggregate records (default: the last :meth:`evaluate` result).
+
+        Latency aggregates (``mean_latency_s`` and ``p95_latency_s``) span
+        every record, failed ones included: failed attempts still cost wall
+        time, and that is the ops signal this summary reports. Token totals
+        and the per-question aggregates cover successful records only.
+        """
         records = self._records_or_last(records)
-        ok = [
-            record
+        responses = [
+            record.response
             for record in records
             if record.error is None and record.response is not None
         ]
         latencies = [record.latency_s for record in records]
         return {
             "n_states": len(records),
-            "n_errors": len(records) - len(ok),
+            "n_errors": len(records) - len(responses),
             "total_input_tokens": sum(
-                record.response.usage.input_tokens for record in ok
+                response.usage.input_tokens for response in responses
             ),
             "total_output_tokens": sum(
-                record.response.usage.output_tokens for record in ok
+                response.usage.output_tokens for response in responses
             ),
             "mean_latency_s": _mean(latencies) if latencies else 0.0,
             "p95_latency_s": _p95(latencies) if latencies else 0.0,
-            "questions": self._question_summary(ok),
+            "questions": self._question_summary(responses),
         }
 
-    def _question_summary(self, ok: Sequence[EvaluationRecord]) -> dict[str, Any]:
+    def _question_summary(
+        self, responses: Sequence[SystemOneResponse]
+    ) -> dict[str, Any]:
         # Aggregate by the question's DECLARED type, not the answer's; a
         # response whose answer type disagrees with the declaration is
         # skipped for that question.
-        expected = {
-            "noul": NoulAnswer,
-            "choice": ChoiceAnswer,
-            "score": ScoreAnswer,
-        }
         aggregates: dict[str, Any] = {}
         for qid, question in self._questions.items():
             qtype = getattr(question, "type", None)
-            answer_cls = expected.get(qtype)
-            if answer_cls is None:
-                continue
-            answers = [
-                record.response.answers[qid]
-                for record in ok
-                if qid in record.response.answers
-                and isinstance(record.response.answers[qid], answer_cls)
-            ]
-            if not answers:
-                continue
             if qtype == "noul":
-                values = [answer.noul for answer in answers]  # type: ignore[attr-defined]
+                noul_answers = [
+                    answer
+                    for answer in (
+                        response.answers.get(qid) for response in responses
+                    )
+                    if isinstance(answer, NoulAnswer)
+                ]
+                if not noul_answers:
+                    continue
+                values = [answer.noul for answer in noul_answers]
                 aggregates[qid] = {
                     "kind": "noul",
                     "mean": _mean(values),
@@ -271,29 +278,45 @@ class Evaluator:
                     "max": max(values),
                 }
             elif qtype == "choice":
-                counts = Counter(answer.choice for answer in answers)  # type: ignore[attr-defined]
+                choice_answers = [
+                    answer
+                    for answer in (
+                        response.answers.get(qid) for response in responses
+                    )
+                    if isinstance(answer, ChoiceAnswer)
+                ]
+                if not choice_answers:
+                    continue
+                counts = Counter(answer.choice for answer in choice_answers)
                 aggregates[qid] = {
                     "kind": "choice",
                     "counts": dict(counts),
                     "mode": counts.most_common(1)[0][0],
                     "mean_confidence": _mean(
-                        [answer.confidence for answer in answers]  # type: ignore[attr-defined]
+                        [answer.confidence for answer in choice_answers]
                     ),
                 }
-            else:  # score
+            elif qtype == "score":
+                score_answers = [
+                    answer
+                    for answer in (
+                        response.answers.get(qid) for response in responses
+                    )
+                    if isinstance(answer, ScoreAnswer)
+                ]
+                if not score_answers:
+                    continue
                 aggregates[qid] = {
                     "kind": "score",
-                    "mean": _mean(
-                        [answer.score for answer in answers]  # type: ignore[attr-defined]
-                    ),
+                    "mean": _mean([answer.score for answer in score_answers]),
                     "mean_confidence": _mean(
-                        [answer.confidence for answer in answers]  # type: ignore[attr-defined]
+                        [answer.confidence for answer in score_answers]
                     ),
                 }
         return aggregates
 
     def to_json(
-        self, records: Optional[Sequence[EvaluationRecord]] = None
+        self, records: Sequence[EvaluationRecord] | None = None
     ) -> list[dict[str, Any]]:
         """JSON-safe view of records (default: the last :meth:`evaluate`)."""
         records = self._records_or_last(records)

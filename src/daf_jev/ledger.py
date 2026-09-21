@@ -82,12 +82,19 @@ class UsageLedger:
         - ``None`` — a silent no-op (error paths in evaluation loops pass
           ``None`` when no response was produced).
 
+        Anything else raises ``TypeError``.
+
         Returns ``None`` by design: the caller already holds per-call usage
         on the response; the ledger exists for aggregates.
         """
         if source is None:
             return
-        usage = source if isinstance(source, Usage) else source.usage
+        if isinstance(source, Usage):
+            usage = source
+        elif isinstance(source, SystemOneResponse):
+            usage = source.usage
+        else:
+            raise TypeError("record() accepts Usage, SystemOneResponse, or None")
         with self._lock:
             self._requests += 1
             self._input_tokens += usage.input_tokens

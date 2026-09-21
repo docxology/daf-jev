@@ -7,20 +7,19 @@ by code. No I/O.
 """
 
 import math
-
 from collections.abc import Callable, Mapping, Sequence
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from daf_jev._types import ChoiceAnswer, ScoreAnswer
 
-__all__ = ["composite_score", "confidence_gate", "route", "pick", "tiered_gate"]
+__all__ = ["composite_score", "confidence_gate", "pick", "route", "tiered_gate"]
 
 T = TypeVar("T")
 
 
 def composite_score(
     answer: ScoreAnswer,
-    weights: Optional[Sequence[float]] = None,
+    weights: Sequence[float] | None = None,
 ) -> float:
     """Expected value of a Score answer over its level indices.
 
@@ -32,19 +31,45 @@ def composite_score(
     level indices): the probability distribution is re-weighted —
     ``q_i = p_i * w_i / sum(p_j * w_j)`` — and the result is
     ``sum(q_i * i)``. Only the weight ratios matter (scale-invariant:
-    ``[2, 6]`` and ``[1, 3]`` give the same value), and the result always
-    lies within ``[min index, max index]``. ``ValueError`` if the weights
-    length does not match the level count, any weight is not finite, the
-    weights do not sum to a positive value, or ``sum(p_j * w_j) == 0``
-    (the weights assign no mass to probable levels).
+    ``[2, 6]`` and ``[1, 3]`` give the same value). For non-negative
+    weights the result lies within ``[min index, max index]``; negative
+    weights are accepted deliberately (scale-invariant reweighting) but
+    void that range guarantee.
+
+    ``ValueError`` if any probability is not a finite non-negative number,
+    a probability key is not an integer level index, the weights length
+    does not match the level count, any weight is not finite, the weights
+    do not sum to a positive value, or ``sum(p_j * w_j) == 0`` (the
+    weights assign no mass to probable levels).
     """
     probs = answer.probabilities
     if not probs:
-        raise ValueError("ScoreAnswer carries no probabilities; cannot compute composite score")
+        raise ValueError(
+            "ScoreAnswer carries no probabilities; cannot compute composite score"
+        )
 
-    indices = sorted(int(k) for k in probs)
+    # Parse and validate the distribution once, shared by both weighting
+    # paths, so both iterate the same canonical sorted level indices and
+    # bad keys/values fail before any arithmetic. Duplicate integer
+    # spellings of one level ('1' and '01') accumulate onto that level.
+    by_index: dict[int, float] = {}
+    for key, value in probs.items():
+        try:
+            index = int(key)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "probability keys must be integer level indices"
+            ) from None
+        if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(
+                f"probability {key!r} must be a finite non-negative number, "
+                f"got {value!r}"
+            )
+        by_index[index] = by_index.get(index, 0.0) + value
+
+    indices = sorted(by_index)
     if weights is None:
-        return sum(int(k) * p for k, p in probs.items())
+        return sum(index * by_index[index] for index in indices)
 
     if len(weights) != len(indices):
         raise ValueError(
@@ -55,7 +80,7 @@ def composite_score(
     if sum(weights) <= 0:
         raise ValueError("weights must sum to a positive value")
 
-    weighted = [(idx, probs[str(idx)] * w) for idx, w in zip(indices, weights)]
+    weighted = [(idx, by_index[idx] * w) for idx, w in zip(indices, weights, strict=True)]
     mass = sum(m for _, m in weighted)
     if mass == 0:
         raise ValueError("weights assign no mass to probable levels")
@@ -73,8 +98,10 @@ def confidence_gate(
     ``answer`` must carry a ``confidence`` field (Choice or Score answers do;
     Noul answers do not and raise ``TypeError``). The primary value is the
     selected ``choice`` for a Choice answer, and for a Score answer the legend
-    description of the level nearest ``score`` (falling back to the score
-    itself when the legend lacks that level).
+    description of the level nearest ``score`` — rounded to the nearest
+    integer with ties to even (Python ``round`` semantics) and clamped to the
+    probable level range — falling back to the score itself when the legend
+    lacks that level. A non-finite score raises ``ValueError``.
     """
     confidence = getattr(answer, "confidence", None)
     if confidence is None:
@@ -91,8 +118,12 @@ def confidence_gate(
         if score is None:
             primary = str(answer)
         else:
+            if not math.isfinite(score):
+                raise ValueError(
+                    f"score {score!r} is not finite; cannot map it to a legend level"
+                )
             probs = getattr(answer, "probabilities", None) or {}
-            level = round(score)
+            level = round(score)  # nearest, ties to even (Python round semantics)
             if probs:
                 keys = [int(k) for k in probs]
                 level = min(max(level, min(keys)), max(keys))
@@ -107,16 +138,17 @@ def route(
     handlers: Mapping[str, Callable[[], T]],
     *,
     min_confidence: float = 0.0,
-    fallback: Optional[Callable[[], T]] = None,
+    fallback: Callable[[], T] | None = None,
 ) -> T:
     """Dispatch to the handler for ``answer.choice``, gated on confidence.
 
-    Confidence below ``min_confidence`` routes to ``fallback`` — the model is
-    saying it is not sure, so no handler fires. A choice with no registered
-    handler also falls back. When ``fallback`` is ``None``, either condition
-    raises (``ValueError`` for low confidence, ``KeyError`` for an unmapped
-    choice) rather than silently acting. Handlers are zero-argument callables,
-    invoked lazily only when selected.
+    Confidence below ``min_confidence`` (a non-finite confidence counts as
+    below) routes to ``fallback`` — the model is saying it is not sure, so
+    no handler fires. A choice with no registered handler also falls back.
+    When ``fallback`` is ``None``, either condition raises (``ValueError``
+    for low confidence, ``KeyError`` for an unmapped choice) rather than
+    silently acting. Handlers are zero-argument callables, invoked lazily
+    only when selected.
     """
     choice = getattr(answer, "choice", None)
     if choice is None:
@@ -124,10 +156,13 @@ def route(
             f"{type(answer).__name__} has no 'choice'; route() requires a ChoiceAnswer"
         )
 
-    if getattr(answer, "confidence", 0.0) < min_confidence:
+    confidence = getattr(answer, "confidence", 0.0)
+    # Fail closed: `not (c >= min)` sends a NaN confidence to the fallback,
+    # which a raw `c < min` comparison would wrongly dispatch.
+    if not (confidence >= min_confidence):
         if fallback is None:
             raise ValueError(
-                f"answer confidence {getattr(answer, 'confidence', 0.0)} is below "
+                f"answer confidence {confidence} is not at least "
                 f"min_confidence {min_confidence} and no fallback was provided"
             )
         return fallback()
@@ -148,15 +183,15 @@ def pick(
 
     Convenience wrapper for the fan-out pattern: one call returns answers for
     several questions; ``pick`` maps each answer id to the result of the action
-    matching its choice. Answers without a ``choice`` field (noul, score) have
-    no discrete action to select and are skipped. Unmapped choices raise
+    matching its choice. Answers that are not Choice answers (noul, score)
+    have no discrete action to select and are skipped. Unmapped choices raise
     ``KeyError`` — pass answers through :func:`route` with a ``fallback``
     instead when a default action is wanted.
     """
     return {
         qid: route(answer, actions)
         for qid, answer in choices.items()
-        if getattr(answer, "choice", None) is not None
+        if isinstance(answer, ChoiceAnswer)
     }
 
 
@@ -175,8 +210,11 @@ def tiered_gate(
     ``high_label`` (automate), ``>= low`` returns ``middle_label`` (review),
     otherwise ``low_label`` (escalate). ``answer`` must carry a ``confidence``
     field (Choice or Score answers do; Noul answers do not and raise
-    ``TypeError``).
+    ``TypeError``). Both thresholds must be finite; a non-finite confidence
+    compares False against both and escalates.
     """
+    if not (math.isfinite(high) and math.isfinite(low)):
+        raise ValueError(f"thresholds must be finite, got high={high!r}, low={low!r}")
     if low > high:
         raise ValueError(f"low ({low}) must not exceed high ({high})")
     if not (high_label and middle_label and low_label):
@@ -189,6 +227,7 @@ def tiered_gate(
             "(noul answers do not); tiered_gate requires a Choice or Score answer"
         )
 
+    # A NaN confidence fails both comparisons below and escalates.
     if confidence >= high:
         return high_label
     if confidence >= low:

@@ -22,7 +22,8 @@ from __future__ import annotations
 import enum
 import threading
 import time
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from daf_jev._errors import TypeSafeError
 
@@ -43,12 +44,15 @@ class CircuitOpenError(TypeSafeError):
     """Raised instead of calling the wrapped callable while the circuit is open."""
 
     def __init__(
-        self, message: str, *, remaining_seconds: Optional[float] = None
+        self, message: str, *, remaining_seconds: float | None = None
     ) -> None:
         super().__init__(message)
         #: Seconds until the cooldown expires and a probe is allowed through.
-        #: ``None`` when not applicable (e.g. the single-probe rule rejected
-        #: the call during a HALF_OPEN probe already in flight).
+        #: :meth:`CircuitBreaker.call` always passes a non-negative float:
+        #: positive is the remaining cooldown; ``0.0`` means a retry is
+        #: permitted immediately, subject to the single-probe rule (the
+        #: rejected call raced a HALF_OPEN probe already in flight).
+        #: ``None`` only when omitted at direct construction.
         self.remaining_seconds = remaining_seconds
 
 
@@ -100,8 +104,10 @@ class CircuitBreaker:
         Raises :class:`CircuitOpenError` without invoking ``fn`` while the
         circuit is open (cooldown not elapsed) or while a HALF_OPEN probe is
         already in flight. On success the circuit closes and the
-        consecutive-failure counter resets; on failure the counter
-        increments and may trip the breaker.
+        consecutive-failure counter resets; on failure — any exception,
+        including ``BaseException`` subclasses such as ``KeyboardInterrupt``
+        — the counter increments and may trip the breaker; the exception
+        is always re-raised, never swallowed.
         """
         with self._lock:
             now = self._clock()
@@ -126,7 +132,13 @@ class CircuitBreaker:
                 )
         try:
             result = fn(*args, **kwargs)
-        except Exception:
+        except BaseException:
+            # Counts BaseException too (KeyboardInterrupt, SystemExit,
+            # asyncio.CancelledError): a HALF_OPEN probe that dies this way
+            # would otherwise never record, wedging the breaker half-open
+            # forever ("a probe is already in flight"). record_failure()
+            # from HALF_OPEN reopens with a fresh stamp. Re-raised, never
+            # swallowed.
             self.record_failure()
             raise
         self.record_success()
