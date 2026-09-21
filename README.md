@@ -500,7 +500,7 @@ both render it), or paste this BibTeX:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.4.0}
+  version = {0.4.1}
 }
 ```
 

@@ -40,7 +40,7 @@ from daf_jev.models import pick_model
 from daf_jev.primitives import QuestionSet, choice, noul, score
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 __all__ = [
     "APIConnectionError",

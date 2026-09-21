@@ -1,7 +1,7 @@
 {
   "title": "daf-jev: A Composable Python Decision Toolkit for the TypeSafe Jev (System One) API",
   "upload_type": "software",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publication_date": "2026-09-21",
   "creators": [
     {
