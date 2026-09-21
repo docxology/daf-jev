@@ -7,7 +7,7 @@ Documentation for daf-jev.
 `CITATION.cff` (CFF 1.2.0 citation metadata) and `.zenodo.json` (Zenodo
 deposit metadata) live at the repo root. The v0.3.0 release is archived on
 Zenodo under the stable concept DOI `10.5281/zenodo.22816187` (v0.3.0
-version record: <https://zenodo.org/records/22816188>), with the public
+version record: <https://zenodo.org/records/22817425>), with the public
 repository at <https://github.com/docxology/daf-jev>.
 
 ## ARCHITECTURE.md — the contract
@@ -23,11 +23,18 @@ module-by-module signatures (including the v0.2 additions `models.py` /
 conventions. All workers must match its signatures exactly; on
 contradiction, report the delta — do not silently deviate.
 
-Gap note: the contract's module map does not yet describe the manuscript
-pipeline modules (`figures.py`, `manuscript_variables.py`) nor the newer
-additions (`mcp_server.py`, `calibration.py`); the root
-`AGENTS.md` module map is the current on-disk truth for those, and the
-contract should be extended rather than contradicted.
+Gap note: the contract now also covers the newer modules — `evaluate.py`,
+`calibration.py`, `questions.py`, `docs_verify.py`, `mcp_server.py`, the
+decision-loop trio (`ledger.py`, `resilience.py`, `decider.py`), and the
+figure/variables scripts (`scripts/generate_figures.py`,
+`scripts/z_generate_manuscript_variables.py`) — plus the post-wave-A
+hardening semantics (client timeout/error mapping, strict wire parsing,
+compose validation, decider taxonomy). The remaining gap is the
+manuscript-pipeline module internals (`figures.py`,
+`manuscript_variables.py`), covered by the contract only through their
+script entry points; the root `AGENTS.md` module map stays the detailed
+on-disk truth for those, and the contract should be extended rather than
+contradicted.
 
 ## models.md — sourced model reference
 
@@ -95,8 +102,9 @@ code.
 
 ## examples/ — runnable walkthroughs
 
-`examples/` holds four runnable scripts (quickstart, triage router,
-composite scoring, corpus evaluation — see `examples/README.md`); each
+`examples/` holds six runnable scripts (quickstart, triage router,
+composite scoring, corpus evaluation, gated fallback, decider loop — see
+`examples/README.md`); each
 prints `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves.
 
 ## calibration

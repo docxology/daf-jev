@@ -31,8 +31,8 @@ here.
     unless passed explicitly.
   - `primitives.py` — `noul()` / `choice()` / `score()` builders and
     `QuestionSet` (no I/O).
-  - `compose.py` — `composite_score`, `confidence_gate`, `route`, `pick`
-    (pure logic; multi-call helpers take an injected client).
+  - `compose.py` — `composite_score`, `confidence_gate`, `route`,
+    `tiered_gate`, `pick` (pure logic, no I/O).
   - `evaluate.py` — `Evaluator` / `EvaluationRecord`: concurrent evaluation
     of a fixed question set over many states (thread pool for the sync
     client, `asyncio.Semaphore` for the async client); per-state failures
@@ -47,14 +47,33 @@ here.
     (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
     `calibration`, `graphical_abstract`) + `figure_registry.json` emission;
     data-driven figures read the newest `output/benchmarks/*.json`.
-  - `manuscript_variables.py` — `generate_variables` / `save_variables`: 46
+  - `manuscript_variables.py` — `generate_variables` / `save_variables`: 49
     `{{TOKEN}}` manuscript variables derived from pyproject, docs MANIFEST,
-    test counts, and benchmark JSONs; zero hardcoded result values.
+    test counts, benchmark JSONs, and the `manuscript/config.yaml`
+    experiment knobs (`BATCHING_RUNS`, `CALIBRATION_STATES`,
+    `CALIBRATION_REPEATS`; `CONFIG_BATCHING_N<n>` token names derive from
+    the configured batch widths); zero hardcoded result values.
   - `config.py` — `load_dotenv`, `resolve_api_key` (injected env >
     process env > `.env`; `JEV_API_KEY` then `TYPESAFE_API_KEY`),
     `resolve_base_url`, `resolve_model`, `resolve_retry` /
     `resolve_timeout` (env overrides, see README table), `Settings` /
     `load_settings`.
+  - `ledger.py` — thread-safe usage accounting: `UsageLedger.record(
+    Usage | SystemOneResponse | None)` (None is a silent no-op; anything
+    else raises `TypeError`), `snapshot()` / `reset()` returning a frozen
+    JSON-safe `UsageSnapshot` (incl. `total_tokens`).
+  - `resilience.py` — opt-in `CircuitBreaker` (closed/open/half_open);
+    `call()` records a failure on any `BaseException` and always re-raises,
+    so a HALF_OPEN probe cannot wedge the breaker;
+    `CircuitOpenError.remaining_seconds` is always a float >= 0 (`0.0` for
+    the probe-rejection race). Not wired into `JevClient` by default.
+  - `decider.py` — `Decider` observe -> compose -> ask -> gate -> fail-open
+    -> act loop (`decide()` never raises), `DecisionEvent` (JSON-safe
+    `to_dict()`), `ConfidenceGate`, `Budget` (thresholds validated >= 0,
+    `max_calls=0` stays valid); 11-reason closed fallback taxonomy with
+    `error` LAST (belt-and-suspenders); a client factory that raises OR
+    returns None latches `client_error`; `cache_key` computed once per
+    decide.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
@@ -62,17 +81,21 @@ here.
   - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
     `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
     `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify` + the
-    `jev://docs/snapshot` resource; stdio transport only; imports `mcp` at
-    module import (optional `mcp` extra — never import from core modules).
+    `jev://docs/snapshot` resource; stdio transport only; `jev_evaluate` /
+    `jev_models` are async; `jev_composite_score` validates finite
+    non-negative probabilities (`ValueError`); imports `mcp` at module
+    import (optional `mcp` extra — never import from core modules).
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
-  (16 files, 256 tests collected — per module plus CLI, scraper, and the
-  v0.2 evaluate/models/figures/manuscript_variables, calibration, and
-  mcp_server modules), `tests/live/test_live_api.py` (2 tests,
-  `@pytest.mark.live`).
+  (per module plus CLI, scraper, and the evaluate/models/figures/
+  manuscript_variables, calibration, and mcp_server modules),
+  `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
+  counts live in `output/data/manuscript_variables.json` (test_count /
+  coverage, refresh via `scripts/z_generate_manuscript_variables.py`; last
+  full run: 316 passing unit tests).
 - `scripts/scrape_docs.py` — standalone stdlib re-scraper for the docs
   snapshot; CLI: `--index-url`, `--out-dir`, `--check`, `--manifest PATH`
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
@@ -85,10 +108,10 @@ here.
   and (inside the template checkout) substitutes `{{TOKEN}}`s into
   `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
   analysis outputs are missing.
-- `examples/` — four runnable walkthroughs (`quickstart.py`,
-  `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`) +
-  `README.md`; each prints `SKIP: JEV_API_KEY not set` and exits 0 without a
-  key (see invariants).
+- `examples/` — six runnable walkthroughs (`quickstart.py`,
+  `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
+  `gated_fallback.py`, `decider_loop.py`) + `README.md`; each prints
+  `SKIP: JEV_API_KEY not set` and exits 0 without a key (see invariants).
 - `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
   Markdown skill) + `README.md` (install notes). Documentation only — never
   imported by code.
@@ -99,9 +122,12 @@ here.
   placeholder (see invariants).
 - `benchmarks/` — live-API benchmark scripts with their own `README.md`;
   `_util.py` holds shared SKIP/percentile/JSON-writer helpers.
-- `docs/ARCHITECTURE.md` — contract (see `docs/README.md`). Note: its
-  module map predates the figures/manuscript pipeline modules — the map
-  above is the current on-disk truth for those.
+- `docs/ARCHITECTURE.md` — contract (see `docs/README.md`); it now covers
+  the newer modules (evaluate, calibration, ledger, resilience, decider,
+  questions, docs_verify, mcp_server) and the figure/variables scripts.
+  The manuscript-pipeline module internals (`figures.py`,
+  `manuscript_variables.py`) are the one remaining gap — the map above is
+  the detailed on-disk truth for those.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
@@ -125,20 +151,21 @@ here.
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
 - **Published Zenodo deposit (v0.3.0).** The v0.3.0 release is archived as
-  Zenodo deposit id **22816188** (version DOI
-  `10.5281/zenodo.22816188`, record
-  <https://zenodo.org/records/22816188>); the concept DOI
+  Zenodo deposit id **22817425** (version DOI
+  `10.5281/zenodo.22817425`, record
+  <https://zenodo.org/records/22817425>); the concept DOI
   `10.5281/zenodo.22816187` is stable across versions and always resolves to
-  the latest published version. New releases MUST be new version deposits on
-  the same concept via the Zenodo deposits API — never a fresh deposit
-  (that would mint a new concept DOI). The Zenodo API token lives in the
-  template checkout's `.env` as `ZENODO_PROD_TOKEN`: never echo it, never
-  print it in logs or transcripts, never copy it into the lane repo or
-  commit it anywhere.
+  the latest published version. Deposit **22816188** is the earlier
+  superseded deposit in the same concept family — never cite or pin it. New
+  releases MUST be new version deposits on the same concept via the Zenodo
+  deposits API — never a fresh deposit (that would mint a new concept DOI).
+  The Zenodo API token lives in the template checkout's `.env` as
+  `ZENODO_PROD_TOKEN`: never echo it, never print it in logs or transcripts,
+  never copy it into the lane repo or commit it anywhere.
 - **Public release remote.** <https://github.com/docxology/daf-jev>
   (`docxology/daf-jev`) is the release remote for the published code and
-  repo landing page; the local lane git repo (branch `main`, still no
-  configured remote) remains the source of truth. Publishing to the public
+  repo landing page; the local lane git repo (branch `main`) remains the
+  source of truth. Publishing to the public
   repo is the owner's call; the lane invariant against `git add`-ing lane
   paths into outer repos stands.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
@@ -161,10 +188,12 @@ here.
   — the `live` marker is registered in `pyproject.toml`
   (`--strict-markers`); live tests are skipped, not failed, without a key.
 - **Coverage gate: >= 90% on `src/`** (`fail_under = 90`, branch coverage,
-  `source = ["src"]`). Last recorded full-suite measurement: 94.05%
-  (2026-09-16, captured at variable-generation time into
-  `output/data/manuscript_variables.json`); raw `.coverage` data is not
-  retained on disk.
+  `source = ["src"]`; bare `...` protocol-stub lines are excluded from the
+  gate via `exclude_also`). Don't hardcode counts here: generated
+  test_count / coverage live in `output/data/manuscript_variables.json`
+  (refresh via `scripts/z_generate_manuscript_variables.py`); last
+  full-suite measurement 93.50%. Raw `.coverage` data is not retained on
+  disk.
 - **Render path (no leaf alias).** The former managed lifecycle leaf symlink
   `template/projects/ongoing/daf-jev -> .../Code_Tools/daf-jev` was removed
   2026-09-18 by owner decision. The template's project-path confinement
@@ -183,7 +212,7 @@ here.
   `architecture`, `primitives`, and `confidence` are data-free and always
   render.
 - **`{{TOKEN}}` no-hardcode manuscript protocol.** Every measured number in
-  `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 46 tokens live in
+  `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 49 tokens live in
   `output/data/manuscript_variables.json` (generated by
   `scripts/z_generate_manuscript_variables.py` from pyproject, the docs
   MANIFEST, test collection counts, and the benchmark JSONs — no hardcoded
@@ -194,10 +223,14 @@ here.
   sentinels for drafts only).
 - **`composite_score` weights re-weight the probability distribution** —
   `q_i = p_i * w_i / sum(p_j * w_j)`, expected value `sum(q_i * i)` over
-  sorted level indices; scale-invariant (only weight ratios matter),
-  result always in `[min index, max index]`, `ValueError` on length
-  mismatch, non-finite weights, non-positive weight sum, or zero weighted
-  mass. Deliberate orchestrator ruling — details in
+  sorted level indices; scale-invariant (only weight ratios matter); for
+  non-negative weights the result lies within `[min index, max index]`
+  (negative weights are accepted deliberately but void that guarantee);
+  probabilities are validated on both paths (finite, non-negative;
+  integer-index keys accumulated canonically — duplicate spellings like
+  '1'/'01' merge onto one level); `ValueError` on length mismatch,
+  non-finite weights, non-positive weight sum, or zero weighted mass.
+  Deliberate orchestrator ruling — details in
   `docs/ARCHITECTURE.md` (`compose.py`) and the `compose.py` docstring.
 - **`pick` returns a dict** `{question_id: routed_result}` and silently
   skips answers without a `choice` field (noul, score); unmapped choices
@@ -215,8 +248,8 @@ here.
   cross the MCP boundary. FastMCP runs over **stdio only** (other transports
   are unsupported by design; the CLI exposes `--transport stdio` as the sole
   choice). The `mcp` package is an optional extra — never import
-  `daf_jev.mcp_server` (or `mcp`) from core modules; `mcp_server.py` and
-  `cli.py`'s `serve` import it lazily.
+  `daf_jev.mcp_server` (or `mcp`) from core modules; only `mcp_server.py`
+  imports `mcp` (at module level), reached lazily from `cli.py`'s `serve`.
 - **Calibration proxy semantics.** `bench_calibration.py`'s correctness
   signal is agreement with the modal choice across repeats (self-consistency
   proxy), NOT ground truth. Never present its ECE/Brier/reliability figures
@@ -234,8 +267,13 @@ here.
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 256 tests, coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # coverage gate >= 90%; generated counts in
+                                            # output/data/manuscript_variables.json —
+                                            # refresh via scripts/z_generate_manuscript_variables.py
+                                            # (bare `...` protocol stubs excluded via exclude_also)
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests; skipped without key
+uv run ruff check .
+uv run mypy src/daf_jev
 uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
 uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
@@ -244,7 +282,7 @@ python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  #
 uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
-uv run python scripts/z_generate_manuscript_variables.py   # 46 tokens + injection
+uv run python scripts/z_generate_manuscript_variables.py   # 49 tokens + injection
 
 # Render + validate from the template checkout (currently blocked: the leaf
 # symlink was removed 2026-09-18 — see the render-path invariant above):

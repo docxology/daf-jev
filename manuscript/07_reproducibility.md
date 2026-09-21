@@ -8,7 +8,7 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
   ```bash
   uv run python scripts/generate_figures.py            # all figures
-  uv run python scripts/generate_figures.py --only batching_speedup
+  uv run python scripts/generate_figures.py --only batching
   ```
 
   The data-driven figures read `output/benchmarks/batching_*.json`, `output/benchmarks/patterns_*.json`, and `output/benchmarks/calibration_*.json`, resolving "latest" by filename date; a missing benchmark file is reported as a clear error naming the missing file rather than silently producing an empty chart. The same rule applies to the graphical abstract of [@sec:abstract], which composes the latest batching, latency, and calibration payloads into its live-outputs panel. The two schematic figures and the parametric confidence-band illustration require no data and no network.

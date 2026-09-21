@@ -4,7 +4,7 @@
 
 This manuscript describes an early, rapidly evolving package, and four caveats bound every claim in it.
 
-**Single-model measurements.** All benchmarks in [@sec:results] were recorded against the {{BENCH_MODEL}} model at the configuration described in [@sec:experimental_setup]. The package accepts a per-call model override, but nothing here characterizes how the speedups, token ratios, or latency percentiles transfer across models or across provider-side changes to the same model; re-running the two benchmark scripts against another setting is the intended way to extend the measurements, and the render-time token pipeline picks up the new payloads automatically.
+**Single-model measurements.** All benchmarks in [@sec:results] were recorded against the {{BENCH_MODEL}} model at the configuration described in [@sec:experimental_setup]. The package accepts a per-call model override, but nothing here characterizes how the speedups, token ratios, or latency percentiles transfer across models or across provider-side changes to the same model; re-running the three benchmark scripts against another setting is the intended way to extend the measurements, and the render-time token pipeline picks up the new payloads automatically.
 
 **Live-API variance.** The measurements are wall-clock observations of a shared remote service. Run-to-run variation from network conditions and provider load is inherent; the percentile protocol in [@sec:experimental_setup] reports medians and tails rather than single samples, but the values should be read as representative of a healthy session, not as service-level guarantees.
 

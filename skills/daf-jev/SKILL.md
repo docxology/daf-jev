@@ -20,7 +20,7 @@ of truth: `docs/ARCHITECTURE.md`; live-API facts: `docs/reference/`.
 ## Install
 
 ```bash
-uv sync --extra dev      # or: pip install -e ".[dev]"
+uv sync --extra dev
 uv sync --extra mcp      # only for the MCP server (daf-jev serve)
 export JEV_API_KEY=...   # falls back to TYPESAFE_API_KEY
 ```
@@ -35,17 +35,20 @@ never be committed, printed, or read by tests.
   `choice(instructions, options: Mapping[str, str | None])`,
   `score(instructions, levels: Sequence[str])` (>= 2 levels);
   `QuestionSet()` with `.add(id, q)`, `.merge(other)`, `.to_wire()`.
-- **Clients** — `JevClient(api_key=None, *, base_url=None, model="jev-latest",
-  ...)`, `.ask(state, questions, *, model=None) -> SystemOneResponse`
-  (answers by id; cached views `.nouls` / `.choices` / `.scores`; `.usage`;
-  `.request_id`). `AsyncJevClient` has the same surface, async. Errors form a
+- **Clients** — `JevClient(api_key=None, *, base_url=None, model=None, ...)`
+  (`model=None` resolves `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL`, then
+  `jev-latest`), `.ask(state, questions, *, model=None, timeout=None,
+  request_headers=None) -> SystemOneResponse` (answers by id; cached views
+  `.nouls` / `.choices` / `.scores`; `.usage`; `.request_id`).
+  `AsyncJevClient` has the same surface, async. Errors form a
   `TypeSafeError` hierarchy; 429/529 retry per `RetryPolicy`.
 - **Evaluation** — `Evaluator(client, questions, *, concurrency=...)`
   `.evaluate(states) -> list[EvaluationRecord]`, `.summary()` for aggregates.
 - **Compose** (`daf_jev.compose`, pure over answers):
   - `composite_score(answer, weights=None)` — expected value over sorted level
     indices; `weights` re-weight the probability distribution (only ratios
-    matter; result stays within the level index range).
+    matter; with non-negative weights the result stays within the level
+    index range — negative weights are allowed but void that guarantee).
   - `confidence_gate(answer, *, threshold, below="review")` — primary value
     when `answer.confidence >= threshold`, else `below`.
   - `tiered_gate(answer, *, high=0.85, low=0.6, high_label="automate",
@@ -54,7 +57,8 @@ never be committed, printed, or read by tests.
     `pick(actions, choices)` for dispatch to callables.
 - **Usage** (`daf_jev.ledger`) — `UsageLedger()` thread-safe accounting
   across any loop of calls: `.record(usage | response | None)` (None is
-  skipped), `.snapshot()` / `.reset()` return a frozen `UsageSnapshot` with
+  skipped; anything else raises `TypeError`), `.snapshot()` / `.reset()`
+  return a frozen `UsageSnapshot` with
   `requests`, `input_tokens`, `output_tokens`, `.total_tokens`, `.to_dict()`.
 - **Resilience** (`daf_jev.resilience`) — `CircuitBreaker(failure_threshold=5,
   cooldown_seconds=30.0, clock=time.monotonic)` opt-in failure isolation over
@@ -63,6 +67,14 @@ never be committed, printed, or read by tests.
   failures open for the cooldown, then one probe; `record_success()` /
   `record_failure()` drive it manually; states via `CircuitState`
   (closed/open/half_open).
+- **Decider** (`daf_jev.decider`) — `Decider(client=None, *,
+  render_state, questions, map_answers, fallback, gate, budget, breaker,
+  ledger, cache, cache_key, ...)`: the fail-open decision-point loop.
+  `decide(state)` never raises; `DecisionEvent.to_dict()` carries the
+  closed reason taxonomy (11 reasons, incl. `error`); `Budget` thresholds
+  must be >= 0; `calibration_pairs()` accumulates `(declared confidence,
+  gate-accepted)` pairs when the gate is a `ConfidenceGate` — a
+  self-consistency proxy for `daf_jev.calibration`.
 - **Models** — `client.models() -> list[ModelCard]`;
   `pick_model(cards, *, contains=None, prefer="latest")`.
 - **Calibration** (`daf_jev.calibration`, pure): `bucket_index(confidence,
@@ -73,17 +85,19 @@ never be committed, printed, or read by tests.
   `resolve_base_url`, `resolve_retry`, `resolve_timeout`.
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
-composite scoring, gated fallback, corpus evaluation); each skips cleanly
+composite scoring, gated fallback, corpus evaluation, decision-point
+decider); each skips cleanly
 without a key.
 
 ## CLI
 
 ```
 daf-jev ask (--state-file FILE | --state TEXT) [--question ID=SPEC ...]
-            [--model M] [--json | --pretty]
-daf-jev models [--pick latest|first|last] [--contains STR]
+            [--model M] [--base-url URL] [--json | --pretty]
+daf-jev models [--base-url URL] [--pick latest|first|last] [--contains STR]
 daf-jev evaluate --questions-file PATH --states-file PATH
-            [--concurrency N] [--include-records]
+            [--concurrency N] [--model M] [--base-url URL]
+            [--include-records]
 daf-jev docs-verify [--manifest PATH]        # exit 1 on snapshot drift
 daf-jev serve [--transport stdio]            # MCP server (stdio default)
 ```

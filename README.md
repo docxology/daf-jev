@@ -27,12 +27,15 @@ reproducible manuscript pipeline.
 - **Composition patterns** — pure functions over answers:
   `composite_score` (probability-weighted expected value over score levels),
   `confidence_gate` (auto-escalate low-confidence answers), `route` /
-  `pick` (intent routing by choice).
+  `pick` (intent routing by choice). `route`, `composite_score`, and
+  `confidence_gate` are exported from the package root; `pick` and
+  `tiered_gate` live only in `daf_jev.compose`.
 - **Evaluation** — `Evaluator` runs a fixed question set over many states
   concurrently (thread pool for `JevClient`, `asyncio` semaphore for
   `AsyncJevClient`) without aborting the batch: per-state failures are
   captured in `EvaluationRecord.error`. `summary()` aggregates per-question
-  means/p95s; `to_json()` serializes records.
+  means plus batch-level latency mean/p95 and token usage; `to_json()`
+  serializes records.
 - **Usage accounting** — `UsageLedger` (thread-safe) accumulates request
   counts and token totals across any loop of `ask` calls; it accepts `Usage`
   objects, full responses, or `None` for error paths, and
@@ -79,7 +82,7 @@ flowchart LR
 
 The batched call carries *all* questions at once — live benchmarks show it
 running up to ~18× faster than sequential single-question calls while the
-sequential strategy consumes ~4× more tokens (see
+sequential strategy consumes up to ~4× more tokens (see
 [Tests and benchmarks](#tests-and-benchmarks)).
 
 
@@ -175,7 +178,7 @@ with JevClient() as client:
     evaluator = Evaluator(client, questions, concurrency=8)
     records = evaluator.evaluate(["state one text", "state two text", ...])
 
-summary = evaluator.summary(records)      # per-question means/p95s + usage
+summary = evaluator.summary(records)      # per-question means + batch latency mean/p95 + usage
 print(evaluator.to_json(records))         # per-state records incl. errors/latency
 ```
 
@@ -289,11 +292,11 @@ uv run daf-jev evaluate \
   --questions-file questions.yaml --states-file states.txt \
   --concurrency 8 --include-records
 
-uv run daf-jev docs-verify     # re-hash docs/reference/ against MANIFEST.json
+uv run daf-jev docs-verify     # re-hash docs/reference/ against MANIFEST.json; reports missing/drifted/added
 ```
 
-All commands print JSON to stdout; exit 0 on success, 2 on usage error, 1 on
-runtime error.
+All commands print JSON to stdout (errors go to stderr as JSON); exit 0 on
+success, 2 on usage error, 1 on runtime error.
 
 ## MCP server
 
@@ -336,6 +339,12 @@ Tools (each returns JSON-safe values; keys resolve per call from env or
 | `jev_docs_verify` | re-hash `docs/reference/` against its manifest (no API call) |
 | resource `jev://docs/snapshot` | `{page_count, snapshot_id, scraped_at, index_sha256}` summary of the docs manifest |
 
+Schema note: `jev_evaluate` accepts string, JSON-object, or JSON-array
+states (`str | dict | list`); the CLI `evaluate --states-file` JSON mode
+accepts strings only. `jev_docs_verify` returns
+`{manifest, pages, missing, drifted, added, ok}` — `added` lists unlisted
+`.md` files on disk.
+
 Point any MCP client at the server with a stdio config, e.g.:
 
 ```json
@@ -362,19 +371,19 @@ Everything resolves from the environment (injected env mapping > process env
 | --- | --- | --- |
 | `JEV_API_KEY` / `TYPESAFE_API_KEY` | API key | none (error when no transport injected) |
 | `JEV_BASE_URL` / `TYPESAFE_BASE_URL` | API base URL override | `https://api.typesafe.ai` |
-| `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL` | default model | `jev-latest` |
+| `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL` | default model (applies when `JevClient` / `AsyncJevClient` get `model=None`, their default) | `jev-latest` |
 | `JEV_MAX_ATTEMPTS` | max attempts incl. the initial request (int >= 1) | `3` |
 | `JEV_BACKOFF_BASE` | base backoff delay in seconds (float > 0) | `0.5` |
 | `JEV_BACKOFF_MAX` | backoff cap in seconds | `8.0` |
 | `JEV_JITTER` | uniform ± jitter on the delay (float >= 0) | `0.1` |
-| `JEV_TIMEOUT` | default request timeout in seconds (positive float) | none (transport default) |
+| `JEV_TIMEOUT` | default request timeout in seconds (positive float) | none (explicit 60.0 s) |
 
 Per-field: a bad value keeps only that field's default. Per-call `timeout=`
 and `request_headers=` on `ask()` win over all of the above for that call.
 
 ## Figures and manuscript
 
-The repo renders its own paper: 9 manuscript sections under `manuscript/`,
+The repo renders its own paper: 10 manuscript sections under `manuscript/`,
 with every measured number injected as a `{{TOKEN}}` placeholder — nothing is
 hardcoded in the prose.
 
@@ -390,7 +399,7 @@ Figures `architecture`, `primitives`, and `confidence` are drawn from code;
 
 ```bash
 uv run python scripts/z_generate_manuscript_variables.py
-# 46 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
+# 49 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
 # substitution into output/manuscript/ (inside the template checkout)
 ```
 
@@ -416,7 +425,7 @@ The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
 
 ```bash
 uv sync --extra dev --extra bench
-uv run pytest tests/unit --cov=src          # 294 unit tests; coverage gate >= 90%
+uv run pytest tests/unit --cov=src          # unit tests — counts live in output/data/manuscript_variables.json (refresh: uv run python scripts/z_generate_manuscript_variables.py); coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```
 
@@ -430,8 +439,8 @@ uv run python benchmarks/bench_patterns.py --runs 10  # composite-score / routin
 ```
 
 Latest recorded results (2026-09-16, `output/benchmarks/`): batching is
-3.5x–20.5x faster (N=5→20) and 2.8x–4.2x cheaper in tokens; decision-pattern
-pipelines run at ~0.12 s p50.
+4.0x–18.6x faster (N=5→20) and 2.8x–4.2x cheaper in tokens; decision-pattern
+pipelines run at ~0.13 s p50.
 
 ### Calibration benchmark
 
@@ -456,7 +465,7 @@ mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
 
-v0.3.0 is published on Zenodo (deposit 22816188, released 2026-09-17) and
+v0.3.0 is published on Zenodo (deposit 22817425, released 2026-09-17) and
 mirrored to the public repository at
 [github.com/docxology/daf-jev](https://github.com/docxology/daf-jev).
 
@@ -464,8 +473,8 @@ mirrored to the public repository at
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
-- **v0.3.0 version record**: https://zenodo.org/records/22816188
-  (version DOI `10.5281/zenodo.22816188`)
+- **v0.3.0 version record**: https://zenodo.org/records/22817425
+  (version DOI `10.5281/zenodo.22817425`)
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Rendered manuscript PDF**: [`daf-jev_combined.pdf`](daf-jev_combined.pdf)
   at the repo root (regenerated to `output/pdf/daf-jev_combined.pdf` by the

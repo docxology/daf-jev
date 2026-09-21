@@ -20,7 +20,7 @@ publication:
   # Concept DOI of record: identifies all versions of this deposit.
   doi: "10.5281/zenodo.22816187"
   # Landing page of the versioned record this edition corresponds to.
-  version_record: "https://zenodo.org/records/22816188/latest"
+  version_record: "https://zenodo.org/records/22817425/latest"
   # Source repository (GitHub owner/repo slug and canonical URL).
   github_repository: "docxology/daf-jev"
   repository_url: "https://github.com/docxology/daf-jev"
@@ -65,8 +65,11 @@ testing:
   max_project_test_failures: 0
 
 # Experimental parameters — read by manuscript_variables.py and the figure generators.
-# Mirrors the defaults documented in benchmarks/README.md and benchmarks/bench_batching.py.
+# Mirrors the defaults documented in benchmarks/README.md, benchmarks/bench_batching.py, and benchmarks/bench_calibration.py.
 experiment:
   batching_n_values: [5, 10, 20] # batch widths compared by benchmarks/bench_batching.py
   patterns_runs: 10 # default --runs for benchmarks/bench_patterns.py
-  model: "jev-latest" # default --model for both benchmark scripts
+  model: "jev-latest" # default --model for all benchmark scripts
+  batching_runs: 3 # default --runs for benchmarks/bench_batching.py
+  calibration_states: 6 # default --states for benchmarks/bench_calibration.py
+  calibration_repeats: 5 # default --repeats for benchmarks/bench_calibration.py
