@@ -137,7 +137,7 @@ here.
   rendered provenance).
 - `pyproject.toml` — setuptools build, version 0.3.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
-  `figures` (matplotlib), `bench` (rich), and `mcp` (`mcp>=1.2,<2`, for
+  `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
 
@@ -145,7 +145,8 @@ here.
 
 - **Self-versioned git repo, canonical checkout in the flat mirror**
   (branch `main`; remote `origin` → https://github.com/docxology/daf-jev;
-  local `main` fast-forwarded to `origin/main` @ `86ea7e3` 2026-09-18).
+  local `main` last recorded in sync with `origin/main` @ `7c4db8e`
+  (2026-09-21).
   Commit meaningful changes locally — the template's provenance validation
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
@@ -266,7 +267,7 @@ here.
 ## Verification commands
 
 ```bash
-uv sync --extra dev --extra bench
+uv sync --extra dev --extra figures
 uv run pytest tests/unit --cov=src          # coverage gate >= 90%; generated counts in
                                             # output/data/manuscript_variables.json —
                                             # refresh via scripts/z_generate_manuscript_variables.py

@@ -17,7 +17,7 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync --extra dev --extra bench
+        run: uv sync --extra dev --extra figures
 
       - name: Ruff (lint)
         run: uv run ruff check .

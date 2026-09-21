@@ -22,8 +22,9 @@ reproducible manuscript pipeline.
   exponential backoff, `Retry-After`), typed error mapping, and a
   `models()` listing. Retry policy, default timeout, and default model
   resolve from the environment (see [Configuration](#configuration)); every
-  `ask` call also accepts a per-call `timeout` override and extra
-  `request_headers` (merged over the defaults for that call only).
+  `ask` / `models` call also accepts a per-call `timeout` override and
+  extra `request_headers` (merged over the defaults for that call only;
+  `models()` retries per the same policy as `ask`).
 - **Composition patterns** — pure functions over answers:
   `composite_score` (probability-weighted expected value over score levels),
   `confidence_gate` (auto-escalate low-confidence answers), `route` /
@@ -164,6 +165,10 @@ Python — pass a sync or async client; bare `str` states get `state_0000`-style
 ids. An `AsyncJevClient` is single-use through `evaluate()`: the Evaluator
 closes the async session when the batch completes (its keep-alive connections
 are bound to the private event loop).
+
+Inside a running event loop, `await evaluator.evaluate_async([("id",
+state), ...])` is the public async entry point: the same batch on your
+own loop (`TypeError` unless the client is an `AsyncJevClient`).
 
 ```python
 from daf_jev import Evaluator, JevClient, QuestionSet, noul, score
@@ -379,7 +384,8 @@ Everything resolves from the environment (injected env mapping > process env
 | `JEV_TIMEOUT` | default request timeout in seconds (positive float) | none (explicit 60.0 s) |
 
 Per-field: a bad value keeps only that field's default. Per-call `timeout=`
-and `request_headers=` on `ask()` win over all of the above for that call.
+and `request_headers=` on `ask()` / `models()` win over all of the above for
+that call.
 
 ## Figures and manuscript
 
@@ -424,7 +430,7 @@ The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
 ## Tests and benchmarks
 
 ```bash
-uv sync --extra dev --extra bench
+uv sync --extra dev
 uv run pytest tests/unit --cov=src          # unit tests — counts live in output/data/manuscript_variables.json (refresh: uv run python scripts/z_generate_manuscript_variables.py); coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```

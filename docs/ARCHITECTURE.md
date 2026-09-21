@@ -66,8 +66,12 @@ contradictions (report the delta; do not silently deviate).
   - Strict parsing (hardened): numeric wire fields reject `bool` and numeric strings
     (int/float only); `choice`/`model` require an actual `str`; malformed
     `probabilities`/`legend`/`usage` shapes raise `ValueError`, never
-    `TypeError`/`AttributeError`. Deliberate strictness asymmetry (flagged, unchanged):
-    `Usage` ints still coerce via `int()` ("12", 3.7, True all pass).
+    `TypeError`/`AttributeError`. `Usage` token counts follow the same numeric
+    contract: an `int` passes as-is (`bool` never does), a float only when
+    integral (`100.0` -> `100`), and numeric strings raise `ValueError`
+    ("input_tokens must be an integer number"). `legend` values must already be
+    strings (`ValueError` "legend values must be strings" — `None`/bool/int are
+    never `str()`-coerced; level keys stay stringified).
 - `_errors.py` — exception hierarchy (mirror the JS SDK classes):
   `TypeSafeError` base; `APIConnectionError`, `APITimeoutError`;
   `APIStatusError` (carries `status_code`, `body`, `request_id`) with subclasses
@@ -87,6 +91,8 @@ contradictions (report the delta; do not silently deviate).
   headers: dict[str, str], *, timeout=None) -> httpx.Response` (+ `close()`).
   `HttpxTransport(base_url, timeout, headers)` implements it with `httpx`.
   Also `AsyncTransport` / `AsyncHttpxTransport` with `async` signature.
+  Both httpx transports also expose `get_json(path, headers, *, timeout=None)`
+  (models listing) under the same per-call timeout rule.
   `timeout=None` keeps the transport's configured default; a per-call value
   overrides it for that single request (explicit `None` is never forwarded to
   httpx, which would disable timeouts entirely). A transport constructed
@@ -110,7 +116,12 @@ contradictions (report the delta; do not silently deviate).
     client default for this call only; `request_headers` are merged over the
     default headers for this call only (per-call entries win, stored defaults
     never mutated).
-  - `models() -> list[ModelCard]` (`ModelCard` dataclass per snapshot shape).
+  - `models(*, timeout=None, request_headers=None) -> list[ModelCard]` — a
+    GET retried per the same policy as `ask` (shared send/retry path);
+    per-call `timeout`/`request_headers` semantics identical to `ask`
+    (explicit `None` never forwarded — constructor/env default applies;
+    per-call header entries win, stored defaults never mutated).
+    `ModelCard` is a dataclass per snapshot shape.
   - `close()`; context-manager support. `close()` sets the closed flag only
     after the transport close completes; `ask`/`models` after close raise
     `TypeSafeError("client is closed")`.
@@ -168,15 +179,22 @@ contradictions (report the delta; do not silently deviate).
   states. `Evaluator(client, questions, *, concurrency=4, model=None)` with
   `client` typed `JevClient | AsyncJevClient` (a foreign client raises
   `TypeError` from `evaluate()`); thread pool for the sync client,
-  `asyncio.Semaphore` for the async one on a private event loop (the public
-  `evaluate()` stays synchronous). Per-state failures are captured into
-  `EvaluationRecord.error`, never aborting the batch. The async session is
-  closed in a `finally`, so a cancelled gather still closes it (an
-  `AsyncJevClient` is single-use through `evaluate()`). `summary()` latency
-  mean/p95 span ALL records, failed included — a deliberate ops signal;
-  token totals and per-question aggregates cover successful records only.
-  Aggregation keys off the question's DECLARED type with per-type
-  `isinstance` narrowing; an unknown declared type is skipped.
+  `asyncio.Semaphore` for the async one. The public
+  `async def evaluate_async(items)` is the ONE async path: it takes the
+  normalized `(state_id, state)` items, requires an `AsyncJevClient`
+  (`TypeError` otherwise), runs the semaphore path on the caller's event
+  loop, and stores records so `summary()`/`to_json()` work exactly like
+  after `evaluate()`; `evaluate()` normalizes raw states, then drives that
+  same method on a private event loop (worker thread when called from
+  inside a running loop) so it stays synchronous. Per-state failures are
+  captured into `EvaluationRecord.error`, never aborting the batch. The
+  async session is closed in a `finally`, so a cancelled gather still
+  closes it (an `AsyncJevClient` is single-use through one evaluation).
+  `summary()` latency mean/p95 span ALL records, failed included — a
+  deliberate ops signal; token totals and per-question aggregates cover
+  successful records only. Aggregation keys off the question's DECLARED
+  type with per-type `isinstance` narrowing; an unknown declared type is
+  skipped.
 - `calibration.py` — pure confidence-calibration statistics over
   (confidence, correct) pairs: `bucket_index`, `reliability_table`,
   `expected_calibration_error`, `brier_score`. Every entry point validates
@@ -349,8 +367,9 @@ contradictions (report the delta; do not silently deviate).
 - `mcp_server.py` — FastMCP server (`build_server()`,
   `main(transport="stdio")`): 7 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
-  `question_from_mapping`), `jev_evaluate` (async: `AsyncJevClient` + the
-  Evaluator async path on the serving loop; empty `states` → `ValueError`),
+  `question_from_mapping`), `jev_evaluate` (async: `AsyncJevClient` +
+  `Evaluator.evaluate_async()` on the serving loop; empty `states` →
+  `ValueError`),
   `jev_models` (async; `pick` is a Literal schema; `contains=""` = no
   filter), `jev_composite_score` (finite/non-negative probability validation
   via `composite_score`), `jev_confidence_gate`, `jev_tiered_gate`,

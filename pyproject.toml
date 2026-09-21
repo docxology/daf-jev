@@ -31,9 +31,6 @@ dev = [
 figures = [
     "matplotlib>=3.7",
 ]
-bench = [
-    "rich>=13.0.0",
-]
 mcp = [
     "mcp>=1.2,<2",
 ]

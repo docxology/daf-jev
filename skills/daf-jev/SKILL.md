@@ -43,7 +43,10 @@ never be committed, printed, or read by tests.
   `AsyncJevClient` has the same surface, async. Errors form a
   `TypeSafeError` hierarchy; 429/529 retry per `RetryPolicy`.
 - **Evaluation** — `Evaluator(client, questions, *, concurrency=...)`
-  `.evaluate(states) -> list[EvaluationRecord]`, `.summary()` for aggregates.
+  `.evaluate(states) -> list[EvaluationRecord]`, `.summary()` for
+  aggregates; `await .evaluate_async(items)` is the public async entry
+  point for in-loop use (requires an `AsyncJevClient`; the async session
+  closes at batch end).
 - **Compose** (`daf_jev.compose`, pure over answers):
   - `composite_score(answer, weights=None)` — expected value over sorted level
     indices; `weights` re-weight the probability distribution (only ratios
@@ -75,7 +78,8 @@ never be committed, printed, or read by tests.
   must be >= 0; `calibration_pairs()` accumulates `(declared confidence,
   gate-accepted)` pairs when the gate is a `ConfidenceGate` — a
   self-consistency proxy for `daf_jev.calibration`.
-- **Models** — `client.models() -> list[ModelCard]`;
+- **Models** — `client.models(*, timeout=None, request_headers=None) ->
+  list[ModelCard]` (same per-call params as `ask`, retried per policy);
   `pick_model(cards, *, contains=None, prefer="latest")`.
 - **Calibration** (`daf_jev.calibration`, pure): `bucket_index(confidence,
   n_buckets=10)`, `reliability_table(pairs, *, n_buckets=10)`,
