@@ -151,10 +151,12 @@ here.
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Zenodo deposits (v0.4.0 published 2026-09-21).** The v0.4.0 release is
-  archived as Zenodo deposit id **22884305** (version DOI
-  `10.5281/zenodo.22884305`, record
-  <https://zenodo.org/records/22884305>, source zip from tag `v0.4.0`);
+- **Zenodo deposits (v0.4.1 published 2026-09-21).** The v0.4.1 release is
+  archived as Zenodo deposit id **22884676** (version DOI
+  `10.5281/zenodo.22884676`, record
+  <https://zenodo.org/records/22884676>; source zip from tag `v0.4.1` +
+  the rendered PDF); v0.4.0 remains deposit **22884305** (version DOI
+  `10.5281/zenodo.22884305`);
   v0.3.0 remains deposit **22817425** (version DOI
   `10.5281/zenodo.22817425`); the concept DOI
   `10.5281/zenodo.22816187` is stable across versions and always resolves
@@ -166,7 +168,12 @@ here.
   `family_name`/`given_names`, `resource_type {"id": "software"}`, license
   via the `rights` field, and a `publisher` string for DataCite DOI
   registration — never a fresh deposit, which would mint a new concept
-  DOI). The Zenodo API token lives in the template checkout's `.env` as
+  DOI). Files of a PUBLISHED record are immutable (the edit-draft bucket
+  is locked: content PUTs 403) — the ONLY way to add/change files is a new
+  version deposit. File uploads: POST the files URL with an ARRAY body
+  (`[{"key": ...}]`), PUT the content link with
+  `Content-Type: application/octet-stream` (a pdf content-type 415s),
+  then POST the commit link. The Zenodo API token lives in the template checkout's `.env` as
   `ZENODO_PROD_TOKEN`: never echo it, never print it in logs or
   transcripts, never copy it into the lane repo or commit it anywhere.
 - **Public release remote.** <https://github.com/docxology/daf-jev>

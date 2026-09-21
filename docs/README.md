@@ -6,7 +6,8 @@ Documentation for daf-jev.
 
 `CITATION.cff` (CFF 1.2.0 citation metadata) and `.zenodo.json` (Zenodo
 deposit metadata) live at the repo root. Releases are archived as version
-deposits on the stable concept DOI `10.5281/zenodo.22816187` (v0.4.0:
+deposits on the stable concept DOI `10.5281/zenodo.22816187` (v0.4.1:
+<https://zenodo.org/records/22884676>; v0.4.0:
 <https://zenodo.org/records/22884305>; v0.3.0:
 <https://zenodo.org/records/22817425>), with the public repository at
 <https://github.com/docxology/daf-jev>.

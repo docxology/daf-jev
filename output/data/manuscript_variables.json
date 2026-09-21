@@ -38,7 +38,7 @@
   "DOCS_SNAPSHOT_ID": "b79c9cd6008489f1",
   "DOCS_SNAPSHOT_PAGES": "108",
   "FIGURES": "architecture.png, batching_speedup.png, calibration_reliability.png, confidence_bands.png, graphical_abstract.png, latency_percentiles.png, primitives_overview.png",
-  "GENERATION_TIMESTAMP": "2026-09-21T23:44:30Z",
+  "GENERATION_TIMESTAMP": "2026-09-21T23:49:12Z",
   "PACKAGE_NAME": "daf-jev",
   "PACKAGE_PYTHON_MIN": "3.10",
   "PACKAGE_VERSION": "0.4.1",
