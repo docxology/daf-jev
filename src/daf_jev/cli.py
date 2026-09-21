@@ -16,7 +16,8 @@ Usage::
                 [--include-records] [--json | --pretty]
     daf-jev docs-verify [--manifest PATH] [--json | --pretty]
 
-Question SPEC grammar (commas may be escaped as ``\\,``):
+Question SPEC grammar (``\\,``, ``\\:`` and ``\\\\`` escape a literal
+comma, colon and backslash):
 
 - ``noul:<instructions>``
 - ``choice:<instructions>:opt1=desc,opt2=...`` (empty description -> None)
@@ -30,17 +31,15 @@ Question SPEC grammar (commas may be escaped as ``\\,``):
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Optional, Sequence
-from urllib.parse import urlparse
+from typing import Any
 
 from daf_jev import config
-
-DEFAULT_MANIFEST = Path("docs/reference/MANIFEST.json")
+from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
 
 __all__ = ["main", "parse_question_spec"]
 
@@ -48,14 +47,18 @@ __all__ = ["main", "parse_question_spec"]
 # ---------------------------------------------------------------- questions
 
 
+#: Characters a backslash escapes inside a question SPEC.
+_ESCAPABLE = (",", "\\", ":")
+
+
 def _split_unescaped_commas(text: str) -> list[str]:
-    """Split on commas, honoring ``\\,`` (and ``\\\\``) escapes."""
+    """Split on unescaped commas, honoring ``\\,``/``\\:``/``\\\\`` escapes."""
     parts: list[str] = []
     current: list[str] = []
     i = 0
     while i < len(text):
         ch = text[i]
-        if ch == "\\" and i + 1 < len(text) and text[i + 1] in (",", "\\"):
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
             current.append(text[i + 1])
             i += 2
             continue
@@ -70,40 +73,85 @@ def _split_unescaped_commas(text: str) -> list[str]:
     return parts
 
 
+def _unescape(text: str) -> str:
+    """Resolve ``\\,``/``\\:``/``\\\\`` escapes to literal characters.
+
+    A backslash not followed by an escapable character is kept verbatim,
+    mirroring :func:`_split_unescaped_commas`.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            out.append(text[i + 1])
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _find_unescaped(text: str, target: str, *, last: bool = False) -> int:
+    """Index of the first (default) or last unescaped ``target``, or -1.
+
+    ``\\,``/``\\:``/``\\\\`` escape pairs are skipped, so the search
+    looks past escaped characters.
+    """
+    i = 0
+    found = -1
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            i += 2
+            continue
+        if ch == target:
+            found = i
+            if not last:
+                return i
+        i += 1
+    return found
+
+
 def parse_question_spec(spec: str) -> Any:
     """Parse a question SPEC into a ``daf_jev`` question object.
 
-    The type is taken before the first ``:``; for ``choice``/``score`` the
-    criteria segment starts after the last ``:`` so instructions may contain
-    colons. Commas in options/levels are escaped as ``\\,``. Raises
-    ``ValueError`` on malformed specs.
+    The type is taken before the first unescaped ``:``; for ``choice``/
+    ``score`` the criteria segment starts after the last unescaped ``:``,
+    so plain colons may appear inside instructions and ``\\:`` escapes a
+    literal colon anywhere (instructions, option descriptions, levels).
+    Commas in options/levels are escaped as ``\\,``. Raises ``ValueError``
+    on malformed specs.
     """
     from daf_jev._types import ChoiceQuestion, NoulQuestion, ScoreQuestion
 
-    qtype, sep, rest = spec.partition(":")
-    if not sep or not qtype:
+    type_end = _find_unescaped(spec, ":", last=False)
+    if type_end < 1:
         raise ValueError(
             f"invalid question spec {spec!r}: expected 'noul:<instructions>', "
             f"'choice:<instructions>:k1=desc,k2=...' or 'score:<instructions>:l1,l2,...'"
         )
+    qtype, rest = spec[:type_end], spec[type_end + 1 :]
 
     if qtype == "noul":
         if not rest:
             raise ValueError(f"invalid noul spec {spec!r}: instructions required")
-        return NoulQuestion(instructions=rest)
+        return NoulQuestion(instructions=_unescape(rest))
 
-    instructions, sep, criteria_text = rest.rpartition(":")
-    if not sep:
+    criteria_start = _find_unescaped(rest, ":", last=True)
+    if criteria_start < 0:
         raise ValueError(
             f"invalid {qtype} spec {spec!r}: expected '<instructions>:<criteria>'"
         )
+    instructions = _unescape(rest[:criteria_start])
+    criteria_text = rest[criteria_start + 1 :]
     if not instructions:
         raise ValueError(f"invalid {qtype} spec {spec!r}: instructions required")
 
     if qtype == "choice":
-        options: dict[str, Optional[str]] = {}
+        options: dict[str, str | None] = {}
         for item in _split_unescaped_commas(criteria_text):
-            key, eq, desc = item.partition("=")
+            key, _eq, desc = item.partition("=")
             key = key.strip()
             if not key:
                 raise ValueError(
@@ -146,11 +194,26 @@ def _emit_error(payload: Any, pretty: bool) -> None:
 
 
 def _state_from_args(args: argparse.Namespace) -> Any:
-    text = args.state_file.read_text(encoding="utf-8") if args.state_file else args.state
+    """Resolve the ask state: file content or inline text.
+
+    Only JSON objects and arrays are parsed (the wire shapes beyond
+    str); scalar JSON such as ``123`` or ``null`` stays raw text, and a
+    ``None`` state is never produced.
+    """
+    text = (
+        args.state_file.read_text(encoding="utf-8")
+        if args.state_file
+        else args.state
+    )
+    if text is None:
+        raise ValueError("ask requires --state TEXT or --state-file FILE")
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except (ValueError, TypeError):
         return text
+    if isinstance(parsed, (dict, list)):
+        return parsed
+    return text
 
 
 def _make_client(args: argparse.Namespace) -> Any:
@@ -180,66 +243,47 @@ def _positive_int(value: str) -> int:
 
 def _question_from_yaml(spec: Any, path: Path) -> Any:
     """Build a question from a SPEC string or a native YAML mapping."""
-    from daf_jev._types import ChoiceQuestion, NoulQuestion, ScoreQuestion
+    from daf_jev.questions import question_from_mapping
 
     if isinstance(spec, str):
         return parse_question_spec(spec)
-    if not isinstance(spec, dict):
-        raise ValueError(
-            f"questions file {path}: question must be a SPEC string or a "
-            f"{{type, instructions, criteria}} mapping, got {type(spec).__name__}"
-        )
-    qtype = spec.get("type")
-    instructions = spec.get("instructions")
-    criteria = spec.get("criteria")
-    if not qtype:
-        raise ValueError(
-            f"questions file {path}: native question mapping requires 'type'"
-        )
-    if instructions is None:
-        raise ValueError(
-            f"questions file {path}: native question mapping requires "
-            f"'instructions'"
-        )
-    if qtype == "noul":
-        if criteria is not None and not isinstance(criteria, dict):
-            raise ValueError(
-                f"questions file {path}: noul criteria must be a mapping "
-                f"with optional 'true'/'false' keys"
-            )
-        return NoulQuestion(instructions=instructions, criteria=criteria)
-    if qtype == "choice":
-        if not isinstance(criteria, dict) or not criteria:
-            raise ValueError(
-                f"questions file {path}: choice criteria must be a "
-                f"non-empty mapping of option -> description"
-            )
-        return ChoiceQuestion(
-            instructions=instructions,
-            criteria={str(key): value for key, value in criteria.items()},
-        )
-    if qtype == "score":
-        if not isinstance(criteria, list) or len(criteria) < 2:
-            raise ValueError(
-                f"questions file {path}: score criteria must be a list of "
-                f">= 2 level names"
-            )
-        return ScoreQuestion(
-            instructions=instructions,
-            criteria=[str(level) for level in criteria],
-        )
-    raise ValueError(
-        f"questions file {path}: unknown question type {qtype!r} "
-        f"(expected noul, choice or score)"
-    )
+    return question_from_mapping(spec, context=f"questions file {path}")
 
 
 def _load_questions_file(path: Path) -> dict[str, Any]:
-    """Load a YAML mapping of id -> SPEC string or native question mapping."""
+    """Load a YAML mapping of id -> SPEC string or native question mapping.
+
+    Duplicate question ids are rejected (both literal duplicate YAML keys
+    and keys that collide once cast to ``str``); YAML's default silently
+    keeps the last one.
+    """
     import yaml
 
+    class _UniqueKeyLoader(yaml.SafeLoader):
+        """SafeLoader that rejects duplicate mapping keys."""
+
+        def construct_mapping(self, node: Any, deep: bool = False) -> Any:
+            if isinstance(node, yaml.MappingNode):
+                self.flatten_mapping(node)
+                seen: set[Any] = set()
+                for key_node, _value_node in node.value:
+                    key = self.construct_object(key_node, deep=True)
+                    try:
+                        hash(key)
+                    except TypeError:
+                        key = str(key)
+                    if key in seen:
+                        raise yaml.constructor.ConstructorError(
+                            "while constructing a mapping",
+                            node.start_mark,
+                            f"duplicate key {key!r} in questions file {path}",
+                            key_node.start_mark,
+                        )
+                    seen.add(key)
+            return super().construct_mapping(node, deep=deep)
+
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
     except yaml.YAMLError as exc:
         raise ValueError(f"invalid YAML in {path}: {exc}") from exc
     if not isinstance(data, dict) or not data:
@@ -247,9 +291,15 @@ def _load_questions_file(path: Path) -> dict[str, Any]:
             f"questions file {path} must be a non-empty YAML mapping of "
             f"id -> question spec"
         )
-    return {
-        str(qid): _question_from_yaml(spec, path) for qid, spec in data.items()
-    }
+    questions: dict[str, Any] = {}
+    for qid, spec in data.items():
+        key = str(qid)
+        if key in questions:
+            raise ValueError(
+                f"questions file {path}: duplicate question id {key!r}"
+            )
+        questions[key] = _question_from_yaml(spec, path)
+    return questions
 
 
 def _load_states_file(path: Path) -> list[str]:
@@ -270,25 +320,42 @@ def _load_states_file(path: Path) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
- # ----------------------------------------------------------------- commands
-
-
 # ----------------------------------------------------------------- commands
+
+
+def _questions_from_flags(entries: Sequence[str]) -> dict[str, Any]:
+    """Parse repeated ``--question ID=SPEC`` flags into a question mapping.
+
+    Raises ``ValueError`` on a malformed entry or a duplicated id.
+    """
+    questions: dict[str, Any] = {}
+    for entry in entries:
+        qid, sep, spec = entry.partition("=")
+        if not sep or not qid:
+            raise ValueError(f"invalid --question {entry!r}: expected 'ID=SPEC'")
+        if qid in questions:
+            raise ValueError(
+                f"duplicate question id {qid!r}: --question given more than "
+                f"once for the same id"
+            )
+        questions[qid] = parse_question_spec(spec)
+    return questions
 
 
 def _cmd_ask(args: argparse.Namespace) -> int:
     from daf_jev._errors import TypeSafeError
 
-    questions: dict[str, Any] = {}
-    for entry in args.question or []:
-        qid, sep, spec = entry.partition("=")
-        if not sep or not qid:
-            raise ValueError(f"invalid --question {entry!r}: expected 'ID=SPEC'")
-        questions[qid] = parse_question_spec(spec)
+    try:
+        if not args.question:
+            raise ValueError("ask requires at least one --question ID=SPEC flag")
+        questions = _questions_from_flags(args.question)
+        state = _state_from_args(args)
+    except (ValueError, OSError) as exc:
+        return _usage_error(exc, args.pretty)
 
     try:
         with _make_client(args) as client:
-            response = client.ask(_state_from_args(args), questions)
+            response = client.ask(state, questions)
     except (TypeSafeError, ValueError, OSError) as exc:
         _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
         return 1
@@ -372,55 +439,30 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     return 0
 
 
-def _derive_rel(url: str) -> str:
-    """Relative path (from the docs root) that a page URL maps to."""
-    return urlparse(url).path.lstrip("/")
-
-
 def _cmd_docs_verify(args: argparse.Namespace) -> int:
-    manifest_path = Path(args.manifest)
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        summary = verify_manifest(Path(args.manifest))
+    except ValueError as exc:
         _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
         return 1
-
-    root = manifest_path.parent
-    pages = manifest.get("pages", {})
-    missing: list[str] = []
-    drifted: list[str] = []
-    for rel, meta in pages.items():
-        expected_rel = _derive_rel(meta.get("url", ""))
-        if expected_rel != rel:
-            drifted.append(f"{rel} (url maps to {expected_rel!r})")
-            continue
-        path = root / rel
-        try:
-            data = path.read_bytes()
-        except OSError:
-            missing.append(rel)
-            continue
-        if (
-            hashlib.sha256(data).hexdigest() != meta.get("sha256")
-            or len(data) != meta.get("bytes")
-        ):
-            drifted.append(rel)
-
-    summary = {
-        "manifest": str(manifest_path),
-        "pages": len(pages),
-        "missing": sorted(missing),
-        "drifted": sorted(drifted),
-        "ok": not missing and not drifted,
-    }
     _emit(summary, args.pretty)
     return 0 if summary["ok"] else 1
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
-    from daf_jev.mcp_server import main as serve_main
-
-    serve_main()
+    try:
+        from daf_jev.mcp_server import main as serve_main
+    except ImportError as exc:
+        _emit_error(
+            {
+                "error": type(exc).__name__,
+                "message": f"the MCP server needs the optional 'mcp' "
+                f"dependency: install it with 'uv sync --extra mcp' ({exc})",
+            },
+            getattr(args, "pretty", False),
+        )
+        return 1
+    serve_main(transport=args.transport)
     return 0
 
 
@@ -433,14 +475,20 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
-    def add_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument(
-            "--base-url",
-            default=None,
-            help="API base URL (default: resolved from config, e.g. JEV_BASE_URL).",
+    def add_common(p: argparse.ArgumentParser, *, base_url: bool = True) -> None:
+        if base_url:
+            p.add_argument(
+                "--base-url",
+                default=None,
+                help="API base URL (default: resolved from config, e.g. JEV_BASE_URL).",
+            )
+        output = p.add_mutually_exclusive_group()
+        output.add_argument(
+            "--json", action="store_true", help="compact JSON output (default)"
         )
-        p.add_argument("--json", action="store_true", help="compact JSON output (default)")
-        p.add_argument("--pretty", action="store_true", help="pretty-printed JSON output")
+        output.add_argument(
+            "--pretty", action="store_true", help="pretty-printed JSON output"
+        )
 
     p_ask = sub.add_parser("ask", help="ask questions about a state")
     state_group = p_ask.add_mutually_exclusive_group(required=True)
@@ -471,7 +519,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--contains",
         default=None,
         metavar="STR",
-        help="case-insensitive substring filter on model name (with --pick)",
+        help="case-insensitive substring filter on model name",
     )
     add_common(p_models)
     p_models.set_defaults(func=_cmd_models)
@@ -516,7 +564,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument(
         "--manifest", default=str(DEFAULT_MANIFEST), help="manifest path"
     )
-    p_verify.add_argument("--pretty", action="store_true", help="pretty-printed JSON output")
+    add_common(p_verify, base_url=False)
     p_verify.set_defaults(func=_cmd_docs_verify)
     p_serve = sub.add_parser(
         "serve", help="serve the daf-jev MCP server (stdio transport)"
@@ -532,7 +580,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code."""
     parser = _build_parser()
     try:
