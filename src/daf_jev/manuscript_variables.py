@@ -30,11 +30,14 @@ import platform
 import re
 import subprocess
 import sys
-import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 import yaml
 
 __all__ = ["generate_variables", "save_variables"]
@@ -46,6 +49,7 @@ _MANIFEST_PATH = Path("docs") / "reference" / "MANIFEST.json"
 _CONFIG_PATH = Path("manuscript") / "config.yaml"
 _COVERAGE_PATH = Path(".coverage")
 _PYTEST_TIMEOUT_S = 180
+_DEFAULT_BATCHING_N_VALUES: tuple[str, str, str] = ("5", "10", "20")
 
 _NA = "N/A"
 
@@ -86,7 +90,7 @@ def _require(condition: bool, kind: str, path: Path, hint: str, *, strict: bool)
     return False
 
 
-def _fmt(value: Optional[float], spec: str) -> str:
+def _fmt(value: float | None, spec: str) -> str:
     """Format a float, or ``N/A`` when absent."""
     return format(value, spec) if value is not None else _NA
 
@@ -152,7 +156,7 @@ def _code_stats(project_root: Path) -> dict[str, Any]:
     return {"modules": modules, "loc": loc, "exports": exports}
 
 
-def _pytest_collected(project_root: Path, test_dir: str) -> Optional[int]:
+def _pytest_collected(project_root: Path, test_dir: str) -> int | None:
     """Count tests collected by ``pytest --collect-only -q``; None on failure."""
     try:
         proc = subprocess.run(
@@ -174,7 +178,7 @@ def _pytest_collected(project_root: Path, test_dir: str) -> Optional[int]:
     return len(ids) if ids else None
 
 
-def _coverage_percent(project_root: Path) -> Optional[float]:
+def _coverage_percent(project_root: Path) -> float | None:
     """Return the enforced coverage percentage from an existing ``.coverage``.
 
     Delegates to ``coverage.Coverage.report()`` so the number is computed by
@@ -202,7 +206,7 @@ def _coverage_percent(project_root: Path) -> Optional[float]:
     return float(pct)
 
 
-def _latest_benchmark(project_root: Path, prefix: str, *, strict: bool) -> Optional[Path]:
+def _latest_benchmark(project_root: Path, prefix: str, *, strict: bool) -> Path | None:
     """Newest ``<prefix>_*.json`` under ``output/benchmarks``, or None."""
     bench_dir = project_root / _BENCH_DIR
     matches = sorted(bench_dir.glob(f"{prefix}_*.json"))
@@ -224,14 +228,14 @@ def _load_benchmark(project_root: Path, prefix: str, *, strict: bool) -> dict[st
         return json.load(f)
 
 
-def _bench_row(results: list[dict[str, Any]], n: int) -> Optional[dict[str, Any]]:
+def _bench_row(results: list[dict[str, Any]], n: int) -> dict[str, Any] | None:
     for row in results:
         if row.get("n") == n:
             return row
     return None
 
 
-def _bench_value(source: dict[str, Any], *keys: str) -> Optional[Any]:
+def _bench_value(source: dict[str, Any], *keys: str) -> Any | None:
     value: Any = source
     for key in keys:
         if not isinstance(value, dict) or key not in value:
@@ -246,7 +250,7 @@ def _opt_str(source: dict[str, Any], key: str) -> str:
     return str(value) if value is not None else _NA
 
 
-def _opt_float(source: dict[str, Any], *keys: str) -> Optional[float]:
+def _opt_float(source: dict[str, Any], *keys: str) -> float | None:
     """Nested float at *keys*, or None when any level is missing."""
     value = _bench_value(source, *keys)
     return None if value is None else float(value)
@@ -289,9 +293,28 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["CONFIG_KEYWORDS_BULLETS"] = "\n".join(f"- {keyword}" for keyword in keywords)
 
     batching_n_values = _config_batching_n_values(config)
-    for i, n in enumerate((5, 10, 20)):
-        value = batching_n_values[i] if i < len(batching_n_values) else None
-        variables[f"CONFIG_BATCHING_N{n}"] = value if value is not None else _NA
+    # Token names AND values both derive from the configured batch widths so
+    # a config change can never misname a token; the canonical widths keep
+    # the contracted token set stable when the config lacks the key.
+    for n in batching_n_values or _DEFAULT_BATCHING_N_VALUES:
+        variables[f"CONFIG_BATCHING_N{n}"] = n if batching_n_values else _NA
+    # Experiment parameters (experiment.* in manuscript/config.yaml). In
+    # pipeline (strict) mode a missing key falls back to the benchmark
+    # default so no N/A sentinel leaks into a rendered manuscript; draft
+    # mode emits the N/A sentinel like every other CONFIG_* producer.
+    experiment = config.get("experiment", {}) if isinstance(config, dict) else {}
+    if not isinstance(experiment, dict):
+        experiment = {}
+    for token, key, default in (
+        ("BATCHING_RUNS", "batching_runs", 3),
+        ("CALIBRATION_STATES", "calibration_states", 6),
+        ("CALIBRATION_REPEATS", "calibration_repeats", 5),
+    ):
+        value = experiment.get(key)
+        if value is None:
+            variables[token] = _NA if not strict else str(default)
+        else:
+            variables[token] = str(value)
 
     # ---- Package metadata (pyproject.toml) ----
     package = _load_package_metadata(project_root)
@@ -336,10 +359,10 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["BENCH_DATE"] = str(run_date) if run_date is not None else _NA
 
     results = batching.get("results", []) if isinstance(batching, dict) else []
-    for n in (5, 10, 20):
-        row = _bench_row(results, n)
+    for width in (5, 10, 20):
+        row = _bench_row(results, width)
         speedup = _bench_value(row or {}, "speedup_ratio")
-        variables[f"BENCH_BATCHING_SPEEDUP_N{n}"] = _fmt(None if speedup is None else float(speedup), ".2f")
+        variables[f"BENCH_BATCHING_SPEEDUP_N{width}"] = _fmt(None if speedup is None else float(speedup), ".2f")
     token_ratio = _bench_value(_bench_row(results, 20) or {}, "token_cost_ratio")
     variables["BENCH_BATCHING_TOKEN_RATIO_N20"] = _fmt(None if token_ratio is None else float(token_ratio), ".2f")
 

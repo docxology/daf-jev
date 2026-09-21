@@ -13,7 +13,7 @@ standalone checkouts skip the injection step).
 
 Exit codes:
     0   variables written (and injected, when inside a template repo)
-    1   unexpected error
+    1   missing analysis outputs (strict mode) or unexpected error
 """
 
 from __future__ import annotations
@@ -57,21 +57,27 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from daf_jev.manuscript_variables import generate_variables, save_variables
-
-    variables = generate_variables(
-        _PROJECT_ROOT,
-        require_analysis_outputs=not args.allow_draft,
-    )
     out_path = _PROJECT_ROOT / "output" / "data" / "manuscript_variables.json"
-    save_variables(variables, out_path)
+    try:
+        from daf_jev.manuscript_variables import generate_variables, save_variables
 
-    if _REPO_ROOT is not None:
-        from infrastructure.rendering.manuscript_injection import write_resolved_manuscript_tree
+        variables = generate_variables(
+            _PROJECT_ROOT,
+            require_analysis_outputs=not args.allow_draft,
+        )
+        save_variables(variables, out_path)
 
-        write_resolved_manuscript_tree(_PROJECT_ROOT, variables)
-    else:
-        print("note: not inside a template repository — skipping {{TOKEN}} injection", file=sys.stderr)
+        if _REPO_ROOT is not None:
+            from infrastructure.rendering.manuscript_injection import (
+                write_resolved_manuscript_tree,
+            )
+
+            write_resolved_manuscript_tree(_PROJECT_ROOT, variables)
+        else:
+            print("note: not inside a template repository — skipping {{TOKEN}} injection", file=sys.stderr)
+    except FileNotFoundError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     print(str(out_path))
     return 0

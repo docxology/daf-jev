@@ -24,6 +24,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from _util import latency_summary, settings_or_skip, write_result  # noqa: E402
+
 from daf_jev import (  # noqa: E402
     AsyncJevClient,
     JevClient,

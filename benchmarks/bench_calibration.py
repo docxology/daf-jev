@@ -30,6 +30,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from _util import settings_or_skip, write_result  # noqa: E402
+
 from daf_jev import JevClient, choice, noul  # noqa: E402
 from daf_jev.calibration import (  # noqa: E402
     brier_score,
@@ -83,7 +84,7 @@ def collect_answers(
     choice_answers: dict[int, list] = {i: [] for i in range(len(STATES))}
     noul_answers: dict[int, list] = {i: [] for i in range(len(STATES))}
     n_errors = 0
-    for repeat in range(repeats):
+    for _ in range(repeats):
         for i, state in enumerate(STATES):
             if i not in choice_answers:
                 continue  # state already dropped after an earlier error
@@ -162,7 +163,6 @@ def main(argv: list[str] | None = None) -> int:
     if settings is None:
         return 0
 
-    states = STATES[: args.states]
     with JevClient(api_key=settings.api_key, base_url=settings.base_url,
                    model=args.model) as client:
         print(f"calibration: model={args.model} states={args.states} "

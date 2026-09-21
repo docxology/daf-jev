@@ -26,9 +26,10 @@ import json
 import re
 import sys
 import urllib.request
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 SOURCE = "TypeSafe / Jev documentation"
@@ -41,20 +42,20 @@ USER_AGENT = "daf-jev-docs-scraper/1.0"
 _LINK_RE = re.compile(r"^\s*[-*]\s*\[([^\]]+)\]\(([^)\s]+)\)\s*(?::|$)")
 
 __all__ = [
-    "SOURCE",
     "BASE_URL",
     "DEFAULT_INDEX_URL",
     "MANIFEST_NAME",
+    "SOURCE",
+    "build_manifest",
+    "diff_snapshot",
     "fetch",
+    "main",
+    "page_sha256",
     "parse_index",
     "rel_from_url",
-    "page_sha256",
-    "snapshot_id",
-    "build_manifest",
     "scrape",
+    "snapshot_id",
     "write_snapshot",
-    "diff_snapshot",
-    "main",
 ]
 
 
@@ -90,6 +91,8 @@ def parse_index(index_url: str, index_bytes: bytes) -> list[tuple[str, str]]:
     for line in text.splitlines():
         match = _LINK_RE.match(line)
         if not match:
+            if line.strip():
+                print(f"warning: skipping unrecognized llms.txt line: {line.strip()!r}", file=sys.stderr)
             continue
         title, href = match.group(1).strip(), match.group(2).strip()
         url = urljoin(index_url, href)
@@ -104,8 +107,16 @@ def parse_index(index_url: str, index_bytes: bytes) -> list[tuple[str, str]]:
 
 
 def rel_from_url(url: str) -> str:
-    """Relative path (from the docs root) a page URL maps to."""
-    return urlparse(url).path.lstrip("/")
+    """Relative path (from the docs root) a page URL maps to.
+
+    Raises:
+        ValueError: When the derived path contains ``..`` — a hostile
+            index must not be able to write outside ``out_dir``.
+    """
+    rel = urlparse(url).path.lstrip("/")
+    if ".." in rel:
+        raise ValueError(f"unsafe relative path {rel!r} derived from index URL {url!r}")
+    return rel
 
 
 def page_sha256(data: bytes) -> str:
@@ -214,7 +225,7 @@ def diff_snapshot(
     if old is None:
         report["missing"].append(MANIFEST_NAME)
 
-    for rel, body in contents.items():
+    for rel, _body in contents.items():
         path = out_dir / rel
         try:
             on_disk = path.read_bytes()
@@ -290,7 +301,18 @@ def diff_manifest_offline(manifest_path: Path) -> dict[str, list[str]]:
 # ------------------------------------------------------------------- CLI
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def _positive_timeout(text: str) -> float:
+    """Argparse type: a per-request timeout in seconds, strictly positive."""
+    try:
+        value = float(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"invalid timeout value: {text!r}") from exc
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"--timeout must be > 0 seconds, got {text!r}")
+    return value
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="scrape_docs",
         description="Re-scrape the TypeSafe docs into docs/reference/ (stdlib only).",
@@ -319,7 +341,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         metavar="MANIFEST",
         help="same as --manifest (bare positional form)",
     )
-    parser.add_argument("--timeout", type=float, default=30.0, help="per-request timeout seconds")
+    parser.add_argument("--timeout", type=_positive_timeout, default=30.0, help="per-request timeout seconds")
     args = parser.parse_args(argv)
     manifest_path = args.manifest_path if args.manifest_path is not None else args.manifest
     if args.manifest is not None and args.manifest_path is not None and args.manifest != args.manifest_path:
@@ -334,7 +356,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         manifest, contents = scrape(index_url=args.index_url, timeout=args.timeout)
-    except (OSError, RuntimeError) as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
         print(json.dumps({"error": type(exc).__name__, "message": str(exc)}), file=sys.stderr)
         return 1
 

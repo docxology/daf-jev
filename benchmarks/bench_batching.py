@@ -21,6 +21,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from _util import settings_or_skip, write_result  # noqa: E402
+
 from daf_jev import JevClient, choice, noul, score  # noqa: E402
 
 STATE = (

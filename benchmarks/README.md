@@ -1,14 +1,14 @@
 # daf-jev Benchmarks
 
-Live-API benchmarks for the two documented TypeSafe patterns this package
-implements. Both scripts use the real network and the real key, so they are
-**not** part of the test suite.
+Live-API benchmarks for the documented TypeSafe patterns this package
+implements. All three scripts use the real network and the real key, so
+they are **not** part of the test suite.
 
 ## Requirements
 
 - A real API key: `JEV_API_KEY` (preferred) or `TYPESAFE_API_KEY`, from the
-  process environment or the project `.env`. Without a key both scripts print
-  `SKIP: JEV_API_KEY not set` and exit 0 — they never raise.
+  process environment or the project `.env`. Without a key all three
+  scripts print `SKIP: JEV_API_KEY not set` and exit 0 — they never raise.
 - The package importable (`uv run` handles the src layout).
 
 ## bench_batching.py — parallel-questions claim
@@ -52,12 +52,32 @@ uv run python benchmarks/bench_patterns.py --runs 10 --model jev-latest
 uv run python benchmarks/bench_patterns.py --runs 10 --async
 ```
 
+## bench_calibration.py — confidence calibration
+
+Measures self-consistency calibration: for each of N short distinct states,
+the same three-option choice question is asked R times, and agreement with
+the modal choice across repeats is treated as a **self-consistency
+correctness proxy — not ground truth**. The resulting `(confidence,
+correct)` pairs feed the pure `daf_jev.calibration` functions (ECE, Brier,
+reliability table); a noul question repeated the same way yields a mean
+pairwise |Δnoul| stability metric. A failing call drops that state's repeats
+into `n_errors` instead of aborting the batch.
+
+```bash
+uv run python benchmarks/bench_calibration.py
+# flags: --states N (default 6), --repeats N (default 5), --model NAME
+```
+
+**Caveat:** never present the ECE/Brier figures as ground-truth accuracy —
+they quantify confidence-vs-self-consistency only.
+
 ## Output
 
 JSON results are written to deterministic filenames under `output/benchmarks/`:
 
 - `output/benchmarks/batching_<YYYYMMDD>.json`
 - `output/benchmarks/patterns_<YYYYMMDD>.json`
+- `output/benchmarks/calibration_<YYYYMMDD>.json`
 
 The directory is created with parents on first write. Each payload records the
 model, run count, and per-measurement numbers described above; `_util.py`
