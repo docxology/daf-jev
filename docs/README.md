@@ -6,10 +6,9 @@ Documentation for daf-jev.
 
 `CITATION.cff` (CFF 1.2.0 citation metadata) and `.zenodo.json` (Zenodo
 deposit metadata) live at the repo root. Releases are archived as version
-deposits on the stable concept DOI `10.5281/zenodo.22816187` (v0.3.0:
-<https://zenodo.org/records/22817425>; the v0.4.0 deposit publishes on the
-same concept, so the concept DOI always resolves to the latest published
-version), with the public repository at
+deposits on the stable concept DOI `10.5281/zenodo.22816187` (v0.4.0:
+<https://zenodo.org/records/22884305>; v0.3.0:
+<https://zenodo.org/records/22817425>), with the public repository at
 <https://github.com/docxology/daf-jev>.
 
 ## ARCHITECTURE.md — the contract

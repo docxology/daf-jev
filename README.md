@@ -2,7 +2,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![v0.4.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.4.0-1F77B4)](https://zenodo.org/records/22816187)
+[![v0.4.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.4.0-1F77B4)](https://zenodo.org/records/22884305)
 
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
@@ -480,9 +480,9 @@ resolves to the latest published version.
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
-- **Latest version deposit**: the concept DOI above resolves to the newest
-  published version (v0.3.0: [22817425](https://zenodo.org/records/22817425),
-  version DOI `10.5281/zenodo.22817425`).
+- **v0.4.0 version record**: https://zenodo.org/records/22884305
+  (version DOI `10.5281/zenodo.22884305`; v0.3.0 remains at
+  [22817425](https://zenodo.org/records/22817425)).
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Rendered manuscript PDF**: [`daf-jev_combined.pdf`](daf-jev_combined.pdf)
   at the repo root (regenerated to `output/pdf/daf-jev_combined.pdf` by the

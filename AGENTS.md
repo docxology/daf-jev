@@ -151,23 +151,24 @@ here.
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Zenodo deposits (v0.3.0 published; v0.4.0 pending).** The v0.3.0
-  release is archived as Zenodo deposit id **22817425** (version DOI
-  `10.5281/zenodo.22817425`, record
-  <https://zenodo.org/records/22817425>); the concept DOI
+- **Zenodo deposits (v0.4.0 published 2026-09-21).** The v0.4.0 release is
+  archived as Zenodo deposit id **22884305** (version DOI
+  `10.5281/zenodo.22884305`, record
+  <https://zenodo.org/records/22884305>, source zip from tag `v0.4.0`);
+  v0.3.0 remains deposit **22817425** (version DOI
+  `10.5281/zenodo.22817425`); the concept DOI
   `10.5281/zenodo.22816187` is stable across versions and always resolves
   to the latest published version. Deposit **22816188** is the earlier
   superseded deposit in the same concept family — never cite or pin it. New
   releases MUST be new version deposits on the same concept via the Zenodo
-  deposits API — never a fresh deposit (that would mint a new concept DOI).
-  The v0.4.0 version deposit is created from 22817425 via
-  `POST /api/records/22817425/versions` once `ZENODO_PROD_TOKEN` is
-  reachable (template checkout `.env`); after publish, pin the new deposit
-  id in the CITATION.cff preferred-citation, the README badge/citation
-  list, `manuscript/config.yaml` version_record, and here. The Zenodo API
-  token lives in the template checkout's `.env` as `ZENODO_PROD_TOKEN`:
-  never echo it, never print it in logs or transcripts, never copy it into
-  the lane repo or commit it anywhere.
+  deposits API (`POST /api/records/<latest-id>/versions`, then PUT metadata
+  — this build wants RDM shapes: `person_or_org` creators with
+  `family_name`/`given_names`, `resource_type {"id": "software"}`, license
+  via the `rights` field, and a `publisher` string for DataCite DOI
+  registration — never a fresh deposit, which would mint a new concept
+  DOI). The Zenodo API token lives in the template checkout's `.env` as
+  `ZENODO_PROD_TOKEN`: never echo it, never print it in logs or
+  transcripts, never copy it into the lane repo or commit it anywhere.
 - **Public release remote.** <https://github.com/docxology/daf-jev>
   (`docxology/daf-jev`) is the release remote for the published code and
   repo landing page; the local lane git repo (branch `main`) remains the
