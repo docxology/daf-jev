@@ -2,7 +2,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![v0.3.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.3.0-1F77B4)](https://zenodo.org/records/22817425)
+[![v0.4.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.4.0-1F77B4)](https://zenodo.org/records/22816187)
 
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
@@ -471,16 +471,18 @@ mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
 
-v0.3.0 is published on Zenodo (deposit 22817425, released 2026-09-17) and
-mirrored to the public repository at
-[github.com/docxology/daf-jev](https://github.com/docxology/daf-jev).
+Releases are tagged on GitHub and archived as version deposits on the same
+Zenodo concept — v0.3.0 as deposit 22817425 (released 2026-09-17); the
+v0.4.0 deposit publishes on that concept, so the concept DOI below always
+resolves to the latest published version.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
-- **v0.3.0 version record**: https://zenodo.org/records/22817425
-  (version DOI `10.5281/zenodo.22817425`)
+- **Latest version deposit**: the concept DOI above resolves to the newest
+  published version (v0.3.0: [22817425](https://zenodo.org/records/22817425),
+  version DOI `10.5281/zenodo.22817425`).
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Rendered manuscript PDF**: [`daf-jev_combined.pdf`](daf-jev_combined.pdf)
   at the repo root (regenerated to `output/pdf/daf-jev_combined.pdf` by the
@@ -498,7 +500,7 @@ both render it), or paste this BibTeX:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.3.0}
+  version = {0.4.0}
 }
 ```
 

@@ -135,7 +135,7 @@ here.
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
-- `pyproject.toml` — setuptools build, version 0.3.0, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.4.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
@@ -151,18 +151,23 @@ here.
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Published Zenodo deposit (v0.3.0).** The v0.3.0 release is archived as
-  Zenodo deposit id **22817425** (version DOI
+- **Zenodo deposits (v0.3.0 published; v0.4.0 pending).** The v0.3.0
+  release is archived as Zenodo deposit id **22817425** (version DOI
   `10.5281/zenodo.22817425`, record
   <https://zenodo.org/records/22817425>); the concept DOI
-  `10.5281/zenodo.22816187` is stable across versions and always resolves to
-  the latest published version. Deposit **22816188** is the earlier
+  `10.5281/zenodo.22816187` is stable across versions and always resolves
+  to the latest published version. Deposit **22816188** is the earlier
   superseded deposit in the same concept family — never cite or pin it. New
   releases MUST be new version deposits on the same concept via the Zenodo
   deposits API — never a fresh deposit (that would mint a new concept DOI).
-  The Zenodo API token lives in the template checkout's `.env` as
-  `ZENODO_PROD_TOKEN`: never echo it, never print it in logs or transcripts,
-  never copy it into the lane repo or commit it anywhere.
+  The v0.4.0 version deposit is created from 22817425 via
+  `POST /api/records/22817425/versions` once `ZENODO_PROD_TOKEN` is
+  reachable (template checkout `.env`); after publish, pin the new deposit
+  id in the CITATION.cff preferred-citation, the README badge/citation
+  list, `manuscript/config.yaml` version_record, and here. The Zenodo API
+  token lives in the template checkout's `.env` as `ZENODO_PROD_TOKEN`:
+  never echo it, never print it in logs or transcripts, never copy it into
+  the lane repo or commit it anywhere.
 - **Public release remote.** <https://github.com/docxology/daf-jev>
   (`docxology/daf-jev`) is the release remote for the published code and
   repo landing page; the local lane git repo (branch `main`) remains the
@@ -172,7 +177,7 @@ here.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
   `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
   live at the repo root and MUST stay in sync with the pyproject version
-  (currently 0.3.0) and the deposit DOIs above.
+  (currently 0.4.0) and the deposit DOIs above.
 - **`.env` is gitignored and holds the real key.** Never print, copy, or
   commit its value. Tests MUST never read it: unit config tests pass
   explicit env mappings; live tests read `os.environ["JEV_API_KEY"]` only.
