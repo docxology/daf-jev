@@ -20,7 +20,7 @@
   "BENCH_PATTERNS_RUNS": "6",
   "CALIBRATION_REPEATS": "5",
   "CALIBRATION_STATES": "6",
-  "CODE_LOC": "4977",
+  "CODE_LOC": "5054",
   "CODE_MODULES": "20",
   "CODE_MODULE_LIST": "_errors, _http, _retry, _types, calibration, cli, client, compose, config, decider, docs_verify, evaluate, figures, ledger, manuscript_variables, mcp_server, models, primitives, questions, resilience",
   "CODE_PUBLIC_EXPORTS": "145",
@@ -38,14 +38,14 @@
   "DOCS_SNAPSHOT_ID": "b79c9cd6008489f1",
   "DOCS_SNAPSHOT_PAGES": "108",
   "FIGURES": "architecture.png, batching_speedup.png, calibration_reliability.png, confidence_bands.png, graphical_abstract.png, latency_percentiles.png, primitives_overview.png",
-  "GENERATION_TIMESTAMP": "2026-09-21T21:10:08Z",
+  "GENERATION_TIMESTAMP": "2026-09-21T22:23:54Z",
   "PACKAGE_NAME": "daf-jev",
   "PACKAGE_PYTHON_MIN": "3.10",
   "PACKAGE_VERSION": "0.3.0",
   "PLATFORM": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "PYTHON_VERSION": "3.14.4",
-  "TEST_COVERAGE_PCT": "95.62",
+  "TEST_COVERAGE_PCT": "95.68",
   "TEST_FILES_COUNT": "20",
   "TEST_LIVE_COUNT": "2",
-  "TEST_UNIT_COUNT": "433"
+  "TEST_UNIT_COUNT": "448"
 }
