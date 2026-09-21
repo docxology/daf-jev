@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 import threading
 
-import daf_jev
 import pytest
+
+import daf_jev
 from daf_jev import NoulQuestion, RetryPolicy
 from daf_jev._errors import InternalServerError, TypeSafeError
 from daf_jev.resilience import (

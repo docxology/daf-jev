@@ -11,9 +11,16 @@ from pathlib import Path
 
 import pytest
 
-from daf_jev.config import Settings, load_dotenv, load_settings, resolve_api_key, resolve_base_url
 from daf_jev._retry import RetryPolicy
-from daf_jev.config import resolve_retry, resolve_timeout
+from daf_jev.config import (
+    Settings,
+    load_dotenv,
+    load_settings,
+    resolve_api_key,
+    resolve_base_url,
+    resolve_retry,
+    resolve_timeout,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -81,6 +88,18 @@ def test_typesafe_api_key_fallback(tmp_path: Path, monkeypatch) -> None:
 
 def test_no_key_anywhere_returns_none(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)  # no .env, no process env (cleared by fixture)
+    assert resolve_api_key({}) is None
+    assert resolve_api_key(None) is None
+
+
+def test_whitespace_only_api_key_counts_as_unset(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("JEV_API_KEY=   \n")
+    # Whitespace-only values are stripped before the truthiness check, so a
+    # blank-looking key is unset at every layer: injected env, process env,
+    # and the .env file.
+    assert resolve_api_key({"JEV_API_KEY": "   "}) is None
+    monkeypatch.setenv("JEV_API_KEY", "   ")
     assert resolve_api_key({}) is None
     assert resolve_api_key(None) is None
 
@@ -182,6 +201,41 @@ def test_resolve_timeout_set_invalid_and_unset() -> None:
 def test_resolve_timeout_explicit_env_beats_process_env(monkeypatch) -> None:
     monkeypatch.setenv("JEV_TIMEOUT", "99")
     assert resolve_timeout({"JEV_TIMEOUT": "1.5"}) == 1.5
+
+
+def test_load_settings_single_dotenv_read_feeds_every_setting(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # One load_settings call resolves every field from the same .env fixture:
+    # the parse is shared across api_key, base_url, model, retry, and timeout.
+    for name in (
+        "JEV_MODEL",
+        "JEV_MAX_ATTEMPTS",
+        "JEV_BACKOFF_BASE",
+        "JEV_BACKOFF_MAX",
+        "JEV_JITTER",
+        "JEV_TIMEOUT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            [
+                "JEV_API_KEY=file-key",
+                "JEV_BASE_URL=http://file-base:9",
+                "JEV_MODEL=file-model",
+                "JEV_MAX_ATTEMPTS=2",
+                "JEV_TIMEOUT=7.5",
+            ]
+        )
+        + "\n"
+    )
+    settings = load_settings(None)  # env layer skipped: every value comes from .env
+    assert settings.api_key == "file-key"
+    assert settings.base_url == "http://file-base:9"
+    assert settings.model == "file-model"
+    assert settings.retry.max_attempts == 2
+    assert settings.timeout == 7.5
 
 
 def test_load_settings_populates_retry_and_timeout() -> None:

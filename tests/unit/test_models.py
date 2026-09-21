@@ -12,7 +12,7 @@ from daf_jev.client import ModelCard
 from daf_jev.models import pick_model
 
 
-def _card(name: str, release: "str | None" = None, description: str = "") -> ModelCard:
+def _card(name: str, release: str | None = None, description: str = "") -> ModelCard:
     return ModelCard(name=name, description=description, release_date=release)
 
 

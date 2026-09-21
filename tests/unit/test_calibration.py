@@ -5,12 +5,11 @@ from __future__ import annotations
 import pytest
 
 from daf_jev.calibration import (
-    bucket_index,
     brier_score,
+    bucket_index,
     expected_calibration_error,
     reliability_table,
 )
-import math
 
 # Hand-computed fixture shared by the table and ECE tests:
 # buckets of size 0.5 over [(0.1, F), (0.2, T), (0.7, T), (0.8, T), (0.8, F)]
@@ -93,6 +92,11 @@ def test_reliability_table_covers_confidence_one_point_zero() -> None:
     assert table[0]["n"] == 1
 
 
+def test_reliability_table_rejects_invalid_bucket_count() -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        reliability_table([(0.5, True)], n_buckets=0)
+
+
 # --------------------------------------------- expected_calibration_error ---
 def test_expected_calibration_error_hand_computed() -> None:
     # (2/5)*|0.5 - 0.15| + (3/5)*|2/3 - 23/30| = 0.14 + 0.06 = 0.2
@@ -124,3 +128,14 @@ def test_brier_score_bounds() -> None:
 def test_brier_score_rejects_empty_pairs() -> None:
     with pytest.raises(ValueError):
         brier_score([])
+
+
+def test_brier_score_rejects_nan_confidence() -> None:
+    # NaN shares the [0, 1] rejection with bucket_index via _check_confidence.
+    with pytest.raises(ValueError, match="outside"):
+        brier_score([(float("nan"), True)])
+
+
+def test_brier_score_rejects_out_of_range_confidence() -> None:
+    with pytest.raises(ValueError, match="outside"):
+        brier_score([(0.5, True), (1.2, False)])

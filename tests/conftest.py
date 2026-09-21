@@ -30,6 +30,9 @@ class StubTypeSafeServer:
     - ``set_delay(seconds)`` delays every response (for timeout tests).
     - ``hits`` records one dict per request:
       ``{method, path, headers (lower-cased), body (raw str), json (parsed)}``.
+      A malformed/non-JSON request body records ``json: None`` and answers
+      with an immediate 400 text/plain response without consuming a queued
+      program — the handler thread never dies on bad input.
     """
 
     def __init__(self) -> None:
@@ -42,9 +45,52 @@ class StubTypeSafeServer:
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"
 
+            def _respond(
+                self,
+                status: int,
+                payload: bytes,
+                content_type: str,
+                headers: dict[str, str] | None = None,
+            ) -> None:
+                try:
+                    self.send_response(status)
+                    for key, value in (headers or {}).items():
+                        self.send_header(key, str(value))
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Content-Length", str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass  # client gave up (timeout tests); server thread just exits
+
             def _handle(self) -> None:
                 length = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(length) if length else b""
+                try:
+                    parsed = json.loads(raw) if raw else None
+                except ValueError:
+                    # Malformed/non-JSON body: record the hit and answer 400
+                    # instead of letting the exception kill the handler thread
+                    # (which would leave the client with a connection reset).
+                    # Queued programs stay untouched for the next request.
+                    with outer._lock:
+                        outer.hits.append(
+                            {
+                                "method": self.command,
+                                "path": self.path,
+                                "headers": {
+                                    k.lower(): v for k, v in self.headers.items()
+                                },
+                                "body": raw.decode("utf-8", "replace") if raw else "",
+                                "json": None,
+                            }
+                        )
+                    self._respond(
+                        400,
+                        b"malformed request body: expected JSON",
+                        "text/plain",
+                    )
+                    return
                 with outer._lock:
                     program = outer._queue.popleft() if outer._queue else {}
                     outer.hits.append(
@@ -52,8 +98,8 @@ class StubTypeSafeServer:
                             "method": self.command,
                             "path": self.path,
                             "headers": {k.lower(): v for k, v in self.headers.items()},
-                            "body": raw.decode("utf-8") if raw else "",
-                            "json": json.loads(raw) if raw else None,
+                            "body": raw.decode("utf-8", "replace") if raw else "",
+                            "json": parsed,
                         }
                     )
                 delay = program.get("delay")
@@ -68,24 +114,15 @@ class StubTypeSafeServer:
                 else:
                     payload = json.dumps(program.get("body", {})).encode("utf-8")
                     content_type = "application/json"
-                try:
-                    self.send_response(status)
-                    for key, value in (program.get("headers") or {}).items():
-                        self.send_header(key, str(value))
-                    self.send_header("Content-Type", content_type)
-                    self.send_header("Content-Length", str(len(payload)))
-                    self.end_headers()
-                    self.wfile.write(payload)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass  # client gave up (timeout tests); server thread just exits
+                self._respond(status, payload, content_type, program.get("headers"))
 
-            def do_GET(self) -> None:  # noqa: N802 - http.server API
+            def do_GET(self) -> None:
                 self._handle()
 
-            def do_POST(self) -> None:  # noqa: N802 - http.server API
+            def do_POST(self) -> None:
                 self._handle()
 
-            def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+            def log_message(self, format: str, *args: Any) -> None:
                 pass  # keep pytest output clean
 
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

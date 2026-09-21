@@ -109,3 +109,124 @@ def test_check_detects_missing_page(tmp_path: Path) -> None:
 def test_check_matches_real_snapshot(tmp_path: Path) -> None:
     module = load_script()
     assert run_check(module, PROJECT_ROOT / "docs" / "reference" / "MANIFEST.json") == 0
+
+
+# ----------------------------------------------------------- full rescrape ----
+
+
+def test_full_rescrape_writes_snapshot_and_check_passes(
+    stub, tmp_path: Path, capsys
+) -> None:
+    """Real HTTP via the conftest stub: index + pages -> files + manifest."""
+    module = load_script()
+    index_text = (
+        "# TypeSafe docs\n"
+        "- [Intro](introduction.md)\n"
+        "- [System One](concepts/system-one.md)\n"
+    )
+    pages = {
+        "introduction.md": b"# Introduction\n\nhello\n",
+        "concepts/system-one.md": b"# System One\n\nbody text\n",
+    }
+    stub.enqueue(text=index_text)
+    for body in pages.values():
+        stub.enqueue(text=body.decode("utf-8"))
+
+    out_dir = tmp_path / "reference"
+    code = module.main(
+        [
+            "--index-url",
+            f"{stub.base_url}/llms.txt",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    assert code == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["page_count"] == 2
+
+    for rel, body in pages.items():
+        assert (out_dir / rel).read_bytes() == body
+
+    manifest = json.loads(
+        (out_dir / "MANIFEST.json").read_text(encoding="utf-8")
+    )
+    hashes: list[str] = []
+    for rel, body in pages.items():
+        entry = manifest["pages"][rel]
+        assert entry["sha256"] == hashlib.sha256(body).hexdigest()
+        assert entry["bytes"] == len(body)
+        hashes.append(entry["sha256"])
+    assert manifest["page_count"] == 2
+    assert manifest["snapshot_id"] == module.snapshot_id(hashes)
+    assert manifest["index_sha256"] == hashlib.sha256(
+        index_text.encode("utf-8")
+    ).hexdigest()
+
+    # The freshly written snapshot verifies offline with no network.
+    assert run_check(module, out_dir / "MANIFEST.json") == 0
+
+
+def test_hostile_index_url_never_writes_outside_out_dir(
+    stub, tmp_path: Path, capsys
+) -> None:
+    module = load_script()
+    stub.enqueue(text="- [Evil](..hidden/pwned.md)\n")
+    out_dir = tmp_path / "reference"
+    code = module.main(
+        [
+            "--index-url",
+            f"{stub.base_url}/llms.txt",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    assert code == 1
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "ValueError"
+    assert "unsafe relative path" in payload["message"]
+    # The rejection happened before any page fetch or write.
+    assert len(stub.hits) == 1  # only the index itself was fetched
+    assert not out_dir.exists()
+    assert not list(tmp_path.rglob("*pwned*"))
+
+    # Unit pin: the '..' rejection lives in rel_from_url itself.
+    with pytest.raises(ValueError, match="unsafe relative path"):
+        module.rel_from_url(f"{stub.base_url}/..hidden/pwned.md")
+
+
+def test_zero_timeout_is_a_usage_error(capsys) -> None:
+    module = load_script()
+    with pytest.raises(SystemExit) as excinfo:
+        module.main(["--timeout", "0"])
+    assert excinfo.value.code == 2
+    assert "must be > 0" in capsys.readouterr().err
+
+
+def test_unrecognized_index_line_warns_but_scrape_proceeds(
+    stub, tmp_path: Path, capsys
+) -> None:
+    module = load_script()
+    index_text = (
+        "Random prose the parser cannot parse.\n"
+        "- [Intro](introduction.md)\n"
+    )
+    body = "# Introduction\n\nhello\n"
+    stub.enqueue(text=index_text)
+    stub.enqueue(text=body)
+    out_dir = tmp_path / "reference"
+    code = module.main(
+        [
+            "--index-url",
+            f"{stub.base_url}/llms.txt",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    assert code == 0
+    assert "warning: skipping unrecognized" in capsys.readouterr().err
+    assert (out_dir / "introduction.md").read_text(encoding="utf-8") == body
+    manifest = json.loads(
+        (out_dir / "MANIFEST.json").read_text(encoding="utf-8")
+    )
+    assert manifest["page_count"] == 1

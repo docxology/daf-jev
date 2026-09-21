@@ -80,3 +80,37 @@ def test_error_from_status_unmapped_4xx_is_generic_api_status_error() -> None:
     assert err.status_code == 418
     assert err.body == {"teapot": True}
     assert err.request_id == "req-9"
+
+
+def test_error_from_status_non_integer_status_is_none() -> None:
+    # Only real ints map; a string status (or None) yields no error at all.
+    assert error_from_status("500", {"error": "boom"}, "req-1") is None
+    assert error_from_status(None) is None
+
+
+def test_error_from_status_5xx_boundaries() -> None:
+    assert isinstance(error_from_status(599), InternalServerError)
+    # 600 is outside the 5xx window: it falls back to the generic
+    # APIStatusError rather than InternalServerError.
+    err = error_from_status(600)
+    assert type(err) is APIStatusError
+    assert err.status_code == 600
+
+
+def test_api_timeout_error_message_variants() -> None:
+    from daf_jev._errors import APITimeoutError
+
+    known = APITimeoutError(timeout=0.05)
+    assert str(known) == "TypeSafe API request timed out after 0.05s"
+    assert known.timeout == 0.05
+
+    unknown = APITimeoutError()
+    assert str(unknown) == "TypeSafe API request timed out after unknown"
+    assert unknown.timeout is None
+
+    custom = APITimeoutError("custom timeout text")
+    assert str(custom) == "custom timeout text"
+
+    # The timeout surfaces as both a TimeoutError and a ConnectionError.
+    assert isinstance(known, TimeoutError)
+    assert isinstance(known, ConnectionError)

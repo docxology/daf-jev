@@ -53,3 +53,13 @@ def test_jitter_adds_bounded_noise() -> None:
     policy = RetryPolicy(jitter=0.5)
     for _ in range(50):
         assert 0.25 <= policy.next_delay(1, None) <= 0.75
+
+
+def test_retry_after_delay_wins_verbatim_beyond_backoff_max() -> None:
+    # The client passes an already-clamped Retry-After ([0, 300]s, see
+    # client._retry_after_of); next_delay honors it verbatim, even past
+    # backoff_max — capping a hostile header is the caller's job, not the
+    # policy's.
+    policy = RetryPolicy(jitter=0.0, backoff_max=8.0)
+    assert policy.next_delay(1, 300.0) == 300.0
+    assert policy.next_delay(1, 300.0) == policy.next_delay(50, 300.0)

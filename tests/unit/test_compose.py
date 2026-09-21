@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from daf_jev import ChoiceAnswer, NoulAnswer, ScoreAnswer, composite_score, confidence_gate
-from daf_jev import route
+from daf_jev import (
+    ChoiceAnswer,
+    NoulAnswer,
+    ScoreAnswer,
+    composite_score,
+    confidence_gate,
+    route,
+)
 from daf_jev.compose import pick, tiered_gate
 
 
@@ -105,6 +111,84 @@ def test_composite_score_requires_probabilities() -> None:
         composite_score(answer, weights=[1.0, 2.0, 3.0])
 
 
+def test_composite_score_rejects_non_finite_probability_on_both_paths() -> None:
+    # Distribution validation is shared by both weighting paths and names
+    # the offending key.
+    for weights in (None, [1.0, 1.0]):
+        answer = _score_answer({"0": 0.5, "1": float("nan")})
+        with pytest.raises(
+            ValueError,
+            match=r"probability '1' must be a finite non-negative number",
+        ):
+            composite_score(answer, weights=weights)
+
+
+def test_composite_score_rejects_negative_probability_on_both_paths() -> None:
+    for weights in (None, [2.0, 1.0]):
+        answer = _score_answer({"0": 0.5, "1": -0.1})
+        with pytest.raises(
+            ValueError,
+            match=r"probability '1' must be a finite non-negative number",
+        ):
+            composite_score(answer, weights=weights)
+
+
+def test_composite_score_rejects_non_integer_keys() -> None:
+    with pytest.raises(ValueError, match="integer level indices"):
+        composite_score(
+            ScoreAnswer(
+                score=1.0, legend={"0": "a"}, probabilities={"1.0": 1.0}, confidence=0.9
+            )
+        )
+    with pytest.raises(ValueError, match="integer level indices"):
+        composite_score(
+            ScoreAnswer(
+                score=1.0,
+                legend={"0": "a"},
+                probabilities={"level-1": 1.0},
+                confidence=0.9,
+            )
+        )
+
+
+def test_composite_score_canonicalizes_duplicate_level_spellings() -> None:
+    # '1' and '01' are the same integer level: their probabilities accumulate
+    # onto one level instead of counting twice.
+    answer = _score_answer({"1": 0.9, "01": 0.05})
+    assert composite_score(answer) == pytest.approx(0.95)
+    # One canonical level: a single weight is accepted; two distinct levels
+    # would fail the weights-length check. The reweighted path concentrates
+    # all mass on level 1, so the expected value is exactly 1.
+    assert composite_score(answer, weights=[1.0]) == pytest.approx(1.0)
+
+
+def test_composite_score_both_paths_pair_weights_with_sorted_indices() -> None:
+    # Insertion order is scrambled on purpose: both paths must iterate the
+    # canonical sorted level indices.
+    probs = {"2": 0.1, "0": 0.6, "1": 0.3}
+    answer = _score_answer(probs)
+    # Unweighted: sum(idx * p) over sorted indices == 0*0.6 + 1*0.3 + 2*0.1.
+    assert composite_score(answer) == pytest.approx(
+        sum(int(k) * p for k, p in sorted(probs.items()))
+    )
+    assert composite_score(answer) == pytest.approx(0.5)
+    # Weighted: positional weights pair with SORTED indices — masses
+    # [0.6*3, 0.3*1, 0.1*2]; insertion-order pairing would give 0.8 instead.
+    weights = [3.0, 1.0, 2.0]
+    expected = (0 * 0.6 * 3.0 + 1 * 0.3 * 1.0 + 2 * 0.1 * 2.0) / (
+        0.6 * 3.0 + 0.3 * 1.0 + 0.1 * 2.0
+    )
+    assert composite_score(answer, weights=weights) == pytest.approx(expected)
+
+
+def test_composite_score_negative_weights_void_the_range_guarantee() -> None:
+    # Documented scope: the [min index, max index] result range holds only
+    # for non-negative weights; negative weights reweight scale-invariantly
+    # and may land outside it (here below the 0 level).
+    answer = _score_answer({"0": 0.5, "1": 0.5})
+    assert composite_score(answer, weights=[3, -1]) == pytest.approx(-0.5)
+
+
 # ------------------------------------------------------- confidence_gate -----
 
 
@@ -166,6 +250,34 @@ def test_confidence_gate_score_below_threshold_returns_fallback() -> None:
     assert confidence_gate(answer, threshold=0.8) == "review"
 
 
+def test_confidence_gate_rejects_non_finite_score() -> None:
+    with pytest.raises(ValueError, match="not finite"):
+        confidence_gate(
+            ScoreAnswer(
+                score=float("inf"), legend={"0": "low"}, probabilities={"0": 1.0},
+                confidence=1.0,
+            ),
+            threshold=0.5,
+        )
+    with pytest.raises(ValueError, match="not finite"):
+        confidence_gate(
+            ScoreAnswer(
+                score=float("nan"), legend={}, probabilities={}, confidence=1.0
+            ),
+            threshold=0.5,
+        )
+
+
+def test_confidence_gate_score_half_scores_tie_to_even() -> None:
+    # Python round() semantics: 0.5 rounds to level 0, 1.5 rounds to level 2.
+    legend = {"0": "a", "1": "b", "2": "c"}
+    probs = {"0": 0.5, "1": 0.25, "2": 0.25}
+    answer = ScoreAnswer(score=0.5, legend=legend, probabilities=probs, confidence=1.0)
+    assert confidence_gate(answer, threshold=0.8) == "a"
+    answer = ScoreAnswer(score=1.5, legend=legend, probabilities=probs, confidence=1.0)
+    assert confidence_gate(answer, threshold=0.8) == "c"
+
+
 # ---------------------------------------------------------------- route -----
 
 
@@ -204,6 +316,19 @@ def test_route_fallback_on_missing_handler() -> None:
     answer = _choice_answer("sarcastic", 0.99)
     handlers = {"calm": lambda: "calm-path"}
     assert route(answer, handlers, fallback=lambda: "fallback-path") == "fallback-path"
+
+
+def test_route_nan_confidence_fails_closed() -> None:
+    # A NaN confidence counts as "not confident": it routes to the fallback,
+    # and without one it raises instead of dispatching a handler.
+    answer = _choice_answer("calm", float("nan"))
+    handlers = {"calm": lambda: "calm-path"}
+    assert (
+        route(answer, handlers, min_confidence=0.5, fallback=lambda: "fallback-path")
+        == "fallback-path"
+    )
+    with pytest.raises(ValueError):
+        route(answer, handlers, min_confidence=0.5)
 
 
 def test_pick_returns_dict_of_dispatched_results() -> None:
@@ -281,3 +406,16 @@ def test_tiered_gate_rejects_answers_without_confidence() -> None:
 def test_tiered_gate_accepts_score_answers() -> None:
     answer = _score_answer({"0": 0.5, "1": 0.5}, confidence=0.7)
     assert tiered_gate(answer) == "review"
+
+
+def test_tiered_gate_rejects_non_finite_thresholds() -> None:
+    answer = _choice_answer("calm", 0.7)
+    with pytest.raises(ValueError, match="must be finite"):
+        tiered_gate(answer, high=float("nan"))
+    with pytest.raises(ValueError, match="must be finite"):
+        tiered_gate(answer, low=float("nan"))
+
+
+def test_tiered_gate_nan_confidence_escalates() -> None:
+    # A NaN confidence fails both >= comparisons and escalates (fail closed).
+    assert tiered_gate(_choice_answer("calm", float("nan"))) == "escalate"

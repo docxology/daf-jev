@@ -190,6 +190,9 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
     assert variables["CONFIG_BATCHING_N5"] == "5"
     assert variables["CONFIG_BATCHING_N10"] == "10"
     assert variables["CONFIG_BATCHING_N20"] == "20"
+    assert variables["BATCHING_RUNS"] == "3"
+    assert variables["CALIBRATION_STATES"] == "6"
+    assert variables["CALIBRATION_REPEATS"] == "5"
 
     assert variables["PACKAGE_NAME"] == "daf-jev"
     assert variables["PACKAGE_VERSION"] == FAKE_VERSION
@@ -243,7 +246,7 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
 def test_generate_variables_token_count_stable(fake_project: Path) -> None:
     """The contracted variable set must not silently grow or shrink."""
     variables = generate_variables(fake_project)
-    assert len(variables) == 46
+    assert len(variables) == 49
 
 
 def test_generate_variables_timestamp_honors_source_date_epoch(
@@ -255,10 +258,22 @@ def test_generate_variables_timestamp_honors_source_date_epoch(
 
 
 def test_generate_variables_draft_mode_equals_strict_on_complete_project(fake_project: Path) -> None:
+    """Draft and strict modes agree on a complete project modulo the timestamp.
+
+    The three experiment knobs (BATCHING_RUNS/CALIBRATION_STATES/CALIBRATION_REPEATS)
+    diverge by design when the config omits them — config wins, strict falls back to
+    defaults, draft degrades to N/A (see
+    test_generate_variables_experiment_producers_config_defaults_and_draft) — so the
+    complete-project fixture supplies them and they are compared after popping.
+    """
+    knobs = ("BATCHING_RUNS", "CALIBRATION_STATES", "CALIBRATION_REPEATS")
     strict = generate_variables(fake_project, require_analysis_outputs=True)
     draft = generate_variables(fake_project, require_analysis_outputs=False)
-    strict.pop("GENERATION_TIMESTAMP")
-    draft.pop("GENERATION_TIMESTAMP")
+    for variables in (strict, draft):
+        variables.pop("GENERATION_TIMESTAMP")
+        for knob in knobs:
+            variables.pop(knob)
+    assert strict == draft
 
 
 def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path) -> None:
@@ -274,6 +289,9 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
         "CONFIG_BATCHING_N5",
         "CONFIG_BATCHING_N10",
         "CONFIG_BATCHING_N20",
+        "BATCHING_RUNS",
+        "CALIBRATION_STATES",
+        "CALIBRATION_REPEATS",
         "DOCS_SNAPSHOT_PAGES",
         "DOCS_SNAPSHOT_ID",
         "DOCS_SNAPSHOT_BYTES_HUMAN",
@@ -329,8 +347,64 @@ def test_generate_variables_strict_missing_analysis_output_raises(
 def test_generate_variables_missing_pyproject_raises_even_in_draft(tmp_path: Path) -> None:
     (tmp_path / "src" / "daf_jev").mkdir(parents=True)
 
-    with pytest.raises(FileNotFoundError, match="pyproject.toml"):
+    with pytest.raises(FileNotFoundError, match=re.escape("pyproject.toml")):
         generate_variables(tmp_path, require_analysis_outputs=False)
+
+
+def test_generate_variables_experiment_producers_config_defaults_and_draft(tmp_path: Path) -> None:
+    """BATCHING_RUNS/CALIBRATION_STATES/CALIBRATION_REPEATS: config wins, strict defaults, draft N/A."""
+    _write_minimal_skeleton(tmp_path)
+    _write_analysis_outputs(tmp_path)  # config.yaml lacks the experiment.* keys
+
+    strict_no_keys = generate_variables(tmp_path, require_analysis_outputs=True)
+    assert strict_no_keys["BATCHING_RUNS"] == "3"
+    assert strict_no_keys["CALIBRATION_STATES"] == "6"
+    assert strict_no_keys["CALIBRATION_REPEATS"] == "5"
+
+    draft_no_keys = generate_variables(tmp_path, require_analysis_outputs=False)
+    assert draft_no_keys["BATCHING_RUNS"] == "N/A"
+    assert draft_no_keys["CALIBRATION_STATES"] == "N/A"
+    assert draft_no_keys["CALIBRATION_REPEATS"] == "N/A"
+
+    config_path = tmp_path / "manuscript" / "config.yaml"
+    config_path.write_text(
+        _CONFIG_YAML + "  batching_runs: 4\n  calibration_states: 8\n  calibration_repeats: 7\n",
+        encoding="utf-8",
+    )
+    configured = generate_variables(tmp_path, require_analysis_outputs=True)
+    assert configured["BATCHING_RUNS"] == "4"
+    assert configured["CALIBRATION_STATES"] == "8"
+    assert configured["CALIBRATION_REPEATS"] == "7"
+
+
+def test_generate_variables_batching_n_tokens_derive_from_config(fake_project: Path) -> None:
+    """CONFIG_BATCHING_N* token names AND values follow experiment.batching_n_values."""
+    (fake_project / "manuscript" / "config.yaml").write_text(
+        _CONFIG_YAML.replace("  batching_n_values: [5, 10, 20]", "  batching_n_values: [4, 8]"),
+        encoding="utf-8",
+    )
+
+    variables = generate_variables(fake_project)
+
+    assert variables["CONFIG_BATCHING_N4"] == "4"
+    assert variables["CONFIG_BATCHING_N8"] == "8"
+    assert "CONFIG_BATCHING_N5" not in variables
+    assert "CONFIG_BATCHING_N10" not in variables
+    assert "CONFIG_BATCHING_N20" not in variables
+
+
+def test_generate_variables_unit_count_reflects_pytest_collection(fake_project: Path) -> None:
+    """TEST_UNIT_COUNT is the real pytest --collect-only tally for tests/unit."""
+    unit_dir = fake_project / "tests" / "unit"
+    unit_dir.mkdir(parents=True)
+    (unit_dir / "test_smoke.py").write_text(
+        "def test_smoke() -> None:\n    assert True\n", encoding="utf-8"
+    )
+
+    variables = generate_variables(fake_project)
+
+    assert variables["TEST_UNIT_COUNT"] == "1"
+    assert variables["TEST_LIVE_COUNT"] == "N/A"  # tests/live stays absent
 
 
 # ------------------------------------------------------------ save_variables ---

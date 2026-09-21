@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
 import pytest
+
 import daf_jev
 from daf_jev import AsyncJevClient, NoulQuestion, RetryPolicy
 from daf_jev._errors import (
-    APITimeoutError,
     APIConnectionError,
+    APITimeoutError,
     AuthenticationError,
     RateLimitError,
     TypeSafeError,
@@ -139,6 +141,31 @@ def test_exhausted_429s_raise_rate_limit_error(stub) -> None:
     assert sleeps == [0.5, 1.0]  # exponential backoff, jitter disabled
 
 
+def test_ask_529_retries_then_succeeds(stub) -> None:
+    # One 529 (retryable) followed by success: the retry path returns a
+    # parsed response instead of raising.
+    stub.enqueue(status=529, body={"error": {"message": "overloaded"}})
+    stub.enqueue(
+        body=_answers_body(), headers={"x-typesafe-request-id": "req-529-ok"}
+    )
+    sleeps: list[float] = []
+
+    async def recorder(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    async def main():
+        client = _make_client(stub, sleep=recorder)
+        try:
+            return await client.ask("state", _questions())
+        finally:
+            await client.close()
+
+    resp = asyncio.run(main())
+    assert len(stub.hits) == 2
+    assert sleeps == [0.5]  # exponential backoff, jitter disabled
+    assert resp.request_id == "req-529-ok"
+
+
 def test_ask_401_maps_to_authentication_error(stub) -> None:
     stub.enqueue(status=401, body={"error": {"message": "bad key"}})
 
@@ -218,6 +245,37 @@ def test_models_happy_path(stub) -> None:
     assert hit["path"] == "/v1/models"
     assert hit["headers"]["authorization"] == "Bearer test-key"
     assert [card.name for card in cards] == ["jev-latest", "jev-stable"]
+    assert all(card.description and card.release_date for card in cards)
+
+
+def test_models_rejects_payload_without_a_model_list(stub) -> None:
+    stub.enqueue(body={})  # no "models" key: nothing list-shaped to parse
+
+    async def main():
+        client = _make_client(stub)
+        try:
+            await client.models()
+        finally:
+            await client.close()
+
+    with pytest.raises(ValueError) as excinfo:
+        asyncio.run(main())
+    assert "must contain a list" in str(excinfo.value)
+
+
+def test_models_rejects_entry_missing_name(stub) -> None:
+    stub.enqueue(body={"models": [{"description": "no name here"}]})
+
+    async def main():
+        client = _make_client(stub)
+        try:
+            await client.models()
+        finally:
+            await client.close()
+
+    with pytest.raises(ValueError) as excinfo:
+        asyncio.run(main())
+    assert "invalid model entry" in str(excinfo.value)
 
 
 def test_async_context_manager_support(stub) -> None:
@@ -232,6 +290,20 @@ def test_async_context_manager_support(stub) -> None:
     assert resp.request_id == "req-ctx"
 
 
+def test_ask_empty_questions_raises_without_hitting_the_wire(stub) -> None:
+    async def main():
+        client = _make_client(stub)
+        try:
+            await client.ask("state", {})
+        finally:
+            await client.close()
+
+    with pytest.raises(TypeSafeError) as excinfo:
+        asyncio.run(main())
+    assert len(stub.hits) == 0  # rejected before any request is sent
+    assert "nonempty" in str(excinfo.value)
+
+
 def test_ask_after_close_raises(stub) -> None:
     stub.enqueue(body=_answers_body())
 
@@ -240,11 +312,13 @@ def test_ask_after_close_raises(stub) -> None:
         await client.ask("state", _questions())
         await client.close()
         await client.close()  # closing twice is a no-op
-        # The closed transport refuses further requests.
+        # The closed guard refuses further asks before any request is sent.
         await client.ask("state", _questions())
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeSafeError) as excinfo:
         asyncio.run(main())
+    assert "closed" in str(excinfo.value)  # the client-level guard, not raw httpx
+    assert len(stub.hits) == 1  # the guarded ask never reaches the wire
 
 
 def test_transport_protocol_satisfied_by_async_httpx_transport(stub) -> None:
@@ -264,6 +338,48 @@ def test_transport_protocol_satisfied_by_async_httpx_transport(stub) -> None:
     with pytest.raises(RuntimeError):
         asyncio.run(main())
     assert len(stub.hits) == 1
+
+
+def test_async_httpx_transport_get_json_via_context_manager(stub) -> None:
+    from daf_jev._http import AsyncHttpxTransport
+
+    stub.enqueue(
+        body={
+            "models": [
+                {
+                    "name": "jev-latest",
+                    "description": "current",
+                    "release_date": "2026-01-01",
+                }
+            ]
+        }
+    )
+
+    async def main():
+        async with AsyncHttpxTransport(
+            base_url=stub.base_url, timeout=5.0
+        ) as transport:
+            return await transport.get_json("/v1/models", {"Authorization": "B k"})
+
+    response = asyncio.run(main())
+    assert response.status_code == 200
+    assert [m["name"] for m in response.json()["models"]] == ["jev-latest"]
+    assert stub.hits[0]["method"] == "GET"
+    assert stub.hits[0]["headers"]["authorization"] == "B k"
+
+
+def test_async_httpx_transport_default_timeout_is_60_seconds(stub) -> None:
+    # httpx's own default is 5s; the transport must substitute the explicit
+    # 60s default instead of letting slow LLM calls be capped silently.
+    from daf_jev._http import DEFAULT_TIMEOUT_SECONDS, AsyncHttpxTransport
+
+    transport = AsyncHttpxTransport(base_url=stub.base_url)
+
+    async def main():
+        await transport.close()
+
+    asyncio.run(main())
+    assert transport._client.timeout == httpx.Timeout(DEFAULT_TIMEOUT_SECONDS)
 
 
 def test_missing_key_raises_with_empty_env_mapping(tmp_path, monkeypatch) -> None:

@@ -16,6 +16,7 @@ from daf_jev._types import (
     answer_from_wire,
     parse_response,
 )
+from daf_jev.primitives import choice, noul, score
 
 
 def _expect_value_error(make_question) -> None:
@@ -242,3 +243,95 @@ def test_parse_response_rejects_missing_model_key() -> None:
     del payload["model"]
     with pytest.raises(ValueError):
         parse_response(payload, None)
+
+
+
+def test_answer_from_wire_rejects_bool_and_numeric_string_numbers() -> None:
+    # Strict wire contract: bools and numeric strings are not numbers.
+    with pytest.raises(ValueError, match="noul"):
+        answer_from_wire({"type": "noul", "noul": True})
+    with pytest.raises(ValueError, match="confidence"):
+        answer_from_wire(
+            {
+                "type": "choice",
+                "choice": "a",
+                "probabilities": {"a": 1.0},
+                "confidence": "0.5",
+            }
+        )
+    with pytest.raises(ValueError, match="probabilities"):
+        answer_from_wire(
+            {
+                "type": "choice",
+                "choice": "a",
+                "probabilities": {"a": "0.5"},
+                "confidence": 0.5,
+            }
+        )
+
+
+def test_answer_from_wire_rejects_non_string_choice() -> None:
+    # No str() coercion: a numeric choice id is a malformed answer.
+    with pytest.raises(ValueError, match="choice"):
+        answer_from_wire(
+            {
+                "type": "choice",
+                "choice": 3,
+                "probabilities": {"a": 1.0},
+                "confidence": 0.5,
+            }
+        )
+
+
+def test_answer_from_wire_rejects_non_dict_probabilities() -> None:
+    with pytest.raises(ValueError, match="probabilities must be a dict"):
+        answer_from_wire(
+            {
+                "type": "choice",
+                "choice": "a",
+                "probabilities": [0.5],
+                "confidence": 0.5,
+            }
+        )
+
+
+def test_score_answer_rejects_none_legend() -> None:
+    with pytest.raises(ValueError, match="legend must be a dict"):
+        answer_from_wire(
+            {
+                "type": "score",
+                "score": 0.4,
+                "legend": None,
+                "probabilities": {"0": 1.0},
+                "confidence": 0.5,
+            }
+        )
+
+
+def test_parse_response_rejects_non_string_model() -> None:
+    payload = _answers_payload()
+    payload["model"] = 7
+    with pytest.raises(ValueError, match="model must be a string"):
+        parse_response(payload, None)
+
+
+def test_parse_response_rejects_none_usage_token_counts() -> None:
+    payload = _answers_payload()
+    payload["usage"] = {"input_tokens": None, "output_tokens": 5}
+    with pytest.raises(ValueError, match="input_tokens must be an integer"):
+        parse_response(payload, None)
+
+
+def test_choice_to_wire_rejects_non_string_descriptions() -> None:
+    _expect_value_error(lambda: ChoiceQuestion(instructions="pick", criteria={"a": 1}))
+
+
+def test_builders_reject_non_json_instructions() -> None:
+    # Builder instructions must be JSON content (str, list, or dict): an int
+    # fails at construction time, never at request time.
+    with pytest.raises(ValueError, match="instructions"):
+        noul(7)
+    with pytest.raises(ValueError, match="instructions"):
+        choice(7, {"a": None})
+    with pytest.raises(ValueError, match="instructions"):
+        score(7, ["low", "high"])

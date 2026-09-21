@@ -13,14 +13,17 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("matplotlib")
+
 from daf_jev.figures import (
+    FIGURE_FILENAMES,
     FIGURE_REGISTRY_FILENAME,
     generate_all,
-    generate_graphical_abstract,
     generate_architecture,
     generate_batching,
     generate_calibration,
     generate_confidence,
+    generate_graphical_abstract,
     generate_latency,
     generate_one,
     generate_primitives,
@@ -179,6 +182,7 @@ def test_generate_all_writes_all_seven_pngs(fake_project: Path, tmp_path: Path) 
 
 
 def test_generate_all_regenerates_byte_deterministically(fake_project: Path, tmp_path: Path) -> None:
+    # Byte-stable only within a pinned matplotlib version (uv.lock); a renderer upgrade may shift PNG bytes.
     first = tmp_path / "first"
     second = tmp_path / "second"
 
@@ -346,6 +350,16 @@ def test_generate_all_writes_figure_registry(generated_project: Path) -> None:
 
     registry = json.loads(path.read_text(encoding="utf-8"))
     assert set(registry) == EXPECTED_REGISTRY_KEYS
+
+
+def test_figure_filenames_and_registry_meta_cover_the_same_seven_figures(
+    generated_project: Path,
+) -> None:
+    """The --only name surface, PNG outputs, and registry metadata stay in lockstep."""
+    registry = json.loads((generated_project / FIGURE_REGISTRY_FILENAME).read_text(encoding="utf-8"))
+    assert FIGURE_FILENAMES == EXPECTED_PNGS
+    assert {"calibration", "graphical_abstract"} <= set(FIGURE_FILENAMES)
+    assert {entry["filename"] for entry in registry.values()} == set(FIGURE_FILENAMES.values())
 
 
 def test_write_figure_registry_standalone(tmp_path: Path) -> None:

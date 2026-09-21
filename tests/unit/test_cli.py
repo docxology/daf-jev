@@ -241,16 +241,17 @@ def test_parse_question_spec_escapes_commas_backslashes_and_colons() -> None:
 # ------------------------------------------------------------- ask failures ---
 
 
-def test_cli_ask_malformed_question_entry_exits_one_with_error_json(
+def test_cli_ask_malformed_question_entry_exits_two_with_usage_json(
     stub, monkeypatch, capsys
 ) -> None:
     monkeypatch.setenv("JEV_API_KEY", "cli-key")
     code = run_cli(
         ["ask", "--state", "x", "--question", "not-a-spec", "--base-url", stub.base_url]
     )
-    assert code == 1
+    assert code == 2
     payload = json.loads(capsys.readouterr().err)
-    assert payload["error"] == "ValueError"
+    assert payload["error"] == "UsageError"
+    assert "not-a-spec" in payload["message"]
     assert stub.hits == []
 
 
@@ -270,10 +271,12 @@ def test_cli_models_connection_error_exits_one_with_error_json(
 def test_cli_docs_verify_missing_manifest_exits_one_with_error_json(
     tmp_path, capsys
 ) -> None:
+    # verify_manifest wraps OSError so every CLI consumer sees one error type.
     code = run_cli(["docs-verify", "--manifest", str(tmp_path / "absent.json")])
     assert code == 1
     payload = json.loads(capsys.readouterr().err)
-    assert payload["error"] == "FileNotFoundError"
+    assert payload["error"] == "ValueError"
+    assert "cannot read manifest" in payload["message"]
 
 
 def test_cli_docs_verify_url_rel_mismatch_is_drift(tmp_path, capsys) -> None:
@@ -573,3 +576,328 @@ def test_cli_models_contains_and_pick(stub, monkeypatch, capsys) -> None:
     out = json.loads(capsys.readouterr().out)
     assert "jev-mini" in json.dumps(out)
     assert "jev-classic" not in json.dumps(out)
+
+
+
+def _minimal_ask_body() -> dict:
+    return {
+        "model": "jev-latest",
+        "usage": {"input_tokens": 3, "output_tokens": 2},
+        "answers": {"billing": {"type": "noul", "noul": 0.5}},
+    }
+
+
+def _ask_argv(stub, *extra: str) -> list[str]:
+    return [
+        "ask",
+        "--question",
+        "billing=noul:Is this about billing?",
+        "--base-url",
+        stub.base_url,
+        "--json",
+        *extra,
+    ]
+
+
+# ------------------------------------------------------- evaluate usage errors
+
+
+@pytest.mark.parametrize("value", ["0", "abc"])
+def test_cli_evaluate_rejects_invalid_concurrency(
+    stub, monkeypatch, capsys, tmp_path, value
+) -> None:
+    questions_file = _write_spec_questions_file(tmp_path)
+    states_file = tmp_path / "states.txt"
+    states_file.write_text("alpha\n", encoding="utf-8")
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        [
+            "evaluate",
+            "--questions-file",
+            str(questions_file),
+            "--states-file",
+            str(states_file),
+            "--concurrency",
+            value,
+            "--base-url",
+            stub.base_url,
+        ]
+    )
+    assert code == 2
+    assert "--concurrency" in capsys.readouterr().err
+    assert stub.hits == []
+
+
+@pytest.mark.parametrize(
+    ("label", "content", "fragment"),
+    [
+        ("invalid-yaml", "[", "invalid YAML in"),
+        ("root-not-mapping", "- a\n", "must be a non-empty YAML mapping"),
+        ("missing-type", "q:\n  instructions: hi\n", "requires 'type'"),
+        ("missing-instructions", "q:\n  type: noul\n", "requires 'instructions'"),
+        (
+            "noul-criteria-non-dict",
+            "q:\n  type: noul\n  instructions: hi\n  criteria: [a]\n",
+            "noul criteria must be a mapping",
+        ),
+        (
+            "choice-criteria-empty",
+            "tone:\n  type: choice\n  instructions: t\n  criteria: {}\n",
+            "choice criteria must be a non-empty mapping",
+        ),
+        (
+            "score-criteria-single-level",
+            "sev:\n  type: score\n  instructions: r\n  criteria: [only]\n",
+            "score criteria must be a list of >= 2",
+        ),
+        ("spec-neither-string-nor-mapping", "42: 42\n", "got int"),
+    ],
+)
+def test_cli_evaluate_questions_file_validation_matrix(
+    stub, monkeypatch, capsys, tmp_path, label, content, fragment
+) -> None:
+    questions_file = tmp_path / f"questions-{label}.yaml"
+    questions_file.write_text(content, encoding="utf-8")
+    states_file = tmp_path / "states.txt"
+    states_file.write_text("alpha\n", encoding="utf-8")
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        [
+            "evaluate",
+            "--questions-file",
+            str(questions_file),
+            "--states-file",
+            str(states_file),
+            "--base-url",
+            stub.base_url,
+        ]
+    )
+    assert code == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "UsageError"
+    assert fragment in payload["message"]
+    assert stub.hits == []  # usage errors never reach the API
+
+
+def test_cli_evaluate_json_states_file_rejects_non_string_items(
+    stub, monkeypatch, capsys, tmp_path
+) -> None:
+    questions_file = _write_spec_questions_file(tmp_path)
+    states_file = tmp_path / "states.json"
+    states_file.write_text('["a", 5]', encoding="utf-8")
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        [
+            "evaluate",
+            "--questions-file",
+            str(questions_file),
+            "--states-file",
+            str(states_file),
+            "--base-url",
+            stub.base_url,
+        ]
+    )
+    assert code == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "UsageError"
+    assert "item 1 is int" in payload["message"]
+    assert stub.hits == []
+
+
+def test_cli_evaluate_missing_required_files_exits_two(
+    monkeypatch, tmp_path
+) -> None:
+    questions_file = _write_spec_questions_file(tmp_path)
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    assert run_cli(["evaluate", "--questions-file", str(questions_file)]) == 2
+    states_file = tmp_path / "states.txt"
+    states_file.write_text("alpha\n", encoding="utf-8")
+    assert run_cli(["evaluate", "--states-file", str(states_file)]) == 2
+
+
+def test_cli_evaluate_without_api_key_exits_one_before_network(
+    stub, monkeypatch, capsys, tmp_path
+) -> None:
+    questions_file = _write_spec_questions_file(tmp_path)
+    states_file = tmp_path / "states.txt"
+    states_file.write_text("alpha\n", encoding="utf-8")
+    monkeypatch.delenv("JEV_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)  # keep the repo `.env` out of resolution
+    code = run_cli(
+        [
+            "evaluate",
+            "--questions-file",
+            str(questions_file),
+            "--states-file",
+            str(states_file),
+            "--base-url",
+            stub.base_url,
+        ]
+    )
+    assert code == 1
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "TypeSafeError"
+    assert "No API key found" in payload["message"]
+    assert stub.hits == []  # the client is never constructed
+
+
+def test_cli_models_contains_no_match_exits_one(
+    stub, monkeypatch, capsys
+) -> None:
+    stub.enqueue(body=_models_body())
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        ["models", "--base-url", stub.base_url, "--contains", "nomatch"]
+    )
+    assert code == 1
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "ValueError"
+    assert "nomatch" in payload["message"]
+
+
+# ------------------------------------------------------------- state handling
+
+
+def test_cli_ask_state_file_object_and_text(
+    stub, monkeypatch, capsys, tmp_path
+) -> None:
+    stub.enqueue(body=_minimal_ask_body())
+    stub.enqueue(body=_minimal_ask_body())
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+
+    object_file = tmp_path / "state.json"
+    object_file.write_text('{"text": "hello"}', encoding="utf-8")
+    assert run_cli(_ask_argv(stub, "--state-file", str(object_file))) == 0
+    assert stub.hits[0]["json"]["state"] == {"text": "hello"}
+
+    text_file = tmp_path / "state.txt"
+    text_file.write_text("plain words", encoding="utf-8")
+    assert run_cli(_ask_argv(stub, "--state-file", str(text_file))) == 0
+    assert stub.hits[1]["json"]["state"] == "plain words"
+
+
+@pytest.mark.parametrize("raw", ["123", "true", "null"])
+def test_cli_ask_scalar_json_state_stays_raw_text(
+    stub, monkeypatch, capsys, raw
+) -> None:
+    stub.enqueue(body=_minimal_ask_body())
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    assert run_cli(_ask_argv(stub, "--state", raw)) == 0
+    # Scalar JSON is never parsed: the wire state is the literal string.
+    assert stub.hits[0]["json"]["state"] == raw
+
+
+def test_cli_ask_json_object_state_is_parsed(stub, monkeypatch, capsys) -> None:
+    stub.enqueue(body=_minimal_ask_body())
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    assert run_cli(_ask_argv(stub, "--state", '{"a":1}')) == 0
+    assert stub.hits[0]["json"]["state"] == {"a": 1}
+
+
+def test_cli_ask_duplicate_question_id_exits_two(
+    stub, monkeypatch, capsys
+) -> None:
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        [
+            "ask",
+            "--state",
+            "x",
+            "--question",
+            "tone=noul:first?",
+            "--question",
+            "tone=choice:second?:a,b",
+            "--base-url",
+            stub.base_url,
+        ]
+    )
+    assert code == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "UsageError"
+    assert "duplicate question id 'tone'" in payload["message"]
+    assert stub.hits == []
+
+
+def test_cli_ask_zero_questions_exits_two(stub, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(["ask", "--state", "x", "--base-url", stub.base_url])
+    assert code == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["error"] == "UsageError"
+    assert "at least one --question" in payload["message"]
+    assert stub.hits == []
+
+
+def test_cli_ask_escaped_colon_in_option_description(
+    stub, monkeypatch, capsys
+) -> None:
+    stub.enqueue(body=_minimal_ask_body())
+    monkeypatch.setenv("JEV_API_KEY", "cli-key")
+    code = run_cli(
+        [
+            "ask",
+            "--state",
+            "x",
+            # \\: escapes a literal colon inside the option description...
+            "--question",
+            "tone=choice:Pick:k1=https\\://a",
+            # ...while plain colons still split instructions from criteria.
+            "--question",
+            "severity=score:Rate: it:low,high",
+            "--base-url",
+            stub.base_url,
+            "--json",
+        ]
+    )
+    assert code == 0
+    questions = stub.hits[0]["json"]["questions"]
+    assert questions["tone"] == {
+        "type": "choice",
+        "instructions": "Pick",
+        "criteria": {"k1": "https://a"},
+    }
+    assert questions["severity"] == {
+        "type": "score",
+        "instructions": "Rate: it",
+        "criteria": ["low", "high"],
+    }
+
+
+def test_cli_json_and_pretty_are_mutually_exclusive() -> None:
+    code = run_cli(
+        [
+            "ask",
+            "--state",
+            "x",
+            "--question",
+            "q=noul:Is it fine?",
+            "--json",
+            "--pretty",
+        ]
+    )
+    assert code == 2
+
+
+# ------------------------------------------------------------ docs-verify extra
+
+
+def test_cli_docs_verify_reports_added_files(tmp_path, capsys) -> None:
+    manifest = build_docs_fixture(tmp_path)
+    (tmp_path / "extra.md").write_text("# Extra\n", encoding="utf-8")
+    assert run_cli(["docs-verify", "--manifest", str(manifest), "--json"]) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["added"] == ["extra.md"]
+    assert payload["missing"] == []
+    assert payload["drifted"] == []
+    assert payload["ok"] is False
+
+
+# --------------------------------------------------------------------- serve --
+
+
+def test_cli_serve_help_parses_without_mcp(capsys) -> None:
+    # Structural: argparse help must work without importing the optional
+    # 'mcp' dependency (the server module is only imported by _cmd_serve).
+    assert run_cli(["serve", "--help"]) == 0
+    assert "--transport" in capsys.readouterr().out

@@ -24,8 +24,8 @@ from daf_jev import (
     RetryPolicy,
     ScoreQuestion,
 )
-from daf_jev.evaluate import EvaluationRecord, Evaluator
-
+from daf_jev._errors import TypeSafeError
+from daf_jev.evaluate import Evaluator
 
 # ------------------------------------------------------------- primitives ----
 
@@ -94,21 +94,25 @@ def _async_client(stub, **overrides):
     return AsyncJevClient(**kwargs)
 
 
+# ---------------------------------------------------- construction/validation
 
 
-def test_evaluation_record_dataclass_shape() -> None:
-    record = EvaluationRecord(
-        state_id="state_0000",
-        state={"a": 1},
-        response=None,
-        error=None,
-        latency_s=0.01,
-    )
-    assert record.state_id == "state_0000"
-    assert record.state == {"a": 1}
-    assert record.response is None
-    assert record.error is None
-    assert record.latency_s == pytest.approx(0.01)
+def test_evaluator_rejects_nonpositive_concurrency() -> None:
+    with pytest.raises(ValueError, match=r"concurrency must be >= 1, got 0"):
+        Evaluator(object(), _questions(), concurrency=0)
+
+
+def test_evaluate_rejects_malformed_state_input() -> None:
+    # A bare non-str, non-tuple item fails fast, naming its input index.
+    evaluator = Evaluator(object(), _questions())
+    with pytest.raises(TypeError, match=r"at index 0, got int"):
+        evaluator.evaluate([42])
+
+
+def test_evaluate_rejects_foreign_client() -> None:
+    evaluator = Evaluator(object(), _questions())
+    with pytest.raises(TypeError, match="client must be"):
+        evaluator.evaluate(["s0"])
 
 
 # ------------------------------------------------------------ sync happy path
@@ -218,6 +222,57 @@ def test_async_evaluate_path(stub) -> None:
     assert summary["total_input_tokens"] == 5 + 10 + 15
 
 
+def test_evaluate_works_inside_running_event_loop(stub) -> None:
+    # The async path runs on a private event loop, so a synchronous
+    # evaluate() call made from inside a running loop still works.
+    stub.enqueue(body=_body())
+    client = _async_client(stub)
+    evaluator = Evaluator(client, _questions(), concurrency=1)
+
+    async def scenario():
+        return evaluator.evaluate(["inside-loop"])
+
+    records = asyncio.run(scenario())
+    assert [r.state_id for r in records] == ["state_0000"]
+    assert records[0].error is None
+    # The single-use async session was closed when the batch ended.
+    with pytest.raises(TypeSafeError, match="client is closed"):
+        asyncio.run(client.ask("inside-loop", _questions()))
+
+
+def test_async_session_closed_after_batch(stub) -> None:
+    # The async client is single-use through evaluate(): the Evaluator closes
+    # the session when the batch completes.
+    stub.enqueue(body=_body())
+    client = _async_client(stub)
+    assert client._closed is False
+    evaluator = Evaluator(client, _questions(), concurrency=1)
+    evaluator.evaluate(["s0"])
+    assert client._closed is True
+
+
+def test_async_session_closed_even_when_gather_is_cancelled(stub) -> None:
+    # Pins the documented finally contract: the session also closes when the
+    # gather is cancelled (or a task fails) mid-batch.
+    stub.enqueue(body=_body(), delay=0.5)
+    stub.enqueue(body=_body(), delay=0.5)
+
+    async def scenario():
+        client = _async_client(stub)
+        evaluator = Evaluator(client, _questions(), concurrency=1)
+        batch = asyncio.ensure_future(
+            evaluator._evaluate_async([("s0", "a"), ("s1", "b")], client)
+        )
+        await asyncio.sleep(0.1)  # first ask is in flight against the slow stub
+        batch.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await batch
+        return client
+
+    client = asyncio.run(scenario())
+    assert client._closed is True
+
+
 # ------------------------------------------------------------ error handling --
 
 
@@ -239,6 +294,35 @@ def test_per_state_error_keeps_batch_alive(stub) -> None:
     assert records[1].response is None
     assert records[1].error  # non-empty error description
     assert all(r.latency_s >= 0 for r in records)
+
+    summary = evaluator.summary(records)
+    assert summary["n_states"] == 3
+    assert summary["n_errors"] == 1
+    # aggregates exclude the errored record
+    assert summary["questions"]["billing"]["mean"] == pytest.approx(0.2)
+    assert summary["total_input_tokens"] == 20
+
+
+def test_async_per_state_error_keeps_batch_alive(stub) -> None:
+    # The async path captures per-state failures the same way the sync
+    # thread pool does: a 401 among 200s becomes one error record and the
+    # batch stays alive.
+    stub.enqueue(body=_body(noul=0.1))
+    stub.enqueue(status=401, body={"error": {"message": "bad key"}})
+    stub.enqueue(body=_body(noul=0.3))
+    client = _async_client(stub)
+    evaluator = Evaluator(client, _questions(), concurrency=1)
+    records = evaluator.evaluate(["s0", "s1", "s2"])
+
+    assert [r.state_id for r in records] == [
+        "state_0000",
+        "state_0001",
+        "state_0002",
+    ]
+    assert records[0].error is None
+    assert records[2].error is None
+    assert records[1].response is None
+    assert records[1].error  # non-empty error description
 
     summary = evaluator.summary(records)
     assert summary["n_states"] == 3
@@ -308,6 +392,46 @@ def test_summary_defaults_to_last_evaluate_result(stub) -> None:
         evaluator = Evaluator(client, _questions(), concurrency=1)
         records = evaluator.evaluate(["a", "b"])
         assert evaluator.summary() == evaluator.summary(records)
+
+
+def test_summary_before_evaluate_raises() -> None:
+    evaluator = Evaluator(object(), _questions())
+    with pytest.raises(ValueError, match="no evaluation records: call evaluate"):
+        evaluator.summary()
+
+
+def test_raw_dict_question_passes_through_but_is_skipped_from_aggregates(stub) -> None:
+    # Raw dicts are accepted alongside Question dataclasses on the wire, and
+    # a question with no recognized declared type is skipped in aggregation.
+    questions = _questions()
+    questions["extra_raw"] = {"type": "mystery", "instructions": "raw passthrough"}
+    stub.enqueue(body=_body())
+    with _sync_client(stub) as client:
+        evaluator = Evaluator(client, questions, concurrency=1)
+        records = evaluator.evaluate(["s0"])
+    assert records[0].error is None
+    assert stub.hits[0]["json"]["questions"]["extra_raw"]["type"] == "mystery"
+    summary = evaluator.summary(records)
+    assert set(summary["questions"]) == {"billing", "tone", "severity"}
+
+
+def test_summary_latency_spans_failed_records(stub) -> None:
+    # Latency aggregates deliberately include failed records: a failed
+    # attempt still cost wall time, and that is the ops signal.
+    stub.enqueue(body=_body(inp=10))
+    stub.enqueue(status=401, body={"error": {"message": "bad key"}}, delay=0.4)
+    stub.enqueue(body=_body(inp=10))
+    with _sync_client(stub) as client:
+        evaluator = Evaluator(client, _questions(), concurrency=1)
+        records = evaluator.evaluate(["fast", "slow-fail", "fast"])
+
+    assert records[1].error
+    assert records[1].latency_s >= 0.4
+    summary = evaluator.summary(records)
+    assert summary["n_errors"] == 1
+    # p95 over 3 records is the maximum, i.e. the failed record's latency.
+    assert summary["p95_latency_s"] >= 0.4
+    assert summary["mean_latency_s"] >= 0.4 / 3
 
 
 # ------------------------------------------------------------------ to_json ---

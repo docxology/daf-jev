@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from daf_jev import ChoiceQuestion, NoulQuestion, QuestionSet, ScoreQuestion
-from daf_jev import choice, noul, score
-
+from daf_jev import (
+    ChoiceQuestion,
+    NoulQuestion,
+    QuestionSet,
+    ScoreQuestion,
+    choice,
+    noul,
+    score,
+)
 
 # ------------------------------------------------------------- builders -----
 
