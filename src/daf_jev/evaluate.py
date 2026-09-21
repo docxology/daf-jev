@@ -69,11 +69,13 @@ class Evaluator:
     question id to a ``daf_jev`` question object (a ``QuestionSet``
     included).
 
-    The async path runs on a private event loop so ``evaluate()`` stays
-    synchronous; because the pooled keep-alive connections of an async
-    client are bound to that loop, the Evaluator closes the async
-    session when its batch completes — an ``AsyncJevClient`` is single
-    use through ``evaluate()``.
+    ``evaluate_async()`` is the public async entry point: it runs the
+    semaphore path on the CALLER's event loop, while ``evaluate()`` drives
+    that same path on a private event loop so it stays synchronous.
+    Because the pooled keep-alive connections of an async client are
+    bound to the loop that runs the batch, the Evaluator closes the
+    async session when the batch completes — an ``AsyncJevClient`` is
+    single-use through one evaluation.
     """
 
     def __init__(
@@ -100,8 +102,10 @@ class Evaluator:
         Bare ``str`` states are assigned ids ``state_0000``-style from
         their input index; tuples carry an explicit id. Per-state errors
         are captured into :attr:`EvaluationRecord.error` (response
-        ``None``) — the batch is never aborted. Results are stored and
-        become the default for :meth:`summary` / :meth:`to_json`.
+        ``None``) — the batch is never aborted. With an async client the
+        batch is driven through :meth:`evaluate_async` on a private
+        event loop. Results are stored and become the default for
+        :meth:`summary` / :meth:`to_json`.
         """
         items: list[tuple[str, JSONContent]] = []
         for index, item in enumerate(states):
@@ -116,7 +120,7 @@ class Evaluator:
                 )
 
         if isinstance(self._client, AsyncJevClient):
-            records = self._run_async(self._evaluate_async(items, self._client))
+            records = self._run_async(self.evaluate_async(items))
         elif isinstance(self._client, JevClient):
             records = self._evaluate_sync(items, self._client)
         else:
@@ -154,11 +158,26 @@ class Evaluator:
             state_id, state, response, None, time.perf_counter() - start
         )
 
-    async def _evaluate_async(
-        self,
-        items: Sequence[tuple[str, JSONContent]],
-        client: AsyncJevClient,
+    async def evaluate_async(
+        self, items: Sequence[tuple[str, JSONContent]]
     ) -> list[EvaluationRecord]:
+        """Public async entry point: run the batch on the caller's loop.
+
+        ``items`` are normalized ``(state_id, state)`` pairs as produced
+        by :meth:`evaluate`. Requires an
+        :class:`~daf_jev.client.AsyncJevClient` (``TypeError`` otherwise —
+        there is no async path for a sync client). Records are stored, so
+        :meth:`summary` / :meth:`to_json` work exactly like after
+        :meth:`evaluate`; the async session is closed when the batch
+        completes (an ``AsyncJevClient`` is single-use through one
+        evaluation).
+        """
+        if not isinstance(self._client, AsyncJevClient):
+            raise TypeError(
+                "client must be an AsyncJevClient for evaluate_async(), got "
+                f"{type(self._client).__name__}"
+            )
+        client = self._client
         semaphore = asyncio.Semaphore(self._concurrency)
 
         async def run(state_id: str, state: JSONContent) -> EvaluationRecord:
@@ -181,19 +200,21 @@ class Evaluator:
                 )
 
         try:
-            return list(
+            records = list(
                 await asyncio.gather(
                     *(run(state_id, state) for state_id, state in items)
                 )
             )
         finally:
-            # evaluate() drives the async client on a private event loop, so
-            # its pooled keep-alive connections are bound to a loop that dies
-            # with this batch; close the async session cleanly here rather
-            # than leaving the caller with a poisoned client. Running in a
-            # finally also closes the session when the gather is cancelled
-            # or a task fails mid-batch.
+            # The async client's pooled keep-alive connections are bound to
+            # the loop that runs this batch (the caller's loop directly, or
+            # the private loop evaluate() drives); close the async session
+            # cleanly here rather than leaving the caller with a poisoned
+            # client. Running in a finally also closes the session when the
+            # gather is cancelled or a task fails mid-batch.
             await client.close()
+        self._records = records
+        return records
 
     def _evaluate_sync(
         self,

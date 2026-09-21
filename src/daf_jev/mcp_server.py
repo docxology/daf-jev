@@ -167,9 +167,9 @@ async def jev_evaluate(
             )
         items.append((f"state_{index:04d}", state))
 
-    # Drive the Evaluator's async path (asyncio.Semaphore over
-    # AsyncJevClient) directly on the serving loop, like jev_ask, so a
-    # long batch never blocks the other tools. _evaluate_async closes the
+    # Drive the Evaluator's public async entry point (asyncio.Semaphore
+    # over AsyncJevClient) directly on the serving loop, like jev_ask, so a
+    # long batch never blocks the other tools. evaluate_async() closes the
     # client session when the batch completes; the async-with below only
     # covers error paths.
     async with AsyncJevClient(
@@ -184,7 +184,7 @@ async def jev_evaluate(
             concurrency=concurrency,
             model=model,
         )
-        records = await evaluator._evaluate_async(items, client)
+        records = await evaluator.evaluate_async(items)
         return evaluator.summary(records)
 
 

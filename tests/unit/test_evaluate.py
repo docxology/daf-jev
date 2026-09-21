@@ -261,7 +261,7 @@ def test_async_session_closed_even_when_gather_is_cancelled(stub) -> None:
         client = _async_client(stub)
         evaluator = Evaluator(client, _questions(), concurrency=1)
         batch = asyncio.ensure_future(
-            evaluator._evaluate_async([("s0", "a"), ("s1", "b")], client)
+            evaluator.evaluate_async([("s0", "a"), ("s1", "b")])
         )
         await asyncio.sleep(0.1)  # first ask is in flight against the slow stub
         batch.cancel()
@@ -270,6 +270,51 @@ def test_async_session_closed_even_when_gather_is_cancelled(stub) -> None:
         return client
 
     client = asyncio.run(scenario())
+    assert client._closed is True
+
+
+def test_evaluate_async_public_happy_path(stub) -> None:
+    # The public async entry point runs on the caller's loop and stores
+    # records exactly like evaluate() does.
+    for i in range(2):
+        stub.enqueue(body=_body(inp=7 * (i + 1)))
+    client = _async_client(stub)
+    evaluator = Evaluator(client, _questions(), concurrency=2)
+
+    async def scenario():
+        return await evaluator.evaluate_async([("s0", "a"), ("s1", "b")])
+
+    records = asyncio.run(scenario())
+    assert [r.state_id for r in records] == ["s0", "s1"]
+    assert all(r.error is None for r in records)
+    assert evaluator.summary()["total_input_tokens"] == 7 + 14
+    # summary() with no argument reads the stored records too.
+    assert evaluator.summary() == evaluator.summary(records)
+    assert json.loads(json.dumps(evaluator.to_json()))[0]["state_id"] == "s0"
+
+
+def test_evaluate_async_rejects_sync_client() -> None:
+    evaluator = Evaluator(object(), _questions())
+    with pytest.raises(TypeError, match="client must be an AsyncJevClient"):
+        asyncio.run(evaluator.evaluate_async([("s0", "a")]))
+
+
+def test_evaluate_async_rejects_sync_jev_client(stub) -> None:
+    # A real sync JevClient has no async path: evaluate_async() must say so
+    # instead of silently driving it wrong.
+    client = _sync_client(stub)
+    evaluator = Evaluator(client, _questions())
+    with pytest.raises(TypeError, match="got JevClient"):
+        asyncio.run(evaluator.evaluate_async([("s0", "a")]))
+    assert stub.hits == []
+
+
+def test_evaluate_async_closes_session_after_batch(stub) -> None:
+    # Single-use semantics match evaluate(): the session closes at batch end.
+    stub.enqueue(body=_body())
+    client = _async_client(stub)
+    evaluator = Evaluator(client, _questions(), concurrency=1)
+    asyncio.run(evaluator.evaluate_async([("s0", "a")]))
     assert client._closed is True
 
 

@@ -319,6 +319,66 @@ def test_models_rejects_entry_missing_name(stub) -> None:
     assert "invalid model entry" in str(excinfo.value)
 
 
+def test_models_per_call_timeout_tightens_default(stub) -> None:
+    # Constructor timeout (5.0s) is generous relative to the 0.5s stub delay;
+    # the per-call 0.05s timeout wins for this call only.
+    stub.set_delay(0.5)
+    stub.enqueue(
+        body={
+            "models": [
+                {
+                    "name": "jev-latest",
+                    "description": "current",
+                    "release_date": "2026-01-01",
+                }
+            ]
+        }
+    )
+    with _make_client(stub, timeout=5.0) as client, pytest.raises(APITimeoutError):
+        client.models(timeout=0.05)
+    assert len(stub.hits) == 1
+
+
+def test_models_per_call_timeout_none_keeps_constructor_default(stub) -> None:
+    # An explicit per-call timeout=None must NOT be forwarded to httpx (where
+    # it would mean "no timeout"): the constructor default still fires.
+    stub.set_delay(0.5)
+    stub.enqueue(
+        body={
+            "models": [
+                {
+                    "name": "jev-latest",
+                    "description": "current",
+                    "release_date": "2026-01-01",
+                }
+            ]
+        }
+    )
+    with _make_client(stub, timeout=0.05) as client, pytest.raises(APITimeoutError):
+        client.models(timeout=None)
+    assert len(stub.hits) == 1
+
+
+def test_models_request_headers_merge_with_defaults(stub) -> None:
+    stub.enqueue(
+        body={
+            "models": [
+                {
+                    "name": "jev-latest",
+                    "description": "current",
+                    "release_date": "2026-01-01",
+                }
+            ]
+        }
+    )
+    with _make_client(stub) as client:
+        client.models(request_headers={"X-Experiment": "models-a"})
+    headers = stub.hits[-1]["headers"]
+    assert headers["x-experiment"] == "models-a"
+    assert headers["authorization"] == "Bearer test-key"
+    assert headers["content-type"] == "application/json"
+
+
 def test_models_requires_get_json_capable_transport(stub) -> None:
     # The Transport protocol only promises post_json/close; model listing
     # additionally needs get_json and fails loudly without it, while ask

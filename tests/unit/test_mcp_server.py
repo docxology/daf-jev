@@ -258,6 +258,36 @@ def test_jev_evaluate_returns_summary_only(mcp_stub_env) -> None:
     assert len(mcp_stub_env.hits) == 4
 
 
+def test_jev_evaluate_passes_object_and_array_states_through(mcp_stub_env) -> None:
+    # Object/array states ride the public evaluate_async() path untouched:
+    # the wire body carries them verbatim as the state.
+    body = {
+        "model": "jev-latest",
+        "usage": {"input_tokens": 3, "output_tokens": 1},
+        "answers": {
+            "tone": {
+                "type": "choice",
+                "choice": "calm",
+                "probabilities": {"calm": 1.0},
+                "confidence": 0.9,
+            }
+        },
+    }
+    mcp_stub_env.enqueue(body=body)
+    mcp_stub_env.enqueue(body=body)
+    summary = _run(
+        ms.jev_evaluate(
+            [{"customer": "acme"}, ["line", "items"]],
+            {"tone": "choice:tone?:calm,angry"},
+        )
+    )
+    assert summary["n_states"] == 2
+    assert summary["n_errors"] == 0
+    assert summary["total_input_tokens"] == 6
+    assert mcp_stub_env.hits[0]["json"]["state"] == {"customer": "acme"}
+    assert mcp_stub_env.hits[1]["json"]["state"] == ["line", "items"]
+
+
 # ------------------------------------------------------------ jev_models ------
 def test_jev_models_returns_cards_as_dicts(mcp_stub_env) -> None:
     mcp_stub_env.enqueue(body=_models_body())

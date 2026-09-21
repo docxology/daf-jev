@@ -322,6 +322,54 @@ def test_parse_response_rejects_none_usage_token_counts() -> None:
         parse_response(payload, None)
 
 
+def test_parse_response_usage_rejects_bool_token_counts() -> None:
+    # bool is an int subclass: True must not silently become 1.
+    payload = _answers_payload()
+    payload["usage"] = {"input_tokens": True, "output_tokens": 5}
+    with pytest.raises(ValueError, match="input_tokens must be an integer number"):
+        parse_response(payload, None)
+    payload["usage"] = {"input_tokens": 5, "output_tokens": False}
+    with pytest.raises(ValueError, match="output_tokens must be an integer number"):
+        parse_response(payload, None)
+
+
+def test_parse_response_usage_rejects_non_integral_float_and_numeric_string() -> None:
+    # No int() coercion: 3.7 would truncate to 3 and "12" would parse.
+    payload = _answers_payload()
+    payload["usage"] = {"input_tokens": 12, "output_tokens": 3.7}
+    with pytest.raises(ValueError, match="output_tokens must be an integer number"):
+        parse_response(payload, None)
+    payload["usage"] = {"input_tokens": "12", "output_tokens": 45}
+    with pytest.raises(ValueError, match="input_tokens must be an integer number"):
+        parse_response(payload, None)
+
+
+def test_parse_response_usage_accepts_integral_floats() -> None:
+    # A float is accepted only when integral: 100.0 means 100 tokens.
+    payload = _answers_payload()
+    payload["usage"] = {"input_tokens": 100.0, "output_tokens": 45.0}
+    resp = parse_response(payload, None)
+    assert resp.usage.input_tokens == 100
+    assert resp.usage.output_tokens == 45
+    assert isinstance(resp.usage.input_tokens, int)
+
+
+def test_score_answer_rejects_non_string_legend_values() -> None:
+    # Legend values must already be strings: None/int/bool must not be
+    # silently str()'d into descriptions like "None" or "True".
+    for bad in (None, 1, True):
+        with pytest.raises(ValueError, match="legend values must be strings"):
+            answer_from_wire(
+                {
+                    "type": "score",
+                    "score": 0.4,
+                    "legend": {"0": bad},
+                    "probabilities": {"0": 1.0},
+                    "confidence": 0.5,
+                }
+            )
+
+
 def test_choice_to_wire_rejects_non_string_descriptions() -> None:
     _expect_value_error(lambda: ChoiceQuestion(instructions="pick", criteria={"a": 1}))
 

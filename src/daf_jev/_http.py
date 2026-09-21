@@ -1,8 +1,8 @@
 """HTTP transports. The ``Transport``/``AsyncTransport`` protocols are the
 client-facing contract (``post_json`` + ``close``); the httpx
 implementations additionally expose ``get_json`` for the models listing.
-``post_json`` accepts an optional per-call ``timeout`` (seconds; ``None``
-keeps the transport's configured default). A transport constructed without
+``post_json``/``get_json`` accept an optional per-call ``timeout`` (seconds;
+``None`` keeps the transport's configured default). A transport constructed without
 a ``timeout`` passes :data:`DEFAULT_TIMEOUT_SECONDS` (60.0) to httpx
 instead of letting httpx's own 5-second default silently cap slow LLM
 calls.
@@ -108,8 +108,14 @@ class HttpxTransport:
             )
         return self._client.post(path, json=json_body, headers=headers)
 
-    def get_json(self, path: str, headers: dict[str, str]) -> httpx.Response:
+    def get_json(
+        self, path: str, headers: dict[str, str], *, timeout: float | None = None
+    ) -> httpx.Response:
         """GET used by the client's models listing (beyond the protocol)."""
+        # httpx treats an explicit timeout=None as "no timeout", so only pass
+        # the per-call override when set; otherwise the client default applies.
+        if timeout is not None:
+            return self._client.get(path, headers=headers, timeout=timeout)
         return self._client.get(path, headers=headers)
 
     def close(self) -> None:
@@ -160,8 +166,14 @@ class AsyncHttpxTransport:
             )
         return await self._client.post(path, json=json_body, headers=headers)
 
-    async def get_json(self, path: str, headers: dict[str, str]) -> httpx.Response:
+    async def get_json(
+        self, path: str, headers: dict[str, str], *, timeout: float | None = None
+    ) -> httpx.Response:
         """GET used by the client's models listing (beyond the protocol)."""
+        # httpx treats an explicit timeout=None as "no timeout", so only pass
+        # the per-call override when set; otherwise the client default applies.
+        if timeout is not None:
+            return await self._client.get(path, headers=headers, timeout=timeout)
         return await self._client.get(path, headers=headers)
 
     async def close(self) -> None:

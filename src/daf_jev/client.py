@@ -285,8 +285,19 @@ class JevClient(_BaseClient):
         )
         return self._parse_system_one(response)
 
-    def models(self) -> list[ModelCard]:
-        """List the models available to the account."""
+    def models(
+        self,
+        *,
+        timeout: float | None = None,
+        request_headers: Mapping[str, str] | None = None,
+    ) -> list[ModelCard]:
+        """List the models available to the account.
+
+        ``timeout`` overrides the client default for this call only;
+        ``request_headers`` are merged over the default headers for this
+        call only (per-call entries win). Retries per the configured
+        policy, like ``ask``.
+        """
         if self._closed:
             raise TypeSafeError("client is closed")
         getter = getattr(self._transport, "get_json", None)
@@ -295,8 +306,11 @@ class JevClient(_BaseClient):
                 "the injected transport does not support model listing "
                 "(no get_json method)"
             )
+        headers = self._request_headers()
+        if request_headers:
+            headers.update(request_headers)
         response = self._send_with_retries(
-            lambda: getter(MODELS_PATH, self._request_headers())
+            lambda: getter(MODELS_PATH, headers, timeout=timeout), timeout=timeout
         )
         return _parse_models(_body_of(response))
 
@@ -417,8 +431,19 @@ class AsyncJevClient(_BaseClient):
         )
         return self._parse_system_one(response)
 
-    async def models(self) -> list[ModelCard]:
-        """List the models available to the account."""
+    async def models(
+        self,
+        *,
+        timeout: float | None = None,
+        request_headers: Mapping[str, str] | None = None,
+    ) -> list[ModelCard]:
+        """List the models available to the account.
+
+        ``timeout`` overrides the client default for this call only;
+        ``request_headers`` are merged over the default headers for this
+        call only (per-call entries win). Retries per the configured
+        policy, like ``ask``.
+        """
         if self._closed:
             raise TypeSafeError("client is closed")
         getter = getattr(self._transport, "get_json", None)
@@ -427,8 +452,11 @@ class AsyncJevClient(_BaseClient):
                 "the injected transport does not support model listing "
                 "(no get_json method)"
             )
+        headers = self._request_headers()
+        if request_headers:
+            headers.update(request_headers)
         response = await self._send_with_retries(
-            lambda: getter(MODELS_PATH, self._request_headers())
+            lambda: getter(MODELS_PATH, headers, timeout=timeout), timeout=timeout
         )
         return _parse_models(_body_of(response))
 

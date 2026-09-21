@@ -202,23 +202,43 @@ def _as_probabilities(probabilities: object) -> dict[str, float]:
 
 
 def _as_legend(legend: object) -> dict[str, str]:
-    """Parse a strict ``{level: description}`` mapping or raise ValueError."""
+    """Parse a strict ``{level: description}`` mapping or raise ValueError.
+
+    Values must already be ``str`` — the wire legend is
+    ``{level_index_str: str}``, and coercing e.g. ``str(None)`` to
+    ``"None"`` would silently fabricate a description. Keys are still
+    stringified level indices.
+    """
     if not isinstance(legend, dict):
         raise ValueError(
             "legend must be a dict of level -> description, "
             f"got {type(legend).__name__}"
         )
-    return {str(level): str(description) for level, description in legend.items()}
+    parsed: dict[str, str] = {}
+    for level, description in legend.items():
+        if not isinstance(description, str):
+            raise ValueError(
+                f"legend values must be strings, got {description!r} "
+                f"at level {level!r}"
+            )
+        parsed[str(level)] = description
+    return parsed
 
 
 def _as_int(usage: dict, key: str) -> int:
-    """Return ``usage[key]`` as an int (default 0); any parse failure is
-    normalized to a field-naming ValueError."""
+    """Return ``usage[key]`` as an int (default 0) under the strict wire
+    contract: an ``int`` passes as-is (``bool`` never does — it is an
+    ``int`` subclass), a float only when integral (``100.0`` -> ``100``),
+    and numeric strings or any other type raise a field-naming
+    ``ValueError``."""
     value = usage.get(key, 0)
-    try:
+    if isinstance(value, bool):
+        raise ValueError(f"{key} must be an integer number, got {value!r}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
         return int(value)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ValueError(f"{key} must be an integer, got {value!r}") from exc
+    raise ValueError(f"{key} must be an integer number, got {value!r}")
 
 
 def answer_from_wire(payload: dict) -> Answer:

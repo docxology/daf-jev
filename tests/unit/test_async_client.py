@@ -278,6 +278,71 @@ def test_models_rejects_entry_missing_name(stub) -> None:
     assert "invalid model entry" in str(excinfo.value)
 
 
+def _models_body() -> dict:
+    return {
+        "models": [
+            {
+                "name": "jev-latest",
+                "description": "current",
+                "release_date": "2026-01-01",
+            }
+        ]
+    }
+
+
+def test_models_per_call_timeout_tightens_default(stub) -> None:
+    # Constructor timeout (5.0s) is generous relative to the 0.5s stub delay;
+    # the per-call 0.05s timeout wins for this call only.
+    stub.set_delay(0.5)
+    stub.enqueue(body=_models_body())
+    client = _make_client(stub, timeout=5.0)
+
+    async def main():
+        try:
+            with pytest.raises(APITimeoutError):
+                await client.models(timeout=0.05)
+        finally:
+            await client.close()
+
+    asyncio.run(main())
+    assert len(stub.hits) == 1
+
+
+def test_models_per_call_timeout_none_keeps_constructor_default(stub) -> None:
+    # An explicit per-call timeout=None must NOT be forwarded to httpx (where
+    # it would mean "no timeout"): the constructor default still fires.
+    stub.set_delay(0.5)
+    stub.enqueue(body=_models_body())
+    client = _make_client(stub, timeout=0.05)
+
+    async def main():
+        try:
+            with pytest.raises(APITimeoutError):
+                await client.models(timeout=None)
+        finally:
+            await client.close()
+
+    asyncio.run(main())
+    assert len(stub.hits) == 1
+
+
+def test_models_request_headers_merge_with_defaults(stub) -> None:
+    stub.enqueue(body=_models_body())
+    client = _make_client(stub)
+
+    async def main():
+        try:
+            await client.models(request_headers={"X-Experiment": "async-models"})
+        finally:
+            await client.close()
+
+    asyncio.run(main())
+    headers = stub.hits[-1]["headers"]
+    assert headers["x-experiment"] == "async-models"
+    assert headers["authorization"] == "Bearer test-key"
+    assert headers["content-type"] == "application/json"
+
+
 def test_async_context_manager_support(stub) -> None:
     stub.enqueue(body=_answers_body(), headers={"x-typesafe-request-id": "req-ctx"})
 
