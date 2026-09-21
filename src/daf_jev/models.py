@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from daf_jev.client import ModelCard
 
@@ -47,13 +47,9 @@ def pick_model(
         return cards[0]
     if prefer == "last":
         return cards[-1]
-    best: ModelCard | None = None
-    best_date: str | None = None
-    for card in cards:
+    best, best_date = cards[0], cards[0].release_date
+    for card in cards[1:]:
         date = card.release_date
-        if (
-            best is None
-            or (date is not None and (best_date is None or date > best_date))
-        ):
+        if date is not None and (best_date is None or date > best_date):
             best, best_date = card, date
     return best

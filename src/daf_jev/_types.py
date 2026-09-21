@@ -8,23 +8,24 @@ b79c9cd6008489f1).
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Mapping, Sequence
 from functools import cached_property
-from typing import ClassVar, Mapping, Optional, Sequence, Union
+from typing import ClassVar
 
-JSONContent = Union[str, list, dict]
+JSONContent = str | list | dict
 
 __all__ = [
-    "JSONContent",
-    "Question",
-    "NoulQuestion",
-    "ChoiceQuestion",
-    "ScoreQuestion",
     "Answer",
-    "NoulAnswer",
     "ChoiceAnswer",
+    "ChoiceQuestion",
+    "JSONContent",
+    "NoulAnswer",
+    "NoulQuestion",
+    "Question",
     "ScoreAnswer",
-    "Usage",
+    "ScoreQuestion",
     "SystemOneResponse",
+    "Usage",
     "answer_from_wire",
     "parse_response",
 ]
@@ -41,7 +42,7 @@ class NoulQuestion:
 
     type: ClassVar[str] = "noul"
     instructions: JSONContent
-    criteria: Optional[dict] = None
+    criteria: dict | None = None
 
     def to_wire(self) -> dict:
         wire: dict = {"type": self.type, "instructions": self.instructions}
@@ -60,15 +61,32 @@ class ChoiceQuestion:
 
     type: ClassVar[str] = "choice"
     instructions: JSONContent
-    criteria: Mapping[str, Optional[str]]
+    criteria: Mapping[str, str | None]
 
     def to_wire(self) -> dict:
-        if not self.criteria:
+        criteria = self.criteria
+        if not isinstance(criteria, Mapping):
+            raise ValueError(
+                "choice question criteria must be a mapping of option -> "
+                f"description, got {type(criteria).__name__}"
+            )
+        options = dict(criteria)
+        if not options:
             raise ValueError("choice question requires non-empty criteria (options)")
+        bad = [
+            option
+            for option, description in options.items()
+            if description is not None and not isinstance(description, str)
+        ]
+        if bad:
+            raise ValueError(
+                "choice question criteria values must all be strings or None; "
+                f"non-string at option(s) {bad}"
+            )
         return {
             "type": self.type,
             "instructions": self.instructions,
-            "criteria": dict(self.criteria),
+            "criteria": options,
         }
 
 
@@ -99,7 +117,7 @@ class ScoreQuestion:
         }
 
 
-Question = Union[NoulQuestion, ChoiceQuestion, ScoreQuestion]
+Question = NoulQuestion | ChoiceQuestion | ScoreQuestion
 
 
 # ---------------------------------------------------------------------------
@@ -130,62 +148,107 @@ class ScoreAnswer:
     confidence: float
 
 
-Answer = Union[NoulAnswer, ChoiceAnswer, ScoreAnswer]
+Answer = NoulAnswer | ChoiceAnswer | ScoreAnswer
 
-_ANSWER_TYPES: dict[str, type] = {
-    cls.type: cls for cls in (NoulAnswer, ChoiceAnswer, ScoreAnswer)
+_ANSWER_TYPES: dict[str, type[Answer]] = {
+    NoulAnswer.type: NoulAnswer,
+    ChoiceAnswer.type: ChoiceAnswer,
+    ScoreAnswer.type: ScoreAnswer,
 }
 
 
-def _require(payload: dict, cls: type) -> dict:
+def _require(payload: dict, cls: type[Answer], answer_type: str) -> dict:
     """Return the payload keys needed by ``cls`` or raise ValueError."""
     missing = [
         f.name for f in dataclasses.fields(cls) if f.name not in payload
     ]
     if missing:
-        raise ValueError(f"{cls.type} answer is missing required keys: {missing}")
+        raise ValueError(
+            f"{answer_type} answer is missing required keys: {missing}"
+        )
     return payload
 
 
-def _as_float(payload: dict, key: str) -> float:
-    value = payload[key]
+def _as_float(value: object, field: str) -> float:
+    """Return ``value`` as a float under the strict wire contract: only real
+    numbers pass (bools and numeric strings are rejected)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{field} must be a number, got {value!r}")
     try:
         return float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{key} must be a number, got {value!r}") from exc
+    except OverflowError as exc:
+        raise ValueError(f"{field} must be a number, got {value!r}") from exc
+
+
+def _require_str(payload: dict, field: str) -> str:
+    """Return ``payload[field]`` requiring an actual ``str``."""
+    value = payload[field]
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a string, got {value!r}")
+    return value
+
+
+def _as_probabilities(probabilities: object) -> dict[str, float]:
+    """Parse a strict ``{option: number}`` mapping or raise ValueError."""
+    if not isinstance(probabilities, dict):
+        raise ValueError(
+            "probabilities must be a dict of option -> number, "
+            f"got {type(probabilities).__name__}"
+        )
+    return {
+        str(option): _as_float(value, f"probabilities[{option!r}]")
+        for option, value in probabilities.items()
+    }
+
+
+def _as_legend(legend: object) -> dict[str, str]:
+    """Parse a strict ``{level: description}`` mapping or raise ValueError."""
+    if not isinstance(legend, dict):
+        raise ValueError(
+            "legend must be a dict of level -> description, "
+            f"got {type(legend).__name__}"
+        )
+    return {str(level): str(description) for level, description in legend.items()}
+
+
+def _as_int(usage: dict, key: str) -> int:
+    """Return ``usage[key]`` as an int (default 0); any parse failure is
+    normalized to a field-naming ValueError."""
+    value = usage.get(key, 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{key} must be an integer, got {value!r}") from exc
 
 
 def answer_from_wire(payload: dict) -> Answer:
     """Parse a strict wire answer dict into its dataclass.
 
-    Raises ValueError for an unknown answer type or missing keys.
+    Raises ValueError for an unknown answer type, a missing key, or a
+    malformed value (wrong type for a string, mapping, or numeric field).
     """
     if not isinstance(payload, dict):
         raise ValueError(f"answer must be a dict, got {type(payload).__name__}")
     answer_type = payload.get("type")
+    if not isinstance(answer_type, str):
+        raise ValueError(f"unknown answer type: {answer_type!r}")
     cls = _ANSWER_TYPES.get(answer_type)
     if cls is None:
         raise ValueError(f"unknown answer type: {answer_type!r}")
-    _require(payload, cls)
+    _require(payload, cls, answer_type)
     if cls is NoulAnswer:
-        return NoulAnswer(noul=_as_float(payload, "noul"))
+        return NoulAnswer(noul=_as_float(payload["noul"], "noul"))
     if cls is ChoiceAnswer:
         return ChoiceAnswer(
-            choice=str(payload["choice"]),
-            probabilities={
-                str(k): _as_float(payload["probabilities"], str(k))
-                for k in payload["probabilities"]
-            },
-            confidence=_as_float(payload, "confidence"),
+            choice=_require_str(payload, "choice"),
+            probabilities=_as_probabilities(payload["probabilities"]),
+            confidence=_as_float(payload["confidence"], "confidence"),
         )
     return ScoreAnswer(
-        score=_as_float(payload, "score"),
-        legend={str(k): str(v) for k, v in payload["legend"].items()},
-        probabilities={
-            str(k): _as_float(payload["probabilities"], str(k))
-            for k in payload["probabilities"]
-        },
-        confidence=_as_float(payload, "confidence"),
+        score=_as_float(payload["score"], "score"),
+        legend=_as_legend(payload["legend"]),
+        probabilities=_as_probabilities(payload["probabilities"]),
+        confidence=_as_float(payload["confidence"], "confidence"),
     )
 
 
@@ -205,7 +268,7 @@ class SystemOneResponse:
     model: str
     answers: dict[str, Answer]
     usage: Usage
-    request_id: Optional[str] = None
+    request_id: str | None = None
 
     @cached_property
     def nouls(self) -> dict[str, NoulAnswer]:
@@ -232,11 +295,12 @@ class SystemOneResponse:
         }
 
 
-def parse_response(payload: dict, request_id: Optional[str] = None) -> SystemOneResponse:
+def parse_response(payload: dict, request_id: str | None = None) -> SystemOneResponse:
     """Parse a strict System One response payload.
 
-    Raises ValueError when the top-level keys are missing, an answer has an
-    unknown type, or an answer is missing required keys.
+    Raises ValueError when the top-level keys are missing or malformed, an
+    answer has an unknown type, or an answer or usage value has the wrong
+    type.
     """
     if not isinstance(payload, dict):
         raise ValueError(
@@ -245,6 +309,7 @@ def parse_response(payload: dict, request_id: Optional[str] = None) -> SystemOne
     for key in ("model", "answers", "usage"):
         if key not in payload:
             raise ValueError(f"response is missing required key: {key!r}")
+    model = _require_str(payload, "model")
     answers_raw = payload["answers"]
     if not isinstance(answers_raw, dict):
         raise ValueError(
@@ -257,11 +322,11 @@ def parse_response(payload: dict, request_id: Optional[str] = None) -> SystemOne
         str(qid): answer_from_wire(answer) for qid, answer in answers_raw.items()
     }
     return SystemOneResponse(
-        model=str(payload["model"]),
+        model=model,
         answers=answers,
         usage=Usage(
-            input_tokens=int(usage_raw.get("input_tokens", 0)),
-            output_tokens=int(usage_raw.get("output_tokens", 0)),
+            input_tokens=_as_int(usage_raw, "input_tokens"),
+            output_tokens=_as_int(usage_raw, "output_tokens"),
         ),
         request_id=request_id,
     )

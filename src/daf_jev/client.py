@@ -3,6 +3,8 @@ Jev (System One) API.
 
 Retry policy and the default request timeout resolve from the environment
 (``config.resolve_retry`` / ``config.resolve_timeout``) unless passed
+explicitly; the default model resolves from ``JEV_MODEL`` /
+``TYPESAFE_DEFAULT_MODEL`` (falling back to ``jev-latest``) unless passed
 explicitly. ``ask`` additionally accepts a per-call ``timeout`` override and
 extra ``request_headers`` merged over the defaults for that call only.
 """
@@ -10,17 +12,20 @@ extra ``request_headers`` merged over the defaults for that call only.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import inspect
+import math
 import time
-from typing import Any, Callable, Mapping, Optional
+from collections.abc import Callable, Mapping
+from typing import Any
 
 import httpx
 
 from daf_jev._errors import (
     APIConnectionError,
-    APITimeoutError,
     APIStatusError,
+    APITimeoutError,
     TypeSafeError,
     error_from_status,
 )
@@ -33,7 +38,7 @@ from daf_jev._types import (
     parse_response,
 )
 
-__all__ = ["ModelCard", "JevClient", "AsyncJevClient"]
+__all__ = ["AsyncJevClient", "JevClient", "ModelCard"]
 
 REQUEST_ID_HEADER = "x-typesafe-request-id"
 SYSTEM_ONE_PATH = "/v1/systemone"
@@ -48,8 +53,8 @@ class ModelCard:
     """One entry of the models listing (per ModelMetadata in the snapshot)."""
 
     name: str
-    description: Optional[str] = None
-    release_date: Optional[str] = None
+    description: str | None = None
+    release_date: str | None = None
 
 
 def _body_of(response: httpx.Response) -> Any:
@@ -60,12 +65,38 @@ def _body_of(response: httpx.Response) -> Any:
         return text if text else None
 
 
-def _retry_after_of(response: httpx.Response) -> Optional[float]:
+_MAX_RETRY_AFTER_SECONDS = 300.0
+
+
+def _clamp_retry_after(seconds: float) -> float:
+    """Clamp a server-provided delay to [0, 300] seconds.
+
+    A hostile ``inf``/``1e9`` header must not stall the retry loop; NaN is
+    treated as 0.
+    """
+    if math.isnan(seconds):
+        return 0.0
+    return min(max(seconds, 0.0), _MAX_RETRY_AFTER_SECONDS)
+
+
+def _retry_after_of(response: httpx.Response) -> float | None:
+    """Seconds to wait before the retry, or ``None`` for exponential backoff.
+
+    ``Retry-After-ms`` (integer milliseconds) wins when present, then the
+    numeric ``Retry-After`` form; both are clamped to [0, 300] seconds. The
+    HTTP-date ``Retry-After`` form is intentionally unsupported (parsing it
+    requires a wall clock and ``RetryPolicy.next_delay`` is pure): it, like
+    any unparseable value, falls back to exponential backoff.
+    """
+    milliseconds = response.headers.get("Retry-After-ms")
+    if milliseconds is not None:
+        with contextlib.suppress(ValueError):
+            return _clamp_retry_after(float(milliseconds) / 1000.0)
     value = response.headers.get("Retry-After")
     if value is None:
         return None
     try:
-        return float(value)
+        return _clamp_retry_after(float(value))
     except ValueError:
         return None  # HTTP-date Retry-After is not supported
 
@@ -83,19 +114,18 @@ class _BaseClient:
 
     def __init__(
         self,
-        api_key: Optional[str],
+        api_key: str | None,
         *,
-        base_url: Optional[str],
-        model: str,
-        transport: Optional[Any],
-        retry: Optional[RetryPolicy],
-        timeout: Optional[float],
-        env: Optional[Mapping[str, str]],
+        base_url: str | None,
+        model: str | None,
+        transport: Any | None,
+        retry: RetryPolicy | None,
+        timeout: float | None,
+        env: Mapping[str, str] | None,
     ) -> None:
-        # Lazy import: config.py is a sibling module built concurrently;
-        # importing lazily keeps this module importable mid-build and only
-        # pays for it when environment resolution is needed.
-        from daf_jev import config
+        # config has no import cycle with this module; resolving retry/timeout
+        # pays for the import when environment resolution is needed.
+        import daf_jev.config as config
 
         self._retry = retry if retry is not None else config.resolve_retry(env)
         self._timeout = (
@@ -105,7 +135,14 @@ class _BaseClient:
         self._closed = False
         if api_key is None:
             api_key = config.resolve_api_key(env)
+        if api_key is not None and not api_key.strip():
+            raise ValueError("api_key must be a non-empty string")
         self._api_key = api_key
+        if model is None:
+            model = config.resolve_model(env)
+        if not model.strip():
+            raise ValueError("model must be a non-empty string")
+        self._model = model
         if self._api_key is None and self._transport is None:
             raise TypeSafeError(
                 "No API key found: pass api_key, set JEV_API_KEY (or "
@@ -113,12 +150,10 @@ class _BaseClient:
             )
         if self._transport is None:
             self._transport = self._default_transport(
-
                 base_url
                 if base_url is not None
                 else config.resolve_base_url(env)
             )
-        self._model = model
 
 
     def _default_transport(self, base_url: str) -> Any:  # pragma: no cover - overridden
@@ -155,15 +190,15 @@ class JevClient(_BaseClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         *,
-        base_url: Optional[str] = None,
-        model: str = "jev-latest",
-        transport: Optional[Transport] = None,
-        retry: Optional[RetryPolicy] = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        transport: Transport | None = None,
+        retry: RetryPolicy | None = None,
         sleep: Callable[[float], None] = time.sleep,
-        timeout: Optional[float] = None,
-        env: Optional[Mapping[str, str]] = None,
+        timeout: float | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(
             api_key,
@@ -180,7 +215,7 @@ class JevClient(_BaseClient):
         return HttpxTransport(base_url=base_url, timeout=self._timeout)
 
     def _send_with_retries(
-        self, send: Callable[[], httpx.Response], timeout: Optional[float] = None
+        self, send: Callable[[], httpx.Response], timeout: float | None = None
     ) -> httpx.Response:
         policy = self._retry
         attempt = 1
@@ -191,7 +226,9 @@ class JevClient(_BaseClient):
                 raise APITimeoutError(
                     timeout=self._timeout if timeout is None else timeout
                 ) from exc
-            except httpx.TransportError as exc:
+            except httpx.HTTPError as exc:
+                raise APIConnectionError(f"TypeSafe API connection error: {exc}") from exc
+            except httpx.StreamError as exc:
                 raise APIConnectionError(f"TypeSafe API connection error: {exc}") from exc
             if 200 <= response.status_code < 300:
                 return response
@@ -214,9 +251,9 @@ class JevClient(_BaseClient):
         state: JSONContent,
         questions: Mapping[str, Question],
         *,
-        model: Optional[str] = None,
-        timeout: Optional[float] = None,
-        request_headers: Optional[Mapping[str, str]] = None,
+        model: str | None = None,
+        timeout: float | None = None,
+        request_headers: Mapping[str, str] | None = None,
     ) -> SystemOneResponse:
         """Answer named questions about the given state in a single POST.
 
@@ -224,6 +261,8 @@ class JevClient(_BaseClient):
         ``request_headers`` are merged over the default headers for this
         call only (per-call entries win).
         """
+        if self._closed:
+            raise TypeSafeError("client is closed")
         if not questions:
             raise TypeSafeError("questions must be a nonempty mapping")
         body = {
@@ -236,8 +275,10 @@ class JevClient(_BaseClient):
         headers = self._request_headers()
         if request_headers:
             headers.update(request_headers)
+        transport = self._transport
+        assert transport is not None  # set in __init__
         response = self._send_with_retries(
-            lambda: self._transport.post_json(
+            lambda: transport.post_json(
                 SYSTEM_ONE_PATH, body, headers, timeout=timeout
             ),
             timeout=timeout,
@@ -246,6 +287,8 @@ class JevClient(_BaseClient):
 
     def models(self) -> list[ModelCard]:
         """List the models available to the account."""
+        if self._closed:
+            raise TypeSafeError("client is closed")
         getter = getattr(self._transport, "get_json", None)
         if getter is None:
             raise TypeSafeError(
@@ -260,10 +303,12 @@ class JevClient(_BaseClient):
     def close(self) -> None:
         if self._closed:
             return
+        transport = self._transport
+        assert transport is not None  # set in __init__
+        transport.close()
         self._closed = True
-        self._transport.close()
 
-    def __enter__(self) -> "JevClient":
+    def __enter__(self) -> JevClient:
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -275,15 +320,15 @@ class AsyncJevClient(_BaseClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         *,
-        base_url: Optional[str] = None,
-        model: str = "jev-latest",
-        transport: Optional[AsyncTransport] = None,
-        retry: Optional[RetryPolicy] = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        transport: AsyncTransport | None = None,
+        retry: RetryPolicy | None = None,
         sleep: Callable[[float], Any] = asyncio.sleep,
-        timeout: Optional[float] = None,
-        env: Optional[Mapping[str, str]] = None,
+        timeout: float | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(
             api_key,
@@ -300,7 +345,7 @@ class AsyncJevClient(_BaseClient):
         return AsyncHttpxTransport(base_url=base_url, timeout=self._timeout)
 
     async def _send_with_retries(
-        self, send: Callable[[], Any], timeout: Optional[float] = None
+        self, send: Callable[[], Any], timeout: float | None = None
     ) -> httpx.Response:
         policy = self._retry
         attempt = 1
@@ -311,7 +356,9 @@ class AsyncJevClient(_BaseClient):
                 raise APITimeoutError(
                     timeout=self._timeout if timeout is None else timeout
                 ) from exc
-            except httpx.TransportError as exc:
+            except httpx.HTTPError as exc:
+                raise APIConnectionError(f"TypeSafe API connection error: {exc}") from exc
+            except httpx.StreamError as exc:
                 raise APIConnectionError(f"TypeSafe API connection error: {exc}") from exc
             if 200 <= response.status_code < 300:
                 return response
@@ -336,9 +383,9 @@ class AsyncJevClient(_BaseClient):
         state: JSONContent,
         questions: Mapping[str, Question],
         *,
-        model: Optional[str] = None,
-        timeout: Optional[float] = None,
-        request_headers: Optional[Mapping[str, str]] = None,
+        model: str | None = None,
+        timeout: float | None = None,
+        request_headers: Mapping[str, str] | None = None,
     ) -> SystemOneResponse:
         """Answer named questions about the given state in a single POST.
 
@@ -346,6 +393,8 @@ class AsyncJevClient(_BaseClient):
         ``request_headers`` are merged over the default headers for this
         call only (per-call entries win).
         """
+        if self._closed:
+            raise TypeSafeError("client is closed")
         if not questions:
             raise TypeSafeError("questions must be a nonempty mapping")
         body = {
@@ -358,8 +407,10 @@ class AsyncJevClient(_BaseClient):
         headers = self._request_headers()
         if request_headers:
             headers.update(request_headers)
+        transport = self._transport
+        assert transport is not None  # set in __init__
         response = await self._send_with_retries(
-            lambda: self._transport.post_json(
+            lambda: transport.post_json(
                 SYSTEM_ONE_PATH, body, headers, timeout=timeout
             ),
             timeout=timeout,
@@ -368,6 +419,8 @@ class AsyncJevClient(_BaseClient):
 
     async def models(self) -> list[ModelCard]:
         """List the models available to the account."""
+        if self._closed:
+            raise TypeSafeError("client is closed")
         getter = getattr(self._transport, "get_json", None)
         if getter is None:
             raise TypeSafeError(
@@ -382,12 +435,14 @@ class AsyncJevClient(_BaseClient):
     async def close(self) -> None:
         if self._closed:
             return
-        self._closed = True
-        result = self._transport.close()
+        transport = self._transport
+        assert transport is not None  # set in __init__
+        result = transport.close()
         if inspect.isawaitable(result):
             await result
+        self._closed = True
 
-    async def __aenter__(self) -> "AsyncJevClient":
+    async def __aenter__(self) -> AsyncJevClient:
         return self
 
     async def __aexit__(self, *_exc: object) -> None:

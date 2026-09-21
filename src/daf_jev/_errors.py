@@ -6,21 +6,21 @@ exceptions.md for the documented semantics.
 from __future__ import annotations
 
 import json
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 __all__ = [
-    "TypeSafeError",
     "APIConnectionError",
-    "APITimeoutError",
     "APIStatusError",
-    "BadRequestError",
+    "APITimeoutError",
     "AuthenticationError",
-    "PermissionDeniedError",
-    "NotFoundError",
-    "UnprocessableEntityError",
-    "RateLimitError",
-    "OverloadedError",
+    "BadRequestError",
     "InternalServerError",
+    "NotFoundError",
+    "OverloadedError",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "TypeSafeError",
+    "UnprocessableEntityError",
     "error_from_status",
 ]
 
@@ -49,7 +49,7 @@ class TypeSafeError(Exception):
 class APIConnectionError(TypeSafeError, ConnectionError):
     """A request failed without an HTTP response."""
 
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str | None = None) -> None:
         super().__init__(message or "TypeSafe API connection error")
 
 
@@ -57,7 +57,7 @@ class APITimeoutError(APIConnectionError, TimeoutError):
     """A request exceeded its configured timeout."""
 
     def __init__(
-        self, message: Optional[str] = None, *, timeout: Optional[float] = None
+        self, message: str | None = None, *, timeout: float | None = None
     ) -> None:
         if message is None:
             shown = "unknown" if timeout is None else f"{timeout}s"
@@ -71,11 +71,11 @@ class APIStatusError(TypeSafeError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
+        message: str | None = None,
         *,
         status_code: int,
         body: Any = None,
-        request_id: Optional[str] = None,
+        request_id: str | None = None,
     ) -> None:
         if message is None:
             message = (
@@ -96,11 +96,11 @@ class _HTTPStatusError(APIStatusError):
 
     def __init__(
         self,
-        message: Optional[str] = None,
+        message: str | None = None,
         *,
-        status_code: Optional[int] = None,
+        status_code: int | None = None,
         body: Any = None,
-        request_id: Optional[str] = None,
+        request_id: str | None = None,
     ) -> None:
         code = self._STATUS if status_code is None else status_code
         if message is None:
@@ -181,8 +181,8 @@ _EXACT_STATUS_ERRORS: dict[int, type[_HTTPStatusError]] = {
 
 
 def error_from_status(
-    status_code: int, body: Any = None, request_id: Optional[str] = None
-) -> Optional[APIStatusError]:
+    status_code: int, body: Any = None, request_id: str | None = None
+) -> APIStatusError | None:
     """Map an HTTP status to the matching APIStatusError subclass.
 
     Returns None for non-error statuses (< 400). Unmapped 5xx codes map to

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import dataclasses
 import random
-from typing import Optional
 
 __all__ = ["RetryPolicy"]
 
@@ -27,14 +26,16 @@ class RetryPolicy:
     jitter: float = 0.1
     respect_retry_after: bool = True
 
-    def next_delay(self, attempt: int, retry_after: Optional[float]) -> float:
+    def next_delay(self, attempt: int, retry_after: float | None) -> float:
         """Pure: the delay in seconds before retrying after ``attempt``.
 
         Exponential ``backoff_base * 2**(attempt-1)`` capped at
         ``backoff_max``, plus uniform ``+-jitter/2``. When
-        ``respect_retry_after`` is set and ``retry_after`` is provided, the
-        server-requested delay wins verbatim. The result is never negative;
-        tests get determinism by passing ``jitter=0``.
+        ``respect_retry_after`` is set and ``retry_after`` is provided (the
+        client passes the Retry-After header value already clamped to
+        [0, 300] seconds; an unsupported or unparseable header yields
+        ``None``), the server-requested delay wins verbatim. The result is
+        never negative; tests get determinism by passing ``jitter=0``.
         """
         if self.respect_retry_after and retry_after is not None:
             return max(float(retry_after), 0.0)
