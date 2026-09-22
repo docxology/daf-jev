@@ -118,6 +118,7 @@ here.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
   manuscript_variables, calibration, and mcp_server modules, plus
+  test_graphical.py, test_graphical_elicitation.py, and
   test_graphical_viz.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
@@ -169,7 +170,8 @@ here.
 - `docs/ARCHITECTURE.md` — contract (see `docs/README.md`); it now covers
   the newer modules (evaluate, calibration, ledger, resilience, decider,
   questions, docs_verify, mcp_server, providers, graphical,
-  graphical_elicitation) and the figure/variables scripts. The
+  graphical_elicitation, graphical_viz) and the figure/variables/experiment
+  scripts. The
   manuscript-pipeline module internals (`figures.py`,
   `manuscript_variables.py`) are the one remaining gap — the map above is
   the detailed on-disk truth for those.

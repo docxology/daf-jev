@@ -121,6 +121,34 @@ def test_to_mermaid_truncates_long_descriptions() -> None:
     assert long not in source
 
 
+def test_to_mermaid_hard_cuts_unbreakable_words() -> None:
+    """A single over-long word hard-cuts at the limit (no space to break at)."""
+    net = BayesNet(
+        variables=(Variable("n", "x" * 45, ("a", "b")),),
+        edges=(),
+        cpts={},
+    )
+    assert to_mermaid(net).splitlines()[1] == '    n["n<br/>' + "x" * 40 + '…"]'
+
+
+def test_plot_network_handles_empty_description(tmp_path: Path) -> None:
+    """A variable with no description labels its node with the key alone."""
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+
+    net = BayesNet(
+        variables=(
+            Variable("a", "Has a cause", ("false", "true")),
+            Variable("b", "", ("false", "true")),
+        ),
+        edges=(Edge("a", "b"),),
+        cpts={},
+    )
+    path = plot_network(net, tmp_path / "nested" / "empty.png")
+    assert path == tmp_path / "nested" / "empty.png"
+    assert path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 def test_plot_network_writes_deterministic_png(tmp_path: Path) -> None:
     """A layered-layout PNG; identical input gives byte-identical output."""
     matplotlib = pytest.importorskip("matplotlib")

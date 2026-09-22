@@ -379,6 +379,11 @@ contradictions (report the delta; do not silently deviate).
   and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
   exits 1 with a `FileNotFoundError` naming the missing analysis output rather
   than fabricating values; `--allow-draft` emits `N/A` sentinels instead.
+- `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
+  `graphical_elicitation` (+ `graphical_viz` for the rendered artifacts):
+  CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
+  `--propose-structure` / `--out-dir PATH`; keyless SKIP. Full contract in
+  the Graphical models section (Experiment runner block).
 - `questions.py` — shared native question-mapping builder (no I/O):
   `question_from_mapping(value, *, context="question") -> Question` builds a
   `NoulQuestion`/`ChoiceQuestion`/`ScoreQuestion` from a
@@ -423,6 +428,12 @@ contradictions (report the delta; do not silently deviate).
   chunking via `max_questions_per_request`) and `propose_structure` (one
   batched ask over all variable pairs -> DAG proposal, edges only). Both
   take any object with `.ask(state, questions)`. Full contract in the
+  Graphical models section below.
+- `graphical_viz.py` — rendering over the public `BayesNet` API:
+  `to_mermaid` (zero-dependency mermaid `graph TD` source), `plot_network`
+  (deterministic layered PNG; matplotlib imported inside the function),
+  and `plot_posterior_trajectory` (grouped P(true) bars over cumulative
+  evidence steps). Full contract in the Visualization part of the
   Graphical models section below.
 
 ## Provider dispatch
