@@ -94,8 +94,7 @@ here.
   manuscript_variables, calibration, and mcp_server modules),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
-  coverage, refresh via `scripts/z_generate_manuscript_variables.py`; last
-  full run: 316 passing unit tests).
+  coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
 - `scripts/scrape_docs.py` — standalone stdlib re-scraper for the docs
   snapshot; CLI: `--index-url`, `--out-dir`, `--check`, `--manifest PATH`
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
@@ -135,7 +134,7 @@ here.
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
-- `pyproject.toml` — setuptools build, version 0.4.1, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.4.2, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
@@ -185,7 +184,7 @@ here.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
   `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
   live at the repo root and MUST stay in sync with the pyproject version
-  (currently 0.4.1) and the deposit DOIs above.
+  (currently 0.4.2) and the deposit DOIs above.
 - **`.env` is gitignored and holds the real key.** Never print, copy, or
   commit its value. Tests MUST never read it: unit config tests pass
   explicit env mappings; live tests read `os.environ["JEV_API_KEY"]` only.
@@ -205,9 +204,8 @@ here.
   `source = ["src"]`; bare `...` protocol-stub lines are excluded from the
   gate via `exclude_also`). Don't hardcode counts here: generated
   test_count / coverage live in `output/data/manuscript_variables.json`
-  (refresh via `scripts/z_generate_manuscript_variables.py`); last
-  full-suite measurement 93.50%. Raw `.coverage` data is not retained on
-  disk.
+  (refresh via `scripts/z_generate_manuscript_variables.py`). Raw
+  `.coverage` data is not retained on disk.
 - **Render path (no leaf alias).** The former managed lifecycle leaf symlink
   `template/projects/ongoing/daf-jev -> .../Code_Tools/daf-jev` was removed
   2026-09-18 by owner decision. The template's project-path confinement

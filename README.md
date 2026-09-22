@@ -473,7 +473,7 @@ state's repeats into `n_errors` instead of aborting the batch.
 
 Releases are tagged on GitHub and archived as version deposits on the same
 Zenodo concept — v0.3.0 as deposit 22817425 (released 2026-09-17); the
-the v0.4.x deposits publish on that concept, so the concept DOI below always
+v0.4.x deposits publish on that concept, so the concept DOI below always
 resolves to the latest published version.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
@@ -501,7 +501,7 @@ both render it), or paste this BibTeX:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.4.1}
+  version = {0.4.2}
 }
 ```
 

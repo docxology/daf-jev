@@ -319,6 +319,24 @@ def test_models_rejects_entry_missing_name(stub) -> None:
     assert "invalid model entry" in str(excinfo.value)
 
 
+def test_models_rejects_non_string_model_fields(stub) -> None:
+    for field, junk, expected in (
+        ("name", 42, "'name' must be a string, got 42"),
+        ("description", 5, "'description' must be a string or null, got 5"),
+        ("release_date", 20260101, "'release_date' must be a string or null"),
+    ):
+        entry = {
+            "name": "jev-latest",
+            "description": "current",
+            "release_date": "2026-01-01",
+        }
+        entry[field] = junk
+        stub.enqueue(body={"models": [entry]})
+        with _make_client(stub) as client, pytest.raises(ValueError) as excinfo:
+            client.models()
+        assert expected in str(excinfo.value)
+
+
 def test_models_per_call_timeout_tightens_default(stub) -> None:
     # Constructor timeout (5.0s) is generous relative to the 0.5s stub delay;
     # the per-call 0.05s timeout wins for this call only.

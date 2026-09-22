@@ -7,7 +7,7 @@ authors:
     given-names: "Daniel Ari"
     email: "daniel@activeinference.institute"
     affiliation: "Active Inference Institute"
-version: "0.4.1"
+version: "0.4.2"
 date-released: "2026-09-21"
 license: "MIT"
 type: "software"
@@ -26,7 +26,7 @@ keywords:
 abstract: "daf-jev is a modular, composable Python client and decision toolkit for the TypeSafe Jev (System One) API, which turns generated text into typed machine decisions. One HTTP endpoint exposes three question primitives — noul (a 0-1 probability), choice (an option drawn from a probability distribution), and score (a rating on ordered rubric levels). On top of the typed answers the package provides pure-logic composition patterns (composite_score, confidence_gate, route, pick), a concurrent batch Evaluator, confidence-calibration statistics, a CLI, a Model Context Protocol (MCP) server, an agent skill, runnable examples, a live-API benchmark suite, a figure registry, and a reproducible {{TOKEN}}-parameterized manuscript pipeline. Archived on Zenodo as software."
 preferred-citation:
   type: "software"
-  title: "daf-jev (v0.4.1)"
+  title: "daf-jev (v0.4.2)"
   authors:
     - orcid: "https://orcid.org/0000-0001-6232-9096"
       family-names: "Friedman"

@@ -71,6 +71,11 @@ def question_from_mapping(value: object, *, context: str = "question") -> Questi
             )
         if criteria:
             for key, desc in criteria.items():
+                if key not in ("true", "false"):
+                    raise ValueError(
+                        f"{context}: noul criteria keys must be 'true' or "
+                        f"'false', got {key!r}"
+                    )
                 _require_str_or_none(context, "noul", key, desc)
         return NoulQuestion(
             instructions=instructions, criteria=dict(criteria) if criteria else None
@@ -85,7 +90,12 @@ def question_from_mapping(value: object, *, context: str = "question") -> Questi
         options: dict[str, str | None] = {}
         for key, desc in criteria.items():
             _require_str_or_none(context, "choice", key, desc)
-            options[str(key)] = desc
+            name = str(key)
+            if not name.strip():
+                raise ValueError(f"{context}: choice option name must be non-empty")
+            if name in options:
+                raise ValueError(f"{context}: duplicate option {name!r}")
+            options[name] = desc
         return ChoiceQuestion(instructions=instructions, criteria=options)
 
     if qtype == "score":

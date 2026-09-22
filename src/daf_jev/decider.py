@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import math
 import time
 from collections.abc import Callable, Mapping, MutableMapping
 from typing import Any, Generic, TypeVar
@@ -130,6 +131,11 @@ class ConfidenceGate:
         confidence = getattr(answer, "confidence", None)
         if confidence is None:
             return None
+        if not math.isfinite(confidence):
+            return (
+                f"confidence {confidence!r} is not finite, "
+                f"below threshold {self.threshold:.3f}"
+            )
         if confidence < self.threshold:
             return f"confidence {confidence:.3f} < threshold {self.threshold:.3f}"
         return None

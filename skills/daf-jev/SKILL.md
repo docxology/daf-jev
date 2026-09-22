@@ -85,8 +85,9 @@ never be committed, printed, or read by tests.
   n_buckets=10)`, `reliability_table(pairs, *, n_buckets=10)`,
   `expected_calibration_error(pairs, *, n_buckets=10)`,
   `brier_score(pairs)` — pairs are `(confidence, correct: bool)` tuples.
-- **Config** — `load_settings()`; resolvers `resolve_api_key`,
-  `resolve_base_url`, `resolve_retry`, `resolve_timeout`.
+- **Config** — package-root re-exports `load_settings`, `resolve_retry`,
+  `resolve_timeout`; the API-key/base-URL resolvers live in
+  `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point

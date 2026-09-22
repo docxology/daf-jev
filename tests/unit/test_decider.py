@@ -225,6 +225,20 @@ def test_confidence_gate_missing_answer_and_validation() -> None:
         ConfidenceGate("route", -0.1)
 
 
+def test_confidence_gate_rejects_non_finite_confidence() -> None:
+    gate = ConfidenceGate("route", 0.5)
+    nan = ChoiceAnswer(
+        choice="act", probabilities={"act": 1.0}, confidence=float("nan")
+    )
+    inf = ChoiceAnswer(
+        choice="act", probabilities={"act": 1.0}, confidence=float("inf")
+    )
+    reason = gate({"route": nan})
+    assert reason is not None
+    assert "not finite" in reason
+    assert gate({"route": inf}) is not None
+
+
 def test_mapping_error_counts_toward_latch(stub) -> None:
     stub.enqueue(body=_body())
     stub.enqueue(status=500, body={"error": "boom"})

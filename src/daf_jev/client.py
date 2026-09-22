@@ -490,11 +490,24 @@ def _parse_models(payload: Any) -> list[ModelCard]:
     for item in items:
         if not isinstance(item, dict) or "name" not in item:
             raise ValueError(f"invalid model entry: {item!r}")
-        cards.append(
-            ModelCard(
-                name=str(item["name"]),
-                description=item.get("description"),
-                release_date=item.get("release_date"),
+        name = item["name"]
+        if not isinstance(name, str):
+            raise ValueError(
+                f"invalid model entry: 'name' must be a string, got {name!r}"
             )
+        description = item.get("description")
+        if description is not None and not isinstance(description, str):
+            raise ValueError(
+                f"invalid model entry: 'description' must be a string or "
+                f"null, got {description!r}"
+            )
+        release_date = item.get("release_date")
+        if release_date is not None and not isinstance(release_date, str):
+            raise ValueError(
+                f"invalid model entry: 'release_date' must be a string or "
+                f"null, got {release_date!r}"
+            )
+        cards.append(
+            ModelCard(name=name, description=description, release_date=release_date)
         )
     return cards
