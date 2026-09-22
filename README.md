@@ -11,6 +11,19 @@ pure-logic composition patterns built on top of the answers — plus a
 concurrent batch evaluation harness, an MCP server, a figure registry, and a
 reproducible manuscript pipeline.
 
+**Contents**: [What it provides](#what-it-provides) ·
+[Architecture at a glance](#architecture-at-a-glance) ·
+[How a decision flows](#how-a-decision-flows) · [Quickstart](#quickstart) ·
+[Examples](#examples) · [Evaluating a corpus](#evaluating-a-corpus) ·
+[Usage accounting and resilience](#usage-accounting-and-resilience) ·
+[Decision-point decider](#decision-point-decider) ·
+[Graphical models](#graphical-models) ·
+[Jev to RxInfer.jl pipeline](#jev-to-rxinferjl-pipeline) · [CLI](#cli) ·
+[MCP server](#mcp-server) · [Configuration](#configuration) ·
+[Providers](#providers) · [Figures and manuscript](#figures-and-manuscript) ·
+[Tests and benchmarks](#tests-and-benchmarks) · [Map](#map) ·
+[Documentation](#documentation)
+
 ## What it provides
 
 - **Primitives** — `noul` (yes/no), `choice` (pick an option from a
@@ -77,6 +90,72 @@ reproducible manuscript pipeline.
 
 Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` for
 figures). Managed with `uv`.
+
+## Architecture at a glance
+
+Every box maps to a file — follow it into the [Map](#map) for source and
+contract links. The per-module contract lives in
+[Package layout](docs/ARCHITECTURE.md#package-layout-srcdaf_jev) in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+```mermaid
+flowchart TB
+    subgraph wire["wire layer — one endpoint, typed questions"]
+        direction LR
+        PRV["primitives.py<br/>noul · choice · score"]
+        PR["providers.py<br/>registry · dispatch"]
+        CF["config.py<br/>env → settings"]
+        CL["client.py<br/>JevClient / AsyncJevClient"]
+        SUP["_types · _http · _retry · _errors<br/>wire plumbing"]
+        PR --> CF
+        CF --> CL
+        PR --> CL
+        SUP --> CL
+    end
+    subgraph pure["pure logic — no I/O, provider-agnostic"]
+        direction LR
+        CP["compose.py<br/>composite_score · gates · route"]
+        EV["evaluate.py<br/>Evaluator"]
+        DC["decider.py<br/>Decider · Budget"]
+        CB["calibration · resilience · ledger"]
+    end
+    subgraph gfx["graphical models — Jev as factor source"]
+        direction LR
+        GE["graphical_elicitation.py<br/>propose_structure · elicit_cpts"]
+        GA["graphical.py<br/>BayesNet · exact VE"]
+        GV["graphical_viz.py<br/>mermaid + PNG"]
+    end
+    subgraph surf["surfaces"]
+        direction LR
+        CI["cli.py — daf-jev"]
+        MC["mcp_server.py — serve"]
+        QU["questions.py · docs_verify.py<br/>shared CLI/MCP helpers"]
+        EX["examples/ · skills/"]
+    end
+    PRV --> CL
+    CL --> CP
+    CL --> EV
+    EV --> DC
+    CL --> GE
+    GE --> GA
+    GA --> GV
+    CI --> CL
+    MC --> CL
+    EX --> CL
+
+    classDef wire fill:#0e7490,color:#fff;
+    classDef pure fill:#4c1d95,color:#fff;
+    classDef gfx fill:#166534,color:#fff;
+    classDef surf fill:#9a3412,color:#fff;
+    class PR,CF,CL,SUP,PRV wire;
+    class CP,EV,DC,CB pure;
+    class GE,GA,GV gfx;
+    class CI,MC,QU,EX surf;
+```
+
+The core runs on stdlib + `httpx` (+ `pyyaml`); `matplotlib` is optional
+(the `figures` extra). Inference in `graphical.py` is pure-stdlib
+variable elimination — no numpy, no network at query time.
 
 ## How a decision flows
 
@@ -374,11 +453,105 @@ uv run python scripts/bayes_experiment.py [--provider KEY] [--model NAME] \
 
 It prints the mermaid diagram, elicits the Asia CPTs in one batched ask,
 walks the posterior trajectory (`priors` -> `asia=false` -> `+xray=true`
--> `+dysp=true`) as a P(true) table for tub/lung/bronc, and writes four
+-> `+dysp=true`) as a P(true) table for tub/lung/bronc, and writes five
 artifacts into `--out-dir` (default `output/experiments/asia`):
-`asia_graphspec.json`, `network.png`, `posterior_trajectory.png`, and
-`mermaid.txt`. Keyless runs print `SKIP: JEV_API_KEY not set` and exit 0
-before any network use.
+`asia_graphspec.json`, `network.png`, `posterior_trajectory.png`,
+`mermaid.txt`, and `receipts.json` (see [Live receipts](#live-receipts)).
+Keyless runs print `SKIP: JEV_API_KEY not set` and exit 0 before any
+network use.
+
+### Live receipts
+
+The committed artifacts come from a real end-to-end run (provider
+`openrouter`, model `jev-latest`, two batched asks: topology proposal
+plus the full 8-CPT elicitation). Exact posteriors under cumulative
+evidence — P(tub) climbs 0.120 → 0.371 → 0.434 as x-ray and dyspnea
+arrive:
+
+| evidence | P(tub) | P(lung) | P(bronc) |
+| --- | --- | --- | --- |
+| priors | 0.1575 | 0.1305 | 0.2275 |
+| `asia=false` | 0.1200 | 0.1305 | 0.2275 |
+| `+xray=true` | 0.3712 | 0.3894 | 0.2444 |
+| `+dysp=true` | 0.4342 | 0.4604 | 0.3219 |
+
+Committed run artifacts (reproduce with the command above; keyless runs
+skip cleanly):
+
+- [`asia_graphspec.json`](output/experiments/asia/asia_graphspec.json) —
+  the elicited net as GraphSpec `dafjev.bayesnet/1`
+- [`network.png`](output/experiments/asia/network.png) — layered DAG
+  layout
+- [`posterior_trajectory.png`](output/experiments/asia/posterior_trajectory.png) —
+  the P(true) bars behind the table
+- [`mermaid.txt`](output/experiments/asia/mermaid.txt) — the `to_mermaid`
+  render of the DAG
+- [`receipts.json`](output/experiments/asia/receipts.json) — provider,
+  model, proposed edges, elicited CPTs, and the trajectory itself
+
+## Jev to RxInfer.jl pipeline
+
+GraphSpec (`dafjev.bayesnet/1`) is the interchange between daf-jev and
+the GNN bridge — [PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
+on branch `feat/rxinfer-bridge`. daf-jev elicits structure and factors,
+the GNN bridge emits a RxInfer.jl `@model`, Julia runs the inference,
+and the marginals come back to daf-jev for calibration and re-asking:
+
+```mermaid
+flowchart LR
+    subgraph jev["daf-jev (this repo)"]
+        A["propose_structure + elicit_cpts<br/>2 batched asks"]
+        G["calibration · re-ask<br/>decider.py · evaluate.py"]
+    end
+    subgraph art["output/experiments/asia"]
+        C["asia_graphspec.json<br/>dafjev.bayesnet/1"]
+    end
+    subgraph gnn["GNN repo (PR #165)"]
+        D["rxinfer_bridge.py<br/>GraphSpec → @model"]
+        E["examples/rxinfer/<br/>asia_model.jl"]
+    end
+    subgraph jl["Julia (RxInfer.jl)"]
+        F["marginals<br/>evidence updates stay local"]
+    end
+    A --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+```
+
+Runnable end to end — the [live receipts](#live-receipts) above are
+step 1 with `--provider openrouter`:
+
+```bash
+# 1. daf-jev (this repo) — elicit the Asia net, write the five artifacts
+uv run python scripts/bayes_experiment.py --provider openrouter --propose-structure
+
+# 2. GNN repo — clone, check out the bridge branch, emit the Julia model
+git clone https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation
+cd Generalized_Notation_Notation && git checkout feat/rxinfer-bridge
+python -m gnn.rxinfer_bridge emit /path/to/daf-jev/output/experiments/asia/asia_graphspec.json
+
+# 3. Julia — run the generated model over the same GraphSpec
+julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
+      examples/rxinfer/asia_graphspec.json
+```
+
+Cross-repo note: the bridge (`src/gnn/rxinfer_bridge.py`), its 39 tests,
+and the GNN-side walkthrough (`examples/rxinfer/README.md`, with the
+verified capability/gap matrix) live in the GNN repository — a relative
+link across repos does not resolve on GitHub, so
+[PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
+is the entry point (its Files list shows all five bridge files).
+Verified capability status: single-parent nets run end-to-end with
+correct posteriors; multi-parent `DiscreteTransition` nodes hit a
+ReactiveMP structured-rule limitation (documented in the PR).
+
+Downstream is plain Python and needs no bridge: feed the marginals back
+into [`Decider`](src/daf_jev/decider.py) /
+[`Evaluator`](src/daf_jev/evaluate.py) or the
+[`calibration`](src/daf_jev/calibration.py) functions, re-asking Jev
+with the new evidence when a posterior warrants it.
 
 ## CLI
 
@@ -673,6 +846,98 @@ New releases are added as new version deposits on the same Zenodo concept, so
 the concept DOI always resolves to the latest published version.
 
 
+## Map
+
+Every module, example, script, and receipt — one click from prose to
+source to contract. Module contracts live in
+[Package layout](docs/ARCHITECTURE.md#package-layout-srcdaf_jev).
+
+### Source modules
+
+| Module | Source | Purpose |
+| --- | --- | --- |
+| `_types` | [`_types.py`](src/daf_jev/_types.py) | wire dataclasses — questions, answers, `Usage`; strict response parsing |
+| `_errors` | [`_errors.py`](src/daf_jev/_errors.py) | typed error hierarchy mirroring the API's status codes |
+| `_retry` | [`_retry.py`](src/daf_jev/_retry.py) | `RetryPolicy` — 429/529 backoff with jitter, `Retry-After` aware |
+| `_http` | [`_http.py`](src/daf_jev/_http.py) | `Transport` / `AsyncTransport` protocols + httpx implementations |
+| `config` | [`config.py`](src/daf_jev/config.py) | env / `.env` resolution, `Settings`, retry/timeout defaults |
+| `providers` | [`providers.py`](src/daf_jev/providers.py) | provider registry, `for_provider` / `open_client` dispatch |
+| `client` | [`client.py`](src/daf_jev/client.py) | `JevClient` / `AsyncJevClient` — `ask` / `models` |
+| `primitives` | [`primitives.py`](src/daf_jev/primitives.py) | `noul()` / `choice()` / `score()` builders, `QuestionSet` |
+| `questions` | [`questions.py`](src/daf_jev/questions.py) | native `{type, instructions, criteria}` mappings → typed questions (shared CLI/MCP) |
+| `compose` | [`compose.py`](src/daf_jev/compose.py) | `composite_score`, `confidence_gate`, `route` / `tiered_gate` / `pick` |
+| `evaluate` | [`evaluate.py`](src/daf_jev/evaluate.py) | `Evaluator` — concurrent batch evaluation with per-state error capture |
+| `decider` | [`decider.py`](src/daf_jev/decider.py) | `Decider` decision loop, `ConfidenceGate`, `Budget`, JSON event receipts |
+| `calibration` | [`calibration.py`](src/daf_jev/calibration.py) | ECE, Brier, reliability tables over `(confidence, correct)` pairs |
+| `resilience` | [`resilience.py`](src/daf_jev/resilience.py) | opt-in `CircuitBreaker` with injectable clock |
+| `ledger` | [`ledger.py`](src/daf_jev/ledger.py) | `UsageLedger` — thread-safe request/token accounting |
+| `models` | [`models.py`](src/daf_jev/models.py) | `pick_model` over the models listing |
+| `docs_verify` | [`docs_verify.py`](src/daf_jev/docs_verify.py) | docs-snapshot manifest verifier (CLI `docs-verify`, MCP `jev_docs_verify`) |
+| `cli` | [`cli.py`](src/daf_jev/cli.py) | the `daf-jev` argparse CLI (JSON out, exit 0/1/2) |
+| `mcp_server` | [`mcp_server.py`](src/daf_jev/mcp_server.py) | FastMCP stdio server — seven tools + docs resource |
+| `graphical` | [`graphical.py`](src/daf_jev/graphical.py) | `Variable` / `Edge` / `CPT` / `BayesNet` — exact VE, GraphSpec round-trip |
+| `graphical_elicitation` | [`graphical_elicitation.py`](src/daf_jev/graphical_elicitation.py) | `elicit_cpts` / `propose_structure` — Jev as factor source |
+| `graphical_viz` | [`graphical_viz.py`](src/daf_jev/graphical_viz.py) | `to_mermaid`, `plot_network`, `plot_posterior_trajectory` |
+| `figures` | [`figures.py`](src/daf_jev/figures.py) | matplotlib figure registry (7 figures + registry JSON) |
+| `manuscript_variables` | [`manuscript_variables.py`](src/daf_jev/manuscript_variables.py) | 49 `{{TOKEN}}` manuscript variables generated from the tree |
+
+### Example scripts
+
+| Example | File | What it shows |
+| --- | --- | --- |
+| quickstart | [`quickstart.py`](examples/quickstart.py) | one mixed ask — nouls, choices, scores, usage |
+| triage_router | [`triage_router.py`](examples/triage_router.py) | `tiered_gate` + `route` over one choice answer |
+| composite_scoring | [`composite_scoring.py`](examples/composite_scoring.py) | weighted `composite_score` + `confidence_gate` |
+| evaluate_corpus | [`evaluate_corpus.py`](examples/evaluate_corpus.py) | `Evaluator` over an inline four-state corpus |
+| gated_fallback | [`gated_fallback.py`](examples/gated_fallback.py) | heuristic-first — the model is called only when it adds value |
+| decider_loop | [`decider_loop.py`](examples/decider_loop.py) | decision-point loop — gate, budget, fail-open fallback |
+| providers_example | [`providers_example.py`](examples/providers_example.py) | registry + dispatch via injected transport (no network) |
+| asia_bayes | [`asia_bayes.py`](examples/asia_bayes.py) | Bayes net from Jev factors; GraphSpec + experiment artifacts |
+
+Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
+
+### Scripts
+
+| Script | Purpose |
+| --- | --- |
+| [`bayes_experiment.py`](scripts/bayes_experiment.py) | Asia experiment runner — elicits, walks posteriors, writes the five artifacts |
+| [`generate_figures.py`](scripts/generate_figures.py) | renders the 7 figures + `figure_registry.json` |
+| [`render_pdf.py`](scripts/render_pdf.py) | in-repo pandoc PDF render with validation gates |
+| [`scrape_docs.py`](scripts/scrape_docs.py) | re-scrapes the docs snapshot; `--check` verifies the manifest |
+| [`z_generate_manuscript_variables.py`](scripts/z_generate_manuscript_variables.py) | regenerates the 49-token variable map |
+
+### Benchmarks
+
+| Script | Committed receipts |
+| --- | --- |
+| [`bench_batching.py`](benchmarks/bench_batching.py) | [`batching_20260916.json`](output/benchmarks/batching_20260916.json) |
+| [`bench_patterns.py`](benchmarks/bench_patterns.py) | [`patterns_20260916.json`](output/benchmarks/patterns_20260916.json) |
+| [`bench_calibration.py`](benchmarks/bench_calibration.py) | [`calibration_20260916.json`](output/benchmarks/calibration_20260916.json) |
+
+Methodology and the committed-receipts policy:
+[`benchmarks/README.md`](benchmarks/README.md#committed-receipts).
+
+### Skills, tests, docs, artifacts
+
+- Agent skill: [`skills/daf-jev/SKILL.md`](skills/daf-jev/SKILL.md)
+  (install notes in [`skills/README.md`](skills/README.md)).
+- Test suite: the shared stub server [`tests/conftest.py`](tests/conftest.py),
+  24 unit modules under [`tests/unit/`](tests/unit/), 2 live tests in
+  [`tests/live/test_live_api.py`](tests/live/test_live_api.py).
+- Docs: contract [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), model
+  reference [`docs/models.md`](docs/models.md), index
+  [`docs/README.md`](docs/README.md), 108-page hashed snapshot under
+  [`docs/reference/`](docs/reference/).
+- Manuscript: 10 sections under [`manuscript/`](manuscript/) +
+  [`config.yaml`](manuscript/config.yaml); rendered PDF
+  [`daf-jev_combined.pdf`](daf-jev_combined.pdf).
+- Generated figures:
+  [`output/figures/figure_registry.json`](output/figures/figure_registry.json)
+  (+ 7 PNGs alongside).
+- Release metadata: [`CITATION.cff`](CITATION.cff),
+  [`.zenodo.json`](.zenodo.json); dev environment template
+  [`.env.example`](.env.example).
+
 ## Documentation
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the authoritative design
   contract (wire facts, module signatures, test and benchmark conventions).
@@ -685,3 +950,4 @@ the concept DOI always resolves to the latest published version.
   it with an agent outside the repo, copy the whole `skills/daf-jev/`
   directory into the agent's skills location — see
   [`skills/README.md`](skills/README.md).
+- [Map](#map) — deep links to every module, example, script, and receipt.

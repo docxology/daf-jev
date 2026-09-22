@@ -5,6 +5,22 @@ trained, how calibration works, and where the vendor's claims have (and have not
 corroborated. This page is documentation, not a benchmark; every factual claim carries a
 source link and its access date.
 
+**Contents.**
+
+- [1. What a System One model is](#1-what-a-system-one-model-is)
+- [2. Architecture: a specialized stack with a parallel sampler](#2-architecture-a-specialized-stack-with-a-parallel-sampler)
+- [3. Training: RLCD vs RLHF/RLVR](#3-training-rlcd-vs-rlhfrlvr)
+- [4. Calibration methodology](#4-calibration-methodology)
+- [5. The three primitives and their typed answers](#5-the-three-primitives-and-their-typed-answers)
+- [6. Model versioning](#6-model-versioning)
+- [7. Naming origins](#7-naming-origins)
+- [8. Company background](#8-company-background)
+- [9. Evidence: vendor claims vs independent measurement](#9-evidence-vendor-claims-vs-independent-measurement)
+- [10. Sibling System One servers: jeff and kev](#10-sibling-system-one-servers-jeff-and-kev)
+- [11. Sibling ecosystem (second tier)](#11-sibling-ecosystem-second-tier)
+- [12. Jev as a factor source for graphical models](#12-jev-as-a-factor-source-for-graphical-models)
+- [Sources](#sources)
+
 > **Canonical cite keys.** The BibTeX entries in `manuscript/references.bib` use the keys
 > referenced throughout this page (`typesafe2026systemone`, `typesafe2026systemoneconcept`,
 > `typesafe2026apidocs`, `typesafe2026confidence`, `typesafe2026patterns`, `register2026jev`,

@@ -124,6 +124,47 @@ composite scoring, gated fallback, corpus evaluation, decision-point
 decider, provider dispatch, Asia Bayes net); each skips cleanly without
 a key.
 
+## Jev to RxInfer.jl pipeline (quick reference)
+
+The cross-repo story: daf-jev elicits a discrete Bayes net from Jev, the
+GNN repo's `rxinfer_bridge` compiles the GraphSpec to RxInfer.jl, Julia
+computes marginals, and posteriors feed back into daf-jev. GraphSpec
+`dafjev.bayesnet/1` is the stable interchange (coordinate any change
+across both repos).
+
+1. Elicit — `scripts/bayes_experiment.py` (`--provider`, `--model`,
+   `--propose-structure`, `--out-dir`): `propose_structure` +
+   `elicit_cpts`, two batched asks.
+2. Artifacts — `output/experiments/asia/`: `asia_graphspec.json`
+   (`dafjev.bayesnet/1` interchange), `network.png`,
+   `posterior_trajectory.png`, `mermaid.txt`, `receipts.json`
+   (per-run provenance + posterior trajectory).
+3. Bridge — GNN `rxinfer_bridge` (branch `feat/rxinfer-bridge`,
+   [PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)):
+   reads the GraphSpec, parses `.gnn` subsets, emits a deterministic
+   RxInfer.jl `@model`.
+4. Infer — from the GNN checkout:
+   `julia --project=examples/rxinfer examples/rxinfer/asia_model.jl
+   examples/rxinfer/asia_graphspec.json` — single-parent nets print exact
+   marginals; the committed 8-node Asia spec stalls at multi-parent
+   `DiscreteTransition` (upstream gap). `--out FILE` writes a
+   `dafjev.bayesnet-posteriors/1` sidecar.
+5. Feed back — posteriors re-enter daf-jev (calibration, evidence
+   queries). Gap: single-parent nets exact end-to-end on RxInfer 5.5.0 /
+   5.5.2; multi-parent `DiscreteTransition` stalls in RxInfer 5.5.x VMP
+   (upstream limitation).
+
+Deep links (resolve from the repo checkout):
+
+- [Graphical models](../../README.md#graphical-models) — user-facing walkthrough
+- [Graphical models — architecture contract](../../docs/ARCHITECTURE.md#graphical-models)
+  and [Provider dispatch](../../docs/ARCHITECTURE.md#provider-dispatch)
+- [`graphical.py`](../../src/daf_jev/graphical.py) ·
+  [`graphical_elicitation.py`](../../src/daf_jev/graphical_elicitation.py) ·
+  [`graphical_viz.py`](../../src/daf_jev/graphical_viz.py)
+- [`scripts/bayes_experiment.py`](../../scripts/bayes_experiment.py) ·
+  [receipts.json](../../output/experiments/asia/receipts.json) (live run)
+
 ## CLI
 
 ```

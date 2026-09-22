@@ -700,8 +700,10 @@ logic lives in src):
   last state); artifacts into `--out-dir`: `asia_graphspec.json`
   (GraphSpec `dafjev.bayesnet/1`), `network.png`,
   `posterior_trajectory.png`, `mermaid.txt` (the source of the net the
-  experiment actually used — the reference edges). Keyless: prints
-  `SKIP: JEV_API_KEY not set` and exits 0 BEFORE any network use.
+  experiment actually used — the reference edges), and `receipts.json`
+  (the live receipt: provider, model, proposed edges, posterior
+  trajectory). Keyless: prints `SKIP: JEV_API_KEY not set` and exits 0
+  BEFORE any network use.
 
 GraphSpec interchange JSON (cross-repo contract with GNN / RxInfer — see
 the AGENTS.md invariant):
@@ -726,6 +728,63 @@ the AGENTS.md invariant):
   be lossless (`==` after both directions).
 - This JSON is what GNN's bridge consumes/produces and what the
   RxInfer.jl example reads. The schema lives here; GNN docs reference it.
+
+### End-to-end pipeline
+
+The pipeline crosses two repos: Jev factors become a Bayes net in this
+repo, and the net becomes an RxInfer.jl model in the GNN checkout
+(branch `feat/rxinfer-bridge` —
+[GNN PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)).
+Commands are signature-exact; step 1 runs from this repo, steps 2-3 from
+the GNN repo root — relative links cannot cross repos, so GNN-side
+paths are named, not linked.
+
+```bash
+# 1. this repo — propose the structure (printed vs the reference edges),
+#    elicit every CPT in one batched ask, write the artifacts
+uv sync --extra figures
+uv run python scripts/bayes_experiment.py --provider openrouter \
+    --propose-structure --out-dir output/experiments/asia
+
+# 2. GNN repo — emit the RxInfer.jl @model from the GraphSpec of step 1
+#    (or a .gnn source); gnn.rxinfer_bridge.emit_rxinfer_jl parses the
+#    subsets and writes the @model. The committed
+#    examples/rxinfer/asia_model.jl is the golden output, pinned
+#    byte-identical by
+#    tests/gnn/test_rxinfer_bridge.py::test_emit_golden_matches_example_file
+python -m gnn.rxinfer_bridge emit asia_graphspec.json
+
+# 3. GNN repo root — exact marginals from the emitted model
+julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
+    examples/rxinfer/asia_graphspec.json   # [--evidence key=state ...] [--out FILE] [--learn]
+```
+
+The Julia script prints marginal posteriors in topological order;
+`--evidence xray=true` clamps GraphSpec evidence, and `--out` writes
+a `dafjev.bayesnet-posteriors/1` sidecar (evidence + marginals) that
+re-feeds daf-jev for calibration / re-asking — the downstream seam.
+
+Artifacts (step 1; `--out-dir`, default `output/experiments/asia`):
+
+| Artifact | Producer | Holds |
+| --- | --- | --- |
+| [`asia_graphspec.json`](../output/experiments/asia/asia_graphspec.json) | `BayesNet.to_json()` | the net as GraphSpec `dafjev.bayesnet/1` — the bridge's input |
+| [`network.png`](../output/experiments/asia/network.png) | `plot_network` | layered PNG of the elicited net |
+| [`posterior_trajectory.png`](../output/experiments/asia/posterior_trajectory.png) | `plot_posterior_trajectory` | grouped P(true) bars over the evidence walkthrough |
+| [`mermaid.txt`](../output/experiments/asia/mermaid.txt) | `to_mermaid` | mermaid source of the net actually used (reference edges) |
+| [`receipts.json`](../output/experiments/asia/receipts.json) | the runner | live receipt: provider, model, proposed edges, posterior trajectory |
+
+Live receipt ([receipts.json](../output/experiments/asia/receipts.json)):
+provider `openrouter`, model `jev-latest`, two batched asks (one
+`propose_structure` + one `elicit_cpts`); tub P(true) walks 0.120 →
+0.371 → 0.434 under the cumulative evidence `asia=false` →
+`+xray=true` → `+dysp=true`.
+
+Verified gap matrix: single-parent networks run end-to-end with exact
+posteriors on RxInfer 5.5.0 and 5.5.2; the full Asia net (multi-parent
+`DiscreteTransition` nodes) stalls variational message passing — an
+upstream ReactiveMP limitation, reproduced independently of the
+bridge.
 
 ## Tests (tests/) — template "no-mock" convention
 

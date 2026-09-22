@@ -145,7 +145,9 @@ here.
   `--model`, `--edge-penalty FLOAT` (default 1.0), `--propose-structure`
   (prints the proposal, continues with the reference edges), `--out-dir`
   (default `output/experiments/asia`); writes `asia_graphspec.json`,
-  `network.png`, `posterior_trajectory.png`, `mermaid.txt`; keyless SKIP.
+  `network.png`, `posterior_trajectory.png`, `mermaid.txt`, and
+  `receipts.json` (per-run provenance: provider/model, proposed edges,
+  elicited CPTs, posterior trajectory); keyless SKIP.
 - `examples/` — eight runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
   `gated_fallback.py`, `decider_loop.py`, `providers_example.py`,
@@ -156,7 +158,8 @@ here.
   selected provider), walks the posterior trajectory, and writes
   `asia_graphspec.json`.
 - `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
-  Markdown skill) + `README.md` (install notes). Documentation only — never
+  Markdown skill) + `daf-jev/README.md` (per-skill install + pointers) +
+  `README.md` (skill-tree install notes). Documentation only — never
   imported by code.
 - `manuscript/` — 10 sections (`00_abstract.md` …
   `08_scope_and_related_work.md`, `99_references.md`) + `preamble.md` +
@@ -181,12 +184,71 @@ here.
   JSONs), `figures/` (7 PNGs + `figure_registry.json`), `data/`
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
-  rendered provenance).
+  rendered provenance), `experiments/` (Asia run:
+  `output/experiments/asia/` — `asia_graphspec.json`, `network.png`,
+  `posterior_trajectory.png`, `mermaid.txt`, `receipts.json`; the
+  cross-repo artifacts, see Cross-repo pipeline below).
 - `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
+
+## Cross-repo pipeline
+
+The graphical-models story crosses repos: Jev elicits the Bayes net, the
+GNN repo's `rxinfer_bridge` turns the GraphSpec into an RxInfer.jl
+`@model`, Julia computes marginals, and posteriors feed back into
+daf-jev. Format seam: GraphSpec `dafjev.bayesnet/1` (invariant below;
+emitter/parser in [`src/daf_jev/graphical.py`](src/daf_jev/graphical.py) and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#graphical-models)).
+
+1. **Elicit** — [`scripts/bayes_experiment.py`](scripts/bayes_experiment.py)
+   runs `propose_structure` + `elicit_cpts` (two batched asks) against the
+   selected provider.
+2. **Artifacts** — five files land in `output/experiments/asia/`:
+   [`asia_graphspec.json`](output/experiments/asia/asia_graphspec.json)
+   (interchange), [`network.png`](output/experiments/asia/network.png),
+   [`posterior_trajectory.png`](output/experiments/asia/posterior_trajectory.png),
+   [`mermaid.txt`](output/experiments/asia/mermaid.txt), and
+   [`receipts.json`](output/experiments/asia/receipts.json) (per-run
+   provenance: provider/model, proposed edges, elicited CPTs, posterior
+   trajectory; live openrouter run: tub `0.120 -> 0.371 -> 0.434` under
+   cumulative evidence `asia=false` → `+xray=true` → `+dysp=true`).
+3. **Bridge** — GNN `rxinfer_bridge`
+   ([PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165),
+   branch `feat/rxinfer-bridge`) reads the GraphSpec (`dafjev.bayesnet/1`),
+   parses `.gnn` subsets, emits a deterministic RxInfer.jl `@model`.
+4. **Infer** — `julia --project=examples/rxinfer examples/rxinfer/asia_model.jl
+   examples/rxinfer/asia_graphspec.json` — the committed 8-node Asia spec
+   currently stalls at the multi-parent `DiscreteTransition` nodes (Known
+   gap below); single-parent specs print exact marginals end-to-end.
+   `--out FILE` writes a `dafjev.bayesnet-posteriors/1` sidecar for
+   re-asking Jev.
+5. **Feed back** — posteriors re-enter daf-jev (calibration, evidence
+   queries, trajectory re-walk).
+
+Known gap: single-parent nets run end-to-end with exact posteriors on
+both RxInfer 5.5.0 and 5.5.2; multi-parent `DiscreteTransition` nodes
+stall in RxInfer 5.5.x VMP (upstream limitation; full gap matrix in the
+GNN-side `examples/rxinfer/README.md`).
+
+GNN-side verification (run from the GNN checkout, branch
+`feat/rxinfer-bridge`):
+
+```bash
+uv run mypy src/gnn/rxinfer_bridge.py
+uv run pytest tests/gnn/test_rxinfer_bridge.py
+julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
+    examples/rxinfer/asia_graphspec.json      # full Asia spec: stalls at multi-parent
+                                              # DiscreteTransition (Known gap above);
+                                              # single-parent specs print exact marginals
+```
+
+GNN-side paths are relative to that repo and not clickable from this repo
+on GitHub; note `examples/rxinfer/` there carries no committed
+`Project.toml` (RxInfer 5.5.x lives in a project-local depot; the committed
+fallback environment is `src/gnn/execute/rxinfer/`).
 
 ## Invariants and gotchas
 
@@ -337,7 +399,9 @@ here.
   string emitted by `BayesNet.to_json()` / `from_json()` is consumed and
   produced by the GNN bridge (GeneralizedNotationNotation): changing it
   (or its row/shape semantics) requires both repos to land in the same
-  wave. Do not bump it unilaterally.
+  wave. Do not bump it unilaterally. The full pipeline and GNN-side
+  verification commands are in the
+  [Cross-repo pipeline](#cross-repo-pipeline) section.
 - **`skills/` is documentation.** `skills/daf-jev/SKILL.md` is agent-facing
   documentation, never imported by code; keep it consistent with
   `README.md` and `docs/ARCHITECTURE.md` facts.
