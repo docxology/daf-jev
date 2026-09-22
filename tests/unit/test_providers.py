@@ -220,7 +220,7 @@ def test_builtin_spec_pinned_facts() -> None:
     assert openrouter.default_base_url == "https://openrouter.ai/api"
     assert openrouter.default_model == "jev-latest"
     assert openrouter.api_key_vars[0] == "OPENROUTER_API_KEY"
-    assert openrouter.model_vars == ()
+    assert openrouter.model_vars == ("OPENROUTER_MODEL",)
 
 
 def test_get_provider_is_case_insensitive() -> None:
@@ -374,12 +374,14 @@ def test_resolve_base_url_and_model_precedence() -> None:
     )
     assert providers.resolve_provider_model(openthai, {}) == "openthai-latest"
 
-    # openrouter has no model_vars: the default model always wins
+    # openrouter resolves its model through OPENROUTER_MODEL
     openrouter = providers.get_provider("openrouter")
     assert providers.resolve_provider_model(openrouter, {}) == "jev-latest"
     assert (
-        providers.resolve_provider_model(openrouter, {"OPENROUTER_MODEL": "ignored"})
-        == "jev-latest"
+        providers.resolve_provider_model(
+            openrouter, {"OPENROUTER_MODEL": "openrouter/custom"}
+        )
+        == "openrouter/custom"
     )
     assert providers.resolve_provider_base_url(openrouter, {}) == (
         "https://openrouter.ai/api"
@@ -643,13 +645,13 @@ def test_cli_providers_subcommand_json_shape(stub, clean_provider_env, capsys) -
     assert jev["base_url_env"] == "JEV_BASE_URL"
     assert jev["model_env"] == "JEV_MODEL"
     assert isinstance(jev["docs_url"], str) and jev["docs_url"]
-    # openrouter has no model vars: model_env is None, key comes from OPENROUTER_API_KEY
+    # openrouter's model var resolves through OPENROUTER_MODEL
     openrouter = payload[-1]
     assert openrouter["key"] == "openrouter"
     assert openrouter["api_key_env"] == "OPENROUTER_API_KEY"
     assert openrouter["default_base_url"] == "https://openrouter.ai/api"
     assert openrouter["default_model"] == "jev-latest"
-    assert openrouter["model_env"] is None
+    assert openrouter["model_env"] == "OPENROUTER_MODEL"
     assert stub.hits == []  # keyless, no network
 
 

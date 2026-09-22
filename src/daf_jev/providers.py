@@ -221,7 +221,7 @@ register_provider(
         api_key_vars=("OPENROUTER_API_KEY", "TYPESAFE_API_KEY"),
         base_url_vars=("OPENROUTER_BASE_URL", "TYPESAFE_BASE_URL"),
         default_model="jev-latest",
-        model_vars=(),
+        model_vars=("OPENROUTER_MODEL",),
         docs_url="https://openrouter.ai/docs",
         notes=(
             "Hosted proxy of the official System One API billed to an "
