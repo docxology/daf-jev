@@ -25,6 +25,12 @@ reproducible manuscript pipeline.
   `ask` / `models` call also accepts a per-call `timeout` override and
   extra `request_headers` (merged over the defaults for that call only;
   `models()` retries per the same policy as `ask`).
+- **Providers** — one wire contract, several backends: hosted `jev`
+  (TypeSafe), self-hosted `jeff` / `kev` / `localjev` /
+  `openthai-systemone`, and the `openrouter` proxy. A global `--provider`
+  CLI flag, a keyless `providers` registry listing, and `for_provider()` /
+  `open_client(provider, ...)` constructors dispatch across them (see
+  [Providers](#providers)).
 - **Composition patterns** — pure functions over answers:
   `composite_score` (probability-weighted expected value over score levels),
   `confidence_gate` (auto-escalate low-confidence answers), `route` /
@@ -126,10 +132,10 @@ verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 
 ## Examples
 
-Six runnable scripts live in `examples/` (walkthrough per script in
+Seven runnable scripts live in `examples/` (walkthrough per script in
 [`examples/README.md`](examples/README.md)). Each resolves the API key from
 the environment or `.env` and — when no key is found — prints
-`SKIP: JEV_API_KEY not set` and exits 0, so all six are offline-safe:
+`SKIP: JEV_API_KEY not set` and exits 0, so all seven are offline-safe:
 
 ```bash
 python examples/quickstart.py         # one mixed ask call; answers, usage, request id
@@ -138,11 +144,13 @@ python examples/composite_scoring.py  # composite_score + confidence_gate
 python examples/evaluate_corpus.py    # Evaluator over an inline four-state corpus
 python examples/gated_fallback.py     # heuristic-first: model called only when it adds value
 python examples/decider_loop.py       # decision-point loop: gate, budget, fail-open fallback
+python examples/providers_example.py  # provider registry + dispatch; injected transport, no network
 ```
 
-All six take `--model NAME` (default: `JEV_MODEL`, then
-`TYPESAFE_DEFAULT_MODEL`, then `jev-latest`); `evaluate_corpus.py` also takes
-`--concurrency N` (default 2).
+All seven take `--model NAME` (default: provider-resolved — for the default
+`jev` provider: `JEV_MODEL`, then `TYPESAFE_DEFAULT_MODEL`, then
+`jev-latest`); `evaluate_corpus.py` also takes `--concurrency N`
+(default 2).
 
 ## Evaluating a corpus
 
@@ -293,6 +301,9 @@ uv run daf-jev models                       # list available models
 uv run daf-jev models --pick latest         # pick one (latest|first|last)
 uv run daf-jev models --pick latest --contains jev
 
+uv run daf-jev providers                    # provider registry listing (keyless, no network)
+uv run daf-jev --provider kev models        # route any command through a registered provider
+
 uv run daf-jev evaluate \
   --questions-file questions.yaml --states-file states.txt \
   --concurrency 8 --include-records
@@ -313,10 +324,10 @@ surface below calls the same core; there is no second implementation:
 ```mermaid
 flowchart TB
     subgraph CORE["daf-jev core"]
-        CLI["CLI<br/>ask · evaluate · models · docs-verify"]
+        CLI["CLI<br/>ask · evaluate · models · providers · docs-verify"]
         MCP["MCP server (stdio)<br/>jev_ask · jev_evaluate · jev_models<br/>jev_composite_score · jev_confidence_gate<br/>jev_tiered_gate · jev_docs_verify"]
         SKILL["agent skill<br/>skills/daf-jev/SKILL.md"]
-        EX["examples/<br/>6 runnable scripts"]
+        EX["examples/<br/>7 runnable scripts"]
     end
     CLI --> K["JevClient / compose / calibration"]
     MCP --> K
@@ -372,6 +383,12 @@ directory; credentials are never returned in tool output.
 Everything resolves from the environment (injected env mapping > process env
 > `.env` file); unset or invalid values fall back to the defaults below.
 
+Naming note (verified): the official TypeSafe SDK convention is
+`TYPESAFE_API_KEY` / `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL`; daf-jev
+keeps the `JEV_*` names as its own primaries with the `TYPESAFE_*` names as
+fallbacks. Every provider's key and base-URL env vars additionally fall
+back to `TYPESAFE_API_KEY` / `TYPESAFE_BASE_URL` last.
+
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `JEV_API_KEY` / `TYPESAFE_API_KEY` | API key | none (error when no transport injected) |
@@ -386,6 +403,60 @@ Everything resolves from the environment (injected env mapping > process env
 Per-field: a bad value keeps only that field's default. Per-call `timeout=`
 and `request_headers=` on `ask()` / `models()` win over all of the above for
 that call.
+
+## Providers
+
+One wire contract — `POST /v1/systemone` — many backends. daf-jev ships a
+provider registry (`src/daf_jev/providers.py`) that parameterizes config
+resolution, client construction, and CLI/MCP dispatch; the pure-logic
+layers (`compose`, `evaluate`, `decider`, `calibration`, `resilience`) are
+provider-agnostic. `daf-jev providers` prints the registry as JSON
+(keyless, no network):
+
+| key | backend | default base URL | default model | client env vars | caveats |
+| --- | --- | --- | --- | --- | --- |
+| `jev` | TypeSafe Jev (System One), hosted | `https://api.typesafe.ai` | `jev-latest` | `JEV_API_KEY` / `JEV_BASE_URL` / `JEV_MODEL` | the reference implementation |
+| `jeff` | GLiFormer (self-hosted) | `http://localhost:8000` | `jev-latest` | `JEFF_API_KEY` / `JEFF_BASE_URL` / `JEFF_MODEL` | temperature-scaled probabilities; nominal output tokens — [logan-markewich/jeff](https://github.com/logan-markewich/jeff) |
+| `kev` | Qwen3.5 0.8B/4B/9B (self-hosted) | `http://localhost:8009` | `kev-latest` | `KEV_API_KEY` / `KEV_BASE_URL` / `KEV_MODEL` | responses add a top-level `latency_ms` (parsed and ignored) — [jaredpalmer/kev](https://github.com/jaredpalmer/kev) |
+| `localjev` | GitHub Next GLiFormer proxy — TS/Bun server over any OpenAI-compatible chat endpoint (self-hosted, MIT) | `http://127.0.0.1:8080` | `localjev-latest` | `LOCALJEV_API_KEY` / `LOCALJEV_BASE_URL` / `LOCALJEV_MODEL` | upstream is any OpenAI-compatible chat endpoint |
+| `openthai-systemone` | Thai/English Qwen3.5-0.8B slot-softmax (self-hosted, Apache-2.0) | `http://localhost:8077` | `openthai-latest` | `OPENTHAI_API_KEY` / `OPENTHAI_BASE_URL` / `OPENTHAI_MODEL` | no server auth; no `/v1/models` — the `models` command is unsupported |
+| `openrouter` | hosted proxy | `https://openrouter.ai/api` | `jev-latest` | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL` | responses add `id` / `provider` / `usage.cost` extras (parsed and ignored); `/v1/models` returns the OpenRouter shape, so `models` is unsupported |
+
+The `jev` provider additionally falls back to `TYPESAFE_DEFAULT_MODEL` for
+its model (see [Configuration](#configuration) for the naming convention).
+
+Selecting a provider:
+
+```bash
+uv run daf-jev providers                 # registry listing, keyless, exit 0
+uv run daf-jev --provider kev models     # any command; the flag precedes the subcommand
+```
+
+The global `--provider` flag selects the backend; precedence: `--provider`
+> `DAF_JEV_PROVIDER` env var > `jev`. Invalid keys are usage errors
+(exit 2). The MCP tools accept the same choice through an optional
+`provider` argument (unknown keys return a JSON-safe error listing the
+available providers).
+
+Python selection — per-provider settings resolution plus `for_provider` /
+`open_client` constructors (explicit arguments always win over the
+provider's env resolution):
+
+```python
+from daf_jev import open_client, load_settings
+
+settings = load_settings(provider="kev")   # KEV_API_KEY / KEV_BASE_URL / KEV_MODEL
+with open_client("kev", api_key=settings.api_key) as client:
+    response = client.ask(state, questions)
+```
+
+Extending: a third-party backend registers at runtime with
+`register_provider(ProviderSpec(key="acme", ...))` and becomes first-class
+everywhere (CLI, MCP, clients, settings). For a backend needing custom HTTP
+behavior, inject a `Transport` / `AsyncTransport` implementation — the seam
+between daf-jev's wire layer and anything upstream or downstream. Provider
+keys are stable API: adding a built-in updates this section, the
+architecture contract, and the agent skill in the same commit.
 
 ## Figures and manuscript
 
@@ -501,7 +572,7 @@ both render it), or paste this BibTeX:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.4.2}
+  version = {0.5.0}
 }
 ```
 

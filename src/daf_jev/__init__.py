@@ -25,7 +25,13 @@ from daf_jev._types import (
     answer_from_wire,
     parse_response,
 )
-from daf_jev.client import AsyncJevClient, JevClient, ModelCard
+from daf_jev.client import (
+    AsyncJevClient,
+    JevClient,
+    ModelCard,
+    open_async_client,
+    open_client,
+)
 from daf_jev.compose import composite_score, confidence_gate, route
 from daf_jev.config import (
     Settings,
@@ -38,9 +44,15 @@ from daf_jev.evaluate import EvaluationRecord, Evaluator
 from daf_jev.ledger import UsageLedger, UsageSnapshot
 from daf_jev.models import pick_model
 from daf_jev.primitives import QuestionSet, choice, noul, score
+from daf_jev.providers import (
+    ProviderSpec,
+    get_provider,
+    list_providers,
+    register_provider,
+)
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 __all__ = [
     "APIConnectionError",
@@ -64,6 +76,7 @@ __all__ = [
     "NoulAnswer",
     "NoulQuestion",
     "OverloadedError",
+    "ProviderSpec",
     "Question",
     "QuestionSet",
     "RateLimitError",
@@ -81,10 +94,15 @@ __all__ = [
     "choice",
     "composite_score",
     "confidence_gate",
+    "get_provider",
+    "list_providers",
     "load_settings",
     "noul",
+    "open_async_client",
+    "open_client",
     "parse_response",
     "pick_model",
+    "register_provider",
     "resolve_retry",
     "resolve_timeout",
     "route",

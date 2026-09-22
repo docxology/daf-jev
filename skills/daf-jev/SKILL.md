@@ -5,10 +5,12 @@ description: >
   typed question builders (noul/choice/score), sync and async clients,
   concurrent evaluation, composable decision patterns (composite scoring,
   confidence and tiered gates), usage accounting (UsageLedger), an opt-in
-  circuit breaker, calibration utilities, a CLI, and an MCP server. Use when
-  writing or reviewing daf-jev code, integrating System One
-  judgments into a Python project, evaluating a question set over many states,
-  or wiring Jev tools into an MCP-capable agent.
+  circuit breaker, calibration utilities, a CLI, an MCP server, and
+  multi-provider dispatch (jev, jeff, kev, localjev, openthai-systemone,
+  openrouter). Use when writing or reviewing daf-jev code, integrating
+  System One judgments into a Python project, evaluating a question set
+  over many states, wiring Jev tools into an MCP-capable agent, or pointing
+  the toolkit at a self-hosted System One server.
 ---
 
 # daf-jev
@@ -91,8 +93,7 @@ never be committed, printed, or read by tests.
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
-decider); each skips cleanly
-without a key.
+decider, provider dispatch); each skips cleanly without a key.
 
 ## CLI
 
@@ -105,11 +106,50 @@ daf-jev evaluate --questions-file PATH --states-file PATH
             [--include-records]
 daf-jev docs-verify [--manifest PATH]        # exit 1 on snapshot drift
 daf-jev serve [--transport stdio]            # MCP server (stdio default)
+daf-jev providers                           # registry listing (keyless, exit 0)
+# global --provider KEY precedes any subcommand: daf-jev --provider kev models
 ```
 
 Question SPEC grammar (commas escaped as `\,`): `noul:<instructions>`,
 `choice:<instructions>:opt1=desc,opt2=...`, `score:<instructions>:l1,l2,...`.
 Output is JSON; exit codes 0 ok / 1 runtime / 2 usage.
+
+## Providers
+
+One wire contract (`POST /v1/systemone`), six registered providers;
+`daf-jev providers` prints the registry as JSON (keyless):
+
+| key | backend | default base URL | default model | client key env |
+| --- | --- | --- | --- | --- |
+| `jev` | TypeSafe Jev (System One), hosted | `https://api.typesafe.ai` | `jev-latest` | `JEV_API_KEY` (then `TYPESAFE_API_KEY`) |
+| `jeff` | GLiFormer (self-hosted) | `http://localhost:8000` | `jev-latest` | `JEFF_API_KEY` |
+| `kev` | Qwen3.5 0.8B/4B/9B (self-hosted) | `http://localhost:8009` | `kev-latest` | `KEV_API_KEY` |
+| `localjev` | GitHub Next GLiFormer proxy (TS/Bun, any OpenAI-compatible endpoint, MIT) | `http://127.0.0.1:8080` | `localjev-latest` | `LOCALJEV_API_KEY` |
+| `openthai-systemone` | Thai/English Qwen3.5-0.8B slot-softmax (self-hosted, Apache-2.0) | `http://localhost:8077` | `openthai-latest` | `OPENTHAI_API_KEY` |
+| `openrouter` | hosted proxy | `https://openrouter.ai/api` | `jev-latest` | `OPENROUTER_API_KEY` |
+
+- CLI: global `--provider KEY` precedes the subcommand (invalid keys are
+  usage errors, exit 2); precedence `--provider` > `DAF_JEV_PROVIDER` env
+  var > `jev`. The `models` command is unsupported on `openthai-systemone`
+  (no `/v1/models`) and `openrouter` (OpenRouter-shaped listing); the
+  keyless error names the provider's primary key var (e.g. `KEV_API_KEY`).
+- Python: `load_settings(provider="kev")` resolves that provider's
+  env vars; `JevClient.for_provider("kev", ...)` /
+  `AsyncJevClient.for_provider(...)`; `open_client(provider, **kwargs)` /
+  `open_async_client(...)`; constructors also accept `provider=`.
+  Unknown keys raise `ValueError` listing the available providers.
+- Extension: `register_provider(ProviderSpec(key=..., ...))` adds a
+  third-party spec at runtime; for custom HTTP behavior inject a
+  `Transport` / `AsyncTransport` — the upstream/downstream seam. Provider
+  keys are stable API.
+- Naming: the official TypeSafe SDK convention is `TYPESAFE_API_KEY` /
+  `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL`; daf-jev keeps `JEV_*` as
+  its own primary names with `TYPESAFE_*` fallbacks, and every provider's
+  key/base-URL tuples fall back to the `TYPESAFE_*` names last.
+- Behavioral caveats live in the registry `notes` (see `daf-jev providers`):
+  jeff — temperature-scaled probabilities, nominal output tokens; kev —
+  extra top-level `latency_ms` (parsed and ignored); openrouter — extra
+  `id` / `provider` / `usage.cost` fields (parsed and ignored).
 
 ## MCP
 

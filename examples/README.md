@@ -1,13 +1,14 @@
 # daf-jev examples
 
-Six runnable scripts showing the core patterns of the toolkit. Each script:
+Seven runnable scripts showing the core patterns of the toolkit. Each script:
 
 - resolves credentials with `daf_jev.load_settings()` — from `JEV_API_KEY`
   or `TYPESAFE_API_KEY` (env or a `.env` file in the current directory);
 - prints `SKIP: JEV_API_KEY not set` and exits 0 when no key is found
   (the `.env` key is never printed);
-- accepts `--model NAME` to override the model (default: `JEV_MODEL`,
-  then `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`);
+- accepts `--model NAME` to override the model (default: provider-resolved
+  — for the default `jev` provider: `JEV_MODEL`, then
+  `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`);
 - writes nothing to disk and prints its results.
 
 ## Scripts
@@ -79,10 +80,26 @@ action, the event log, and the usage snapshot.
 python examples/decider_loop.py [--model NAME]
 ```
 
+### `providers_example.py`
+
+Multi-provider dispatch: prints the registered provider list
+(`list_providers()`), resolves per-provider settings with
+`load_settings(provider=...)`, registers a third-party `ProviderSpec` with
+`register_provider`, then runs one ask through `open_client(...)` over an
+in-process canned `Transport` — no server and no network call even when a
+key is present. The canned response carries kev's extra top-level
+`latency_ms` field to show strict-parse tolerance.
+
+```sh
+python examples/providers_example.py [--model NAME]
+```
+
 ## Notes
 
 - Optional helpers are imported defensively, so a checkout mid-build that
   lacks them fails with a clear message instead of a raw traceback.
-- Network calls go to `JEV_BASE_URL` / `TYPESAFE_BASE_URL`
-  (default `https://api.typesafe.ai`). All six scripts are offline-safe:
-  without a key they do nothing but print the SKIP line.
+- Network calls go to the selected provider's base URL (for the default
+  `jev` provider: `JEV_BASE_URL` / `TYPESAFE_BASE_URL`, default
+  `https://api.typesafe.ai`). All seven scripts are offline-safe: without
+  a key they do nothing but print the SKIP line;
+  `providers_example.py` makes no network call even with one.

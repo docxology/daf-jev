@@ -2,9 +2,11 @@
 
 Exposes the TypeSafe Jev (System One) client and decision toolkit as MCP
 tools over the official SDK (:mod:`mcp.server.fastmcp`). Every tool returns
-a JSON-safe dict/list/float/str; keys, base URL and default model are
-resolved once per call via :func:`daf_jev.config.load_settings` (a missing
-API key raises ``ValueError``, which MCP surfaces as a tool error). Client,
+a JSON-safe dict/list/float/str and takes an optional ``provider``
+argument (default ``jev``) validated against :mod:`daf_jev.providers`;
+keys, base URL and default model resolve once per call via
+:func:`daf_jev.config.load_settings` for that provider (a missing API
+key raises ``ValueError``, which MCP surfaces as a tool error). Client,
 compose and evaluate modules are imported lazily inside the tools, mirroring
 :mod:`daf_jev.cli`; native question mappings and docs verification route
 through the shared :mod:`daf_jev.questions` / :mod:`daf_jev.docs_verify`
@@ -58,15 +60,33 @@ _INSTRUCTIONS = (
 # ------------------------------------------------------------------ helpers
 
 
-def _require_api_key() -> config.Settings:
-    """Resolve settings; raise ``ValueError`` when no API key is available."""
-    settings = config.load_settings()
+def _require_api_key(provider: str = "jev") -> config.Settings:
+    """Resolve settings for ``provider``; raise ``ValueError`` when no API
+    key is available."""
+    settings = config.load_settings(provider=provider)
     if settings.api_key is None:
+        from daf_jev.providers import get_provider
+
+        spec = get_provider(provider)
+        fallback = (
+            f" (or {spec.api_key_vars[1]})" if len(spec.api_key_vars) > 1 else ""
+        )
         raise ValueError(
-            "No API key found: set JEV_API_KEY (or TYPESAFE_API_KEY) so "
-            "daf-jev can reach the TypeSafe API"
+            f"No API key found: set {spec.api_key_vars[0]}{fallback} so "
+            f"daf-jev can reach the {spec.display_name} API"
         )
     return settings
+
+
+def _validate_provider(provider: str) -> str:
+    """Validate ``provider`` against the registry; return the canonical key.
+
+    Raises ``ValueError`` listing the available keys for an unknown
+    provider (MCP surfaces it as a JSON-safe tool error).
+    """
+    from daf_jev.providers import get_provider
+
+    return get_provider(provider).key
 
 
 def _question_from_value(value: Any, *, context: str = "question") -> Any:
@@ -100,6 +120,7 @@ async def jev_ask(
     state: JSONContent,
     questions: dict[str, str | dict],
     model: str | None = None,
+    provider: str = "jev",
 ) -> dict:
     """Ask named questions about one state in a single API call.
 
@@ -109,12 +130,15 @@ async def jev_ask(
     ``{type, instructions, criteria}`` dict. Returns
     ``{model, answers: {id: answer dict with type}, usage, request_id}``;
     ``request_id`` is omitted when the API did not return one.
+    ``provider`` selects the registered API provider (default ``jev``).
     """
-    settings = _require_api_key()
-    from daf_jev.client import AsyncJevClient
+    provider = _validate_provider(provider)
+    settings = _require_api_key(provider)
+    from daf_jev.client import open_async_client
 
     questions_obj = _questions_from_mapping(questions)
-    async with AsyncJevClient(
+    async with open_async_client(
+        provider=provider,
         api_key=settings.api_key,
         base_url=settings.base_url,
         model=settings.model,
@@ -140,6 +164,7 @@ async def jev_evaluate(
     questions: dict[str, str | dict],
     concurrency: int = 4,
     model: str | None = None,
+    provider: str = "jev",
 ) -> dict:
     """Evaluate a fixed question set over many states, concurrently.
 
@@ -148,11 +173,13 @@ async def jev_evaluate(
     mean_latency_s, p95_latency_s, questions}``. Raises ``ValueError``
     on an empty ``states`` list or a state that is neither a string nor
     a JSON object/array.
+    ``provider`` selects the registered API provider (default ``jev``).
     """
+    provider = _validate_provider(provider)
     if not states:
         raise ValueError("states must be a non-empty list of states to evaluate")
-    settings = _require_api_key()
-    from daf_jev.client import AsyncJevClient
+    settings = _require_api_key(provider)
+    from daf_jev.client import open_async_client
     from daf_jev.evaluate import Evaluator
 
     questions_obj = _questions_from_mapping(questions)
@@ -172,7 +199,8 @@ async def jev_evaluate(
     # long batch never blocks the other tools. evaluate_async() closes the
     # client session when the batch completes; the async-with below only
     # covers error paths.
-    async with AsyncJevClient(
+    async with open_async_client(
+        provider=provider,
         api_key=settings.api_key,
         base_url=settings.base_url,
         model=settings.model,
@@ -191,6 +219,7 @@ async def jev_evaluate(
 async def jev_models(
     pick: Literal["latest", "first", "last"] | None = None,
     contains: str | None = None,
+    provider: str = "jev",
 ) -> list[dict]:
     """List available model cards as dicts.
 
@@ -199,11 +228,14 @@ async def jev_models(
     string is no filter) is given, one card is selected via
     :func:`daf_jev.models.pick_model` and returned as a single-element
     list. Raises ``ValueError`` when nothing matches.
+    ``provider`` selects the registered API provider (default ``jev``).
     """
-    settings = _require_api_key()
-    from daf_jev.client import AsyncJevClient
+    provider = _validate_provider(provider)
+    settings = _require_api_key(provider)
+    from daf_jev.client import open_async_client
 
-    async with AsyncJevClient(
+    async with open_async_client(
+        provider=provider,
         api_key=settings.api_key,
         base_url=settings.base_url,
         model=settings.model,
@@ -222,6 +254,7 @@ async def jev_models(
 async def jev_composite_score(
     probabilities: dict[str, float],
     weights: list[float] | None = None,
+    provider: str = "jev",
 ) -> float:
     """Expected value of a score distribution over its level indices.
 
@@ -231,7 +264,10 @@ async def jev_composite_score(
     :func:`daf_jev.compose.composite_score`. Requires at least 2 levels;
     probabilities must be finite and non-negative and keys integer level
     indices (ValueError otherwise).
+    ``provider`` is validated against the registry; local math is
+    provider-agnostic.
     """
+    _validate_provider(provider)
     from daf_jev._types import ScoreAnswer
     from daf_jev.compose import composite_score
 
@@ -261,12 +297,16 @@ async def jev_confidence_gate(
     confidence: float,
     threshold: float,
     below: str = "review",
+    provider: str = "jev",
 ) -> str:
     """Return ``choice`` when ``confidence >= threshold``, else ``below``.
 
     Local deterministic routing over a synthesized choice answer — no API
     call.
+    ``provider`` is validated against the registry; the gate is
+    provider-agnostic.
     """
+    _validate_provider(provider)
     from daf_jev._types import ChoiceAnswer
     from daf_jev.compose import confidence_gate
 
@@ -285,6 +325,7 @@ async def jev_tiered_gate(
     high_label: str = "automate",
     middle_label: str = "review",
     low_label: str = "escalate",
+    provider: str = "jev",
 ) -> str:
     """Two-threshold confidence routing (automate / review / escalate).
 
@@ -292,7 +333,10 @@ async def jev_tiered_gate(
     otherwise ``low_label``. Non-finite thresholds raise ``ValueError``;
     a NaN confidence escalates (fail closed). Local and deterministic — no
     API call.
+    ``provider`` is validated against the registry; the gate is
+    provider-agnostic.
     """
+    _validate_provider(provider)
     from daf_jev._types import ChoiceAnswer
     from daf_jev.compose import tiered_gate
 
@@ -306,7 +350,9 @@ async def jev_tiered_gate(
     )
 
 
-async def jev_docs_verify(manifest: str | None = None) -> dict:
+async def jev_docs_verify(
+    manifest: str | None = None, provider: str = "jev"
+) -> dict:
     """Verify the docs/reference snapshot against its manifest.
 
     Same verifier as the ``daf-jev docs-verify`` CLI command
@@ -314,9 +360,12 @@ async def jev_docs_verify(manifest: str | None = None) -> dict:
     ``{manifest, pages, missing, drifted, added, ok}``; when the manifest
     cannot be read or parsed, returns
     ``{error, message, ok: false}`` instead.
+    An unknown ``provider`` returns the ``{error, message, ok: false}``
+    shape instead of raising.
     """
     manifest_path = Path(manifest) if manifest is not None else DEFAULT_MANIFEST
     try:
+        _validate_provider(provider)
         return verify_manifest(manifest_path)
     except ValueError as exc:
         return {"error": type(exc).__name__, "message": str(exc), "ok": False}

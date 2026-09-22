@@ -28,7 +28,9 @@ here.
     context-manager support), `ModelCard`. `ask` takes per-call `timeout` /
     `request_headers` (per-call entries win); retry policy and default
     timeout resolve from env (`config.resolve_retry` / `resolve_timeout`)
-    unless passed explicitly.
+    unless passed explicitly. Provider dispatch: `for_provider`
+    classmethods + `open_client` / `open_async_client` (see
+    `providers.py`).
   - `primitives.py` — `noul()` / `choice()` / `score()` builders and
     `QuestionSet` (no I/O).
   - `compose.py` — `composite_score`, `confidence_gate`, `route`,
@@ -57,7 +59,13 @@ here.
     process env > `.env`; `JEV_API_KEY` then `TYPESAFE_API_KEY`),
     `resolve_base_url`, `resolve_model`, `resolve_retry` /
     `resolve_timeout` (env overrides, see README table), `Settings` /
-    `load_settings`.
+    `load_settings` (optional `provider=` selection).
+  - `providers.py` — provider registry (no I/O): frozen `ProviderSpec`,
+    `register_provider` / `get_provider` / `list_providers`, per-provider
+    api-key/base-URL/model resolvers delegating to `config._lookup`;
+    built-ins registered at import in order: jev, jeff, kev, localjev,
+    openthai-systemone, openrouter. Provider keys are stable API (see
+    invariants).
   - `ledger.py` — thread-safe usage accounting: `UsageLedger.record(
     Usage | SystemOneResponse | None)` (None is a silent no-op; anything
     else raises `TypeError`), `snapshot()` / `reset()` returning a frozen
@@ -77,14 +85,16 @@ here.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
-    (`--transport stdio` — the only choice); JSON to stdout, exit 0/1/2.
+    (`--transport stdio` — the only choice), `providers` (registry listing;
+    global `--provider` flag); JSON to stdout, exit 0/1/2.
   - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
     `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
     `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify` + the
     `jev://docs/snapshot` resource; stdio transport only; `jev_evaluate` /
     `jev_models` are async; `jev_composite_score` validates finite
     non-negative probabilities (`ValueError`); imports `mcp` at module
-    import (optional `mcp` extra — never import from core modules).
+    import (optional `mcp` extra — never import from core modules); every
+    tool takes an optional `provider` argument (default `jev`).
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
@@ -107,10 +117,17 @@ here.
   and (inside the template checkout) substitutes `{{TOKEN}}`s into
   `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
   analysis outputs are missing.
-- `examples/` — six runnable walkthroughs (`quickstart.py`,
+- `scripts/render_pdf.py` — in-repo PDF render (pandoc --natbib over the
+  generated token map; inputs `manuscript/render/{preamble,cover}.tex`);
+  runs the render gates (zero unresolved bibtex entries / undefined refs /
+  unloadable images; `SOURCE_DATE_EPOCH` pinned from HEAD); `--install`
+  also replaces the root PDF.
+- `examples/` — seven runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
-  `gated_fallback.py`, `decider_loop.py`) + `README.md`; each prints
-  `SKIP: JEV_API_KEY not set` and exits 0 without a key (see invariants).
+  `gated_fallback.py`, `decider_loop.py`, `providers_example.py`) +
+  `README.md`; each prints `SKIP: JEV_API_KEY not set` and exits 0 without
+  a key (see invariants); `providers_example.py` makes no network call
+  even with a key (injected transport).
 - `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
   Markdown skill) + `README.md` (install notes). Documentation only — never
   imported by code.
@@ -119,12 +136,14 @@ here.
   `config.yaml` + `references.bib`
   (13 entries). Prose only: every measured number is a `{{TOKEN}}`
   placeholder (see invariants).
+- `manuscript/render/` — render inputs for the in-repo PDF fallback
+  (`preamble.tex`, `cover.tex`), consumed by `scripts/render_pdf.py`.
 - `benchmarks/` — live-API benchmark scripts with their own `README.md`;
   `_util.py` holds shared SKIP/percentile/JSON-writer helpers.
 - `docs/ARCHITECTURE.md` — contract (see `docs/README.md`); it now covers
   the newer modules (evaluate, calibration, ledger, resilience, decider,
-  questions, docs_verify, mcp_server) and the figure/variables scripts.
-  The manuscript-pipeline module internals (`figures.py`,
+  questions, docs_verify, mcp_server, providers) and the figure/variables
+  scripts. The manuscript-pipeline module internals (`figures.py`,
   `manuscript_variables.py`) are the one remaining gap — the map above is
   the detailed on-disk truth for those.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
@@ -134,7 +153,7 @@ here.
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
-- `pyproject.toml` — setuptools build, version 0.4.2, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.5.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
@@ -192,7 +211,7 @@ here.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
   `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
   live at the repo root and MUST stay in sync with the pyproject version
-  (currently 0.4.2) and the deposit DOIs above.
+  (currently 0.5.0) and the deposit DOIs above.
 - **`.env` is gitignored and holds the real key.** Never print, copy, or
   commit its value. Tests MUST never read it: unit config tests pass
   explicit env mappings; live tests read `os.environ["JEV_API_KEY"]` only.
@@ -279,6 +298,12 @@ here.
 - **Examples skip without a key.** Every `examples/` script prints
   `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves (process
   env, then project `.env`); keep new examples to this contract.
+- **Provider keys are stable API.** The provider registry
+  (`src/daf_jev/providers.py`) is public surface: provider keys never
+  change or get removed, and adding a built-in provider requires README
+  (Providers section) + `docs/ARCHITECTURE.md` (Provider dispatch) +
+  `skills/daf-jev/SKILL.md` (provider quick reference) sync in the same
+  commit.
 - **`skills/` is documentation.** `skills/daf-jev/SKILL.md` is agent-facing
   documentation, never imported by code; keep it consistent with
   `README.md` and `docs/ARCHITECTURE.md` facts.
@@ -326,4 +351,5 @@ cd /Volumes/external_drive/Git/template && \
 # MCP server full handshake needs the mcp extra: uv sync --extra mcp, then
 # connect any MCP client to `daf-jev serve` over stdio.
 python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
+python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
 ```

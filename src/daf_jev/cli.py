@@ -15,6 +15,11 @@ Usage::
                 [--concurrency N] [--model M] [--base-url URL]
                 [--include-records] [--json | --pretty]
     daf-jev docs-verify [--manifest PATH] [--json | --pretty]
+    daf-jev providers [--json | --pretty]
+
+The global ``--provider NAME`` flag (or ``$DAF_JEV_PROVIDER``) selects a
+registered provider for ask/models/evaluate (flag > environment, default
+``jev``); ``daf-jev providers`` lists the registry.
 
 Question SPEC grammar (``\\,``, ``\\:`` and ``\\\\`` escape a literal
 comma, colon and backslash):
@@ -32,13 +37,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from daf_jev import config
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
 
 __all__ = ["main", "parse_question_spec"]
@@ -216,12 +221,35 @@ def _state_from_args(args: argparse.Namespace) -> Any:
     return text
 
 
-def _make_client(args: argparse.Namespace) -> Any:
-    from daf_jev.client import JevClient
+def _resolve_provider(args: argparse.Namespace) -> str:
+    """Selected provider key: ``--provider`` > ``DAF_JEV_PROVIDER`` > ``jev``.
 
-    return JevClient(
-        base_url=args.base_url or config.resolve_base_url(),
-        model=getattr(args, "model", None) or config.resolve_model(),
+    The env fallback checks the process environment first, then the
+    ``.env`` file (same precedence as other settings; falsy values are
+    skipped). An unknown provider raises ``ValueError`` naming the
+    available keys.
+    """
+    from daf_jev.config import load_dotenv
+    from daf_jev.providers import get_provider
+
+    if args.provider is not None:
+        return args.provider  # already validated/normalized by --provider
+    value = os.environ.get("DAF_JEV_PROVIDER") or load_dotenv().get(
+        "DAF_JEV_PROVIDER"
+    )
+    if value:
+        return get_provider(value).key
+    return "jev"
+
+
+def _make_client(args: argparse.Namespace) -> Any:
+    provider = _resolve_provider(args)
+    from daf_jev.client import open_client
+
+    return open_client(
+        provider=provider,
+        base_url=args.base_url,
+        model=getattr(args, "model", None),
     )
 
 
@@ -239,6 +267,20 @@ def _positive_int(value: str) -> int:
     if number < 1:
         raise argparse.ArgumentTypeError(f"{value!r} must be >= 1")
     return number
+
+
+def _provider_arg(value: str) -> str:
+    """Validate a ``--provider`` value against the provider registry.
+
+    Raises ``argparse.ArgumentTypeError`` (usage error, exit 2) for an
+    unknown provider; returns the canonical (lowercase) key.
+    """
+    from daf_jev.providers import get_provider
+
+    try:
+        return get_provider(value).key
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def _question_from_yaml(spec: Any, path: Path) -> Any:
@@ -466,12 +508,43 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_providers(args: argparse.Namespace) -> int:
+    from daf_jev.providers import list_providers
+
+    _emit(
+        [
+            {
+                "key": spec.key,
+                "display_name": spec.display_name,
+                "default_base_url": spec.default_base_url,
+                "default_model": spec.default_model,
+                "api_key_env": spec.api_key_vars[0] if spec.api_key_vars else None,
+                "base_url_env": spec.base_url_vars[0] if spec.base_url_vars else None,
+                "model_env": spec.model_vars[0] if spec.model_vars else None,
+                "docs_url": spec.docs_url,
+                "notes": spec.notes,
+            }
+            for spec in list_providers()
+        ],
+        args.pretty,
+    )
+    return 0
+
+
 # ------------------------------------------------------------------- parser
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="daf-jev", description="TypeSafe Jev (System One) client."
+    )
+    parser.add_argument(
+        "--provider",
+        type=_provider_arg,
+        default=None,
+        metavar="NAME",
+        help="API provider key (default: $DAF_JEV_PROVIDER or 'jev'; "
+        "list with 'daf-jev providers')",
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
@@ -576,6 +649,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="MCP transport (only 'stdio' is supported)",
     )
     p_serve.set_defaults(func=_cmd_serve)
+
+    p_providers = sub.add_parser(
+        "providers", help="list registered API providers (keyless, no network)"
+    )
+    add_common(p_providers, base_url=False)
+    p_providers.set_defaults(func=_cmd_providers)
 
     return parser
 

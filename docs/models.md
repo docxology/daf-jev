@@ -306,6 +306,68 @@ sits a notch below the frontier, and the sample is small"
 count, training-compute disclosure, or weights at launch
 ([OrcaRouter](https://www.orcarouter.ai/blog/jev-typesafe-system-one-what-we-know), 2026-09-16).
 
+## 10. Sibling System One servers: jeff and kev
+
+daf-jev ships multi-provider dispatch for self-hostable servers that speak
+the same wire contract as TypeSafe's hosted API (`POST /v1/systemone`,
+`GET /v1/models`, the noul/choice/score primitives, strict calibrated
+answers). The two reference sibling implementations differ on the model
+family — GLiFormer (jeff) versus the Qwen3.5 family (kev) — but both are
+drop-in wire-compatible, so daf-jev needs no adapter: its strict
+`parse_response` already tolerates unknown top-level fields (kev adds a
+top-level `latency_ms`; daf-jev parses it and ignores it).
+
+Facts below are as pinned by the provider-dispatch contract (2026-09-22);
+unlike the sections above, they have not been re-verified against each
+project's public documentation, so no external links beyond the two pinned
+repositories are asserted.
+
+| | jeff | kev |
+| --- | --- | --- |
+| Project | [logan-markewich/jeff](https://github.com/logan-markewich/jeff) | [jaredpalmer/kev](https://github.com/jaredpalmer/kev) |
+| Model family | GLiFormer | Qwen3.5, 0.8B/4B/9B |
+| Default base URL | `http://localhost:8000` | `http://localhost:8009` |
+| Default model | `jev-latest` (also accepts the alias `jev`) | `kev-latest` |
+| Client key env var | `JEFF_API_KEY` (server auth var: `JEFF_API_KEYS`); falls back to `TYPESAFE_API_KEY` | `KEV_API_KEY`; falls back to `TYPESAFE_API_KEY` |
+| Base-URL / model env vars | `JEFF_BASE_URL` / `JEFF_MODEL` | `KEV_BASE_URL` / `KEV_MODEL` |
+| Behavioral caveats | temperature-scaled probabilities; nominal output tokens | responses add a top-level `latency_ms` field; legend keys are strings (`"0"`, `"1"`, `"2"`) |
+
+Naming note (verified): the official TypeSafe SDK convention is
+`TYPESAFE_API_KEY` / `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL`;
+daf-jev keeps `JEV_*` as its own primary names with `TYPESAFE_*` fallbacks,
+and the provider registry extends the same pattern per provider
+(provider-prefixed vars first, `TYPESAFE_*` fallbacks last).
+
+## 11. Sibling ecosystem (second tier)
+
+Catalogued during the same provider-dispatch effort (2026-09-22) and listed
+exactly as verified — identifiers only. daf-jev ships first-class dispatch
+for its six-provider registry (jev, jeff, kev, localjev,
+openthai-systemone, openrouter — see README's Providers section); none of
+the entries below are wired in.
+
+Catalog-tier servers (with caveats):
+
+- `razorback16/openjev` — DiffusionGemma 26B on vLLM; `OPENJEV_API_KEY`;
+  hosted at `api.codiv.ai`; port per its Docker setup.
+- `ekzhang/openjev-sglang` — Qwen3.6-35B on SGLang; instructions required;
+  restricted license.
+- `Rizzo-AI-Academy/rizzo-flow` — Spark-X2.5-4B on llama.cpp; serves
+  `/v1/models` with honest alias text; numeric legend keys (deviation).
+- `featherless-ai/simple-jev` — no license file; no `/v1/models`; free
+  demo API.
+- `hawkymisc` typed-decision-bert.
+- `Argos1111/jev_local`; `hunkim/solar-mini4-jev`; `taeold/djev-run`.
+- PyPI packages: `fastjev`, `poorjev`, `any2jev`.
+- `SiliconLabAI/OpenJev`; `sabeel111/OpenSourceJev`.
+
+Adjacent model families without confirmed wire servers:
+`TheoLeeCJ/SemIf` (3.7k), `NandhaKishorM/laya` (15k),
+`TianyuCodings/NanoJev` (2k), `bespokelabsai/nimble`, `wfzyx/von`,
+`vinnylarouge/jevlike`, `Mapika/decider`.
+
+Trackers: mrjev.com, awesomejev.com, systemonemodels.org.
+
 ## Sources
 
 Primary (TypeSafe):

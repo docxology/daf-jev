@@ -36,6 +36,12 @@ contradictions (report the delta; do not silently deviate).
 
 - `JEV_API_KEY` preferred; fall back to `TYPESAFE_API_KEY` (official SDK's name).
 - `JEV_BASE_URL` optional override (default `https://api.typesafe.ai`).
+- Verified naming fact: the official TypeSafe SDK convention is
+  `TYPESAFE_API_KEY` / `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL`;
+  daf-jev keeps `JEV_*` as its own primary names with `TYPESAFE_*`
+  fallbacks. The provider registry mirrors this: every provider's
+  api-key / base-URL var tuples end with the `TYPESAFE_*` names (model
+  fallback `TYPESAFE_DEFAULT_MODEL` on the `jev` provider only).
 - `.env` in the working directory (`Path(".env")` default) is auto-loaded by a tiny
   built-in loader (NO python-dotenv dep). Values are stripped before use, so
   whitespace-only values count as unset at every layer (injected env > process env >
@@ -130,6 +136,10 @@ contradictions (report the delta; do not silently deviate).
     `APITimeoutError` FIRST; then `httpx.HTTPError` (TransportError +
     RequestError, incl. `DecodingError`/`TooManyRedirects`) and
     `httpx.StreamError` → `APIConnectionError`.
+  - Provider dispatch: keyword-only `provider=` on `_BaseClient.__init__`,
+    `for_provider` classmethods on both clients, `open_client` /
+    `open_async_client` module functions — full signatures in the Provider
+    dispatch section below.
 - `primitives.py` — ergonomic builders + composition container. No I/O.
   - `noul(instructions, *, true_desc=None, false_desc=None) -> NoulQuestion`
   - `choice(instructions, options: Mapping[str, str | None]) -> ChoiceQuestion`
@@ -220,6 +230,9 @@ contradictions (report the delta; do not silently deviate).
     timeout=None`) + `load_settings(env=None)` — reads `.env` exactly once and
     shares the parsed mapping across the private resolvers (the public
     `resolve_*` signatures are unchanged).
+  - Provider dispatch: `load_settings(env=None, provider=...)` and the
+    `Settings.provider` field — full signatures in the Provider dispatch
+    section below.
 - `ledger.py` — thread-safe usage accounting across call loops (no I/O):
   `UsageLedger.record(Usage | SystemOneResponse | None) -> None` (None is a
   silent no-op for error paths; anything else raises `TypeError`);
@@ -228,6 +241,11 @@ contradictions (report the delta; do not silently deviate).
   `input_tokens`, `output_tokens`, `total_tokens` property, JSON-safe
   `to_dict()`). Complements `Evaluator.summary()`, which aggregates usage
   per evaluation batch.
+- `providers.py` — provider registry (no I/O): frozen `ProviderSpec`,
+  `register_provider` / `get_provider` / `list_providers`, and the three
+  per-provider resolvers delegating to `config._lookup`; built-ins
+  registered at import — full contract in the Provider dispatch section
+  below.
 - `resilience.py` — opt-in client-side failure isolation:
   `CircuitState` (closed / open / half_open), `CircuitOpenError(TypeSafeError)`
   (carries `remaining_seconds`), `CircuitBreaker(failure_threshold=5,
@@ -291,7 +309,8 @@ contradictions (report the delta; do not silently deviate).
     gate-accepted pairs when the gate is a `ConfidenceGate` — a
     self-consistency proxy, NOT correctness), `dead` property.
 - `cli.py` — argparse (stdlib), thin. `main(argv=None) -> int`. Common flags:
-  `--base-url` (ask/models/evaluate) and `--json`/`--pretty` (mutually
+  `--base-url` (ask/models/evaluate), the global `--provider` flag (all
+  commands; see Provider dispatch below), and `--json`/`--pretty` (mutually
   exclusive; compact is the default).
   - `daf-jev ask --state-file FILE | --state TEXT [--question ID=SPEC ...] [--model M]
     [--json | --pretty]` where SPEC is `noul:<instructions>` |
@@ -319,11 +338,18 @@ contradictions (report the delta; do not silently deviate).
     `ok` is False.
   - `daf-jev serve [--transport stdio]` — runs the MCP server (stdio only);
     a missing `mcp` extra prints a `uv sync --extra mcp` hint (exit 1).
+  - `daf-jev providers` — prints the provider registry as a JSON array to
+    stdout (one object per provider in registry order; keyless, exit 0, no
+    network); the global `--provider` flag selects the backend for every
+    command (invalid keys are usage errors, exit 2). Details in the
+    Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (46 names incl. `__version__`): the original 41-name list plus five
+  (52 names incl. `__version__`): the original 41-name list plus five
   intentional additions — `ModelCard`, `Answer`, `JSONContent`,
-  `answer_from_wire`, `parse_response` — i.e.:
+  `answer_from_wire`, `parse_response` — plus the six provider-dispatch
+  additions — `ProviderSpec`, `register_provider`, `get_provider`,
+  `list_providers`, `open_client`, `open_async_client` — i.e.:
   `JevClient, AsyncJevClient, NoulQuestion, ChoiceQuestion, ScoreQuestion, Question,
   Answer, JSONContent, NoulAnswer, ChoiceAnswer, ScoreAnswer, Usage, SystemOneResponse,
   ModelCard, RetryPolicy, TypeSafeError, RateLimitError, OverloadedError, APITimeoutError,
@@ -331,7 +357,8 @@ contradictions (report the delta; do not silently deviate).
   route, Settings, load_settings, resolve_retry, resolve_timeout, pick_model,
   Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
   CircuitOpenError, CircuitState, Budget, ConfidenceGate, DecisionEvent,
-  Decider, answer_from_wire, parse_response, __version__`.
+  Decider, answer_from_wire, parse_response, ProviderSpec, register_provider,
+  get_provider, list_providers, open_client, open_async_client, __version__`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
@@ -378,6 +405,127 @@ contradictions (report the delta; do not silently deviate).
   Every return is JSON-safe (`dataclasses.asdict`); stdio transport only;
   `mcp` imports at module level (optional extra — never from core modules);
   client/compose/evaluate import lazily inside the tools.
+  Every tool additionally accepts an optional string `provider` argument
+  (default `"jev"`; validated via `get_provider` — unknown providers return
+  a JSON-safe error result listing the available keys, no traceback); MCP
+  stays stdio-only. Details in the Provider dispatch section.
+
+## Provider dispatch
+
+One shared wire contract (`POST /v1/systemone`, `GET /v1/models`), many
+providers => a provider REGISTRY that parameterizes config resolution,
+client construction, and CLI/MCP dispatch. No wire adapters:
+`_types.parse_response` stays untouched — unknown top-level response fields
+(kev's `latency_ms`, OpenRouter's `id` / `provider` / `usage.cost` extras)
+already parse fine and are ignored (documented in its docstring). The
+pure-logic layers (compose / evaluate / decider / calibration / resilience)
+stay provider-agnostic and untouched.
+
+Registry (`providers.py`):
+
+- `ProviderSpec` — frozen dataclass: `key` (unique, lowercase,
+  `[a-z][a-z0-9_-]*`), `display_name`, `default_base_url`, `api_key_vars`
+  (primary first; `TYPESAFE_API_KEY` last for all — official-SDK compat),
+  `base_url_vars` (provider var first, `TYPESAFE_BASE_URL` last),
+  `default_model`, `model_vars`, `docs_url: str | None = None`,
+  `notes: str | None = None` (behavioral caveats, one paragraph max).
+- `register_provider(spec) -> None` — validates key pattern + non-empty
+  required fields + duplicate key (`ValueError` naming the problem);
+  appends to the registry (registration order kept, built-ins first).
+- `get_provider(key) -> ProviderSpec` — case-insensitive; `ValueError`
+  "unknown provider 'x': available: jev, jeff, kev, localjev,
+  openthai-systemone, openrouter" (join of current registry keys in order).
+- `list_providers() -> tuple[ProviderSpec, ...]`.
+- `resolve_provider_api_key(spec, env: Mapping[str, str] | None = None) ->
+  str | None`; `resolve_provider_base_url(spec, env=None) -> str` (falls
+  back to `spec.default_base_url`); `resolve_provider_model(spec, env=None)
+  -> str` — all three delegate to `config._lookup` (same truthiness
+  semantics: falsy env values are skipped; explicit env mapping beats
+  `.env` file beats None).
+- Built-ins registered at import, in this order:
+  - `jev` — "TypeSafe Jev (System One)"; base `https://api.typesafe.ai`;
+    model `jev-latest`; key vars `JEV_API_KEY`, `TYPESAFE_API_KEY`;
+    base-URL vars `JEV_BASE_URL`, `TYPESAFE_BASE_URL`; model vars
+    `JEV_MODEL`, `TYPESAFE_DEFAULT_MODEL`; `docs_url` =
+    `https://docs.typesafe.ai/concepts/system-one.md` (the official docs
+    URL cited in `docs/models.md`).
+  - `jeff` — "Jeff (self-hosted System One)"; base `http://localhost:8000`;
+    model `jev-latest`; vars `JEFF_API_KEY` / `JEFF_BASE_URL` /
+    `JEFF_MODEL`; notes: GLiFormer, drop-in wire compatibility,
+    temperature-scaled probabilities, nominal output tokens;
+    https://github.com/logan-markewich/jeff.
+  - `kev` — "Kev (self-hosted System One)"; base `http://localhost:8009`;
+    model `kev-latest`; vars `KEV_API_KEY` / `KEV_BASE_URL` / `KEV_MODEL`;
+    notes: Qwen3.5 family 0.8B/4B/9B, drop-in wire compatibility, extra
+    top-level `latency_ms` field; https://github.com/jaredpalmer/kev.
+  - `localjev` — "LocalJev (GitHub Next)"; base
+    `http://127.0.0.1:8080`; model `localjev-latest`; vars
+    `LOCALJEV_API_KEY` / `LOCALJEV_BASE_URL` / `LOCALJEV_MODEL`; notes:
+    GitHub Next GLiFormer proxy — TS/Bun server over any OpenAI-compatible
+    chat endpoint; MIT.
+  - `openthai-systemone` — "OpenThai System One"; base
+    `http://localhost:8077`; model `openthai-latest`; vars
+    `OPENTHAI_API_KEY` / `OPENTHAI_BASE_URL` / `OPENTHAI_MODEL`; notes:
+    Thai/English Qwen3.5-0.8B slot-softmax; no server auth; no `/v1/models`
+    (the `models` command is unsupported); Apache-2.0.
+  - `openrouter` — "OpenRouter (hosted System One proxy)"; base
+    `https://openrouter.ai/api`; model `jev-latest`; vars
+    `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL`;
+    notes: responses add `id` / `provider` / `usage.cost` extras (parse
+    fine and are ignored); `/v1/models` returns the OpenRouter shape, so
+    the `models` command is unsupported there.
+
+Config (`config.py`):
+
+- `load_settings(env=None, provider: str | ProviderSpec | None = None)` —
+  default None behaves exactly as today (jev); when given, per-provider
+  resolution for api_key / base_url / model.
+- `Settings` gains trailing field `provider: str = "jev"` (defaulted — no
+  positional breakage).
+- Existing `resolve_api_key` / `resolve_base_url` / `resolve_model` stay as
+  the jev compatibility surface (delegate to the jev spec) — signatures
+  unchanged. `_lookup` semantics unchanged.
+
+Clients (`client.py`):
+
+- `_BaseClient.__init__` gains keyword-only `provider: str | ProviderSpec |
+  None = None` (after `env`). When `provider` is not None: api_key /
+  base_url / model DEFAULTS come from that provider's resolvers (explicit
+  args still win). The no-key `TypeSafeError` message names the provider's
+  primary api_key var: "No API key found: pass api_key, set JEFF_API_KEY
+  (or TYPESAFE_API_KEY), or inject a transport."
+- Classmethods on both clients: `JevClient.for_provider(provider, *,
+  api_key=None, base_url=None, model=None, retry=None, timeout=None,
+  transport=None, env=None)` and `AsyncJevClient.for_provider(...)` — same
+  signature, built via the normal `__init__` path with provider wired
+  through.
+- Module functions `open_client(provider="jev", **kwargs) -> JevClient`
+  and `open_async_client(provider="jev", **kwargs) -> AsyncJevClient`
+  (thin forwarding; kwargs go to `for_provider`).
+- `_types.parse_response` stays untouched: unknown top-level response
+  fields (kev `latency_ms`) already parse fine; add one docstring line
+  documenting that extra top-level fields are tolerated and ignored.
+
+CLI + MCP (`cli.py` / `mcp_server.py`):
+
+- Global flag `--provider` on the MAIN parser (so `daf-jev --provider kev
+  ask ...` works): value validated via `get_provider`; invalid => argparse
+  usage error (exit 2 semantics preserved). Precedence: `--provider` flag >
+  `DAF_JEV_PROVIDER` env var (read through the same .env-merged mapping as
+  other settings) > "jev".
+- New subcommand `providers`: prints a JSON array to stdout, one object per
+  registered provider in registry order with keys `key`, `display_name`,
+  `default_base_url`, `default_model`, `api_key_env` (first var),
+  `base_url_env` (first var), `model_env` (first var), `docs_url`, `notes`.
+  Keyless, exit 0, no network.
+- ask/evaluate/models keep their current flags; the selected provider
+  flows into client construction (`open_client` / `open_async_client`).
+  The keyless error JSON for `--provider kev models` mentions
+  `KEV_API_KEY`.
+- `mcp_server.py`: every tool gains optional string arg `provider`
+  (default "jev"), validated via `get_provider`; unknown provider => error
+  result listing available keys (JSON-safe, no traceback). MCP stays
+  stdio-only.
 
 ## Tests (tests/) — template "no-mock" convention
 
@@ -396,6 +544,16 @@ contradictions (report the delta; do not silently deviate).
   decider loop end-to-end over the stub server (`tests/unit/test_decider.py`:
   happy path, cache, budget, breaker, consecutive-failure latch, gate,
   mapping/compose errors, no-key/client-error latching, event receipts).
+  Provider-dispatch additions (`tests/unit/test_providers.py`): registry
+  order + case-insensitive `get_provider` + unknown/duplicate/invalid-key
+  errors; per-provider resolution precedence (explicit arg > provider env
+  var > TYPESAFE_* fallback > default; falsy env skipped); `for_provider` /
+  `open_client` / `open_async_client` wiring (jeff default base URL, kev
+  default model, injected transport removes the key requirement); CLI
+  `providers` shape/order/exit codes, `--provider` / `DAF_JEV_PROVIDER`
+  precedence; MCP provider arg; wire tolerance (valid payload plus extra
+  top-level `latency_ms` parses with answers intact); `Settings.provider`
+  default and `load_settings(provider="kev")`.
 - `tests/live/test_live_api.py` — `@pytest.mark.live` +
   `pytest.mark.skipif(not os.environ.get("JEV_API_KEY"), reason="JEV_API_KEY not set")`.
   Real API: mixed noul/choice/score call over a small state, assert shape and

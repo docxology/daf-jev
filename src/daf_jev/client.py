@@ -7,6 +7,11 @@ explicitly; the default model resolves from ``JEV_MODEL`` /
 ``TYPESAFE_DEFAULT_MODEL`` (falling back to ``jev-latest``) unless passed
 explicitly. ``ask`` additionally accepts a per-call ``timeout`` override and
 extra ``request_headers`` merged over the defaults for that call only.
+
+Passing keyword-only ``provider`` (or using ``for_provider`` /
+``open_client`` / ``open_async_client``) resolves api_key, base_url, and
+model defaults from the provider's entry in ``daf_jev.providers``; explicit
+arguments still win.
 """
 
 from __future__ import annotations
@@ -18,7 +23,7 @@ import inspect
 import math
 import time
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -38,7 +43,18 @@ from daf_jev._types import (
     parse_response,
 )
 
-__all__ = ["AsyncJevClient", "JevClient", "ModelCard"]
+if TYPE_CHECKING:
+    # Static only: provider resolution imports daf_jev.providers lazily
+    # inside method bodies, keeping the runtime import graph acyclic.
+    from daf_jev.providers import ProviderSpec
+
+__all__ = [
+    "AsyncJevClient",
+    "JevClient",
+    "ModelCard",
+    "open_async_client",
+    "open_client",
+]
 
 REQUEST_ID_HEADER = "x-typesafe-request-id"
 SYSTEM_ONE_PATH = "/v1/systemone"
@@ -109,6 +125,26 @@ def _question_to_wire(question: Any) -> dict:
     return question.to_wire()
 
 
+def _no_key_message(spec: ProviderSpec | None) -> str:
+    """Keyless-client error text; names the provider's primary key var."""
+    if spec is None:
+        return (
+            "No API key found: pass api_key, set JEV_API_KEY (or "
+            "TYPESAFE_API_KEY), or inject a transport."
+        )
+    primary = spec.api_key_vars[0]
+    fallbacks = spec.api_key_vars[1:]
+    if fallbacks:
+        return (
+            f"No API key found: pass api_key, set {primary} (or "
+            f"{' or '.join(fallbacks)}), or inject a transport."
+        )
+    return (
+        f"No API key found: pass api_key, set {primary}, or inject a "
+        "transport."
+    )
+
+
 class _BaseClient:
     """Shared setup and helpers for the sync and async clients."""
 
@@ -122,18 +158,41 @@ class _BaseClient:
         retry: RetryPolicy | None,
         timeout: float | None,
         env: Mapping[str, str] | None,
+        provider: str | ProviderSpec | None = None,
     ) -> None:
         # config has no import cycle with this module; resolving retry/timeout
         # pays for the import when environment resolution is needed.
         import daf_jev.config as config
 
+        spec: ProviderSpec | None = None
+        if provider is not None:
+            # The registry resolves per-provider config defaults; it imports
+            # config itself, so resolve it lazily exactly like config above.
+            import daf_jev.providers as providers
+
+            spec = (
+                provider
+                if isinstance(provider, providers.ProviderSpec)
+                else providers.get_provider(provider)
+            )
+            # Per-provider defaults for anything the caller left unset;
+            # explicit arguments still win.
+            if api_key is None:
+                api_key = providers.resolve_provider_api_key(spec, env)
+            if base_url is None:
+                base_url = providers.resolve_provider_base_url(spec, env)
+            if model is None:
+                model = providers.resolve_provider_model(spec, env)
         self._retry = retry if retry is not None else config.resolve_retry(env)
         self._timeout = (
             timeout if timeout is not None else config.resolve_timeout(env)
         )
         self._transport = transport
         self._closed = False
-        if api_key is None:
+        # Jev fallback only without a provider: a provider-scoped client must
+        # never pick up the jev credential (cross-provider key leak), so the
+        # no-key error below names the provider's own vars.
+        if spec is None and api_key is None:
             api_key = config.resolve_api_key(env)
         if api_key is not None and not api_key.strip():
             raise ValueError("api_key must be a non-empty string")
@@ -144,10 +203,7 @@ class _BaseClient:
             raise ValueError("model must be a non-empty string")
         self._model = model
         if self._api_key is None and self._transport is None:
-            raise TypeSafeError(
-                "No API key found: pass api_key, set JEV_API_KEY (or "
-                "TYPESAFE_API_KEY), or inject a transport."
-            )
+            raise TypeSafeError(_no_key_message(spec))
         if self._transport is None:
             self._transport = self._default_transport(
                 base_url
@@ -199,6 +255,7 @@ class JevClient(_BaseClient):
         sleep: Callable[[float], None] = time.sleep,
         timeout: float | None = None,
         env: Mapping[str, str] | None = None,
+        provider: str | ProviderSpec | None = None,
     ) -> None:
         super().__init__(
             api_key,
@@ -208,8 +265,41 @@ class JevClient(_BaseClient):
             retry=retry,
             timeout=timeout,
             env=env,
+            provider=provider,
         )
         self._sleep = sleep
+
+    @classmethod
+    def for_provider(
+        cls,
+        provider: str | ProviderSpec,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        retry: RetryPolicy | None = None,
+        timeout: float | None = None,
+        transport: Transport | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> JevClient:
+        """Build a client whose defaults come from a registered provider.
+
+        ``provider`` is a registry key (``"jev"``, ``"jeff"``, ``"kev"``;
+        case-insensitive) or a ``ProviderSpec``. ``api_key``, ``base_url``,
+        and ``model`` resolve from the provider's environment variables and
+        built-in defaults; explicit arguments still win. Injecting a
+        ``transport`` removes the API-key requirement.
+        """
+        return cls(
+            api_key,
+            base_url=base_url,
+            model=model,
+            transport=transport,
+            retry=retry,
+            timeout=timeout,
+            env=env,
+            provider=provider,
+        )
 
     def _default_transport(self, base_url: str) -> HttpxTransport:
         return HttpxTransport(base_url=base_url, timeout=self._timeout)
@@ -343,6 +433,7 @@ class AsyncJevClient(_BaseClient):
         sleep: Callable[[float], Any] = asyncio.sleep,
         timeout: float | None = None,
         env: Mapping[str, str] | None = None,
+        provider: str | ProviderSpec | None = None,
     ) -> None:
         super().__init__(
             api_key,
@@ -352,8 +443,41 @@ class AsyncJevClient(_BaseClient):
             retry=retry,
             timeout=timeout,
             env=env,
+            provider=provider,
         )
         self._sleep = sleep
+
+    @classmethod
+    def for_provider(
+        cls,
+        provider: str | ProviderSpec,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        retry: RetryPolicy | None = None,
+        timeout: float | None = None,
+        transport: AsyncTransport | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> AsyncJevClient:
+        """Build a client whose defaults come from a registered provider.
+
+        ``provider`` is a registry key (``"jev"``, ``"jeff"``, ``"kev"``;
+        case-insensitive) or a ``ProviderSpec``. ``api_key``, ``base_url``,
+        and ``model`` resolve from the provider's environment variables and
+        built-in defaults; explicit arguments still win. Injecting a
+        ``transport`` removes the API-key requirement.
+        """
+        return cls(
+            api_key,
+            base_url=base_url,
+            model=model,
+            transport=transport,
+            retry=retry,
+            timeout=timeout,
+            env=env,
+            provider=provider,
+        )
 
     def _default_transport(self, base_url: str) -> AsyncHttpxTransport:
         return AsyncHttpxTransport(base_url=base_url, timeout=self._timeout)
@@ -475,6 +599,26 @@ class AsyncJevClient(_BaseClient):
 
     async def __aexit__(self, *_exc: object) -> None:
         await self.close()
+
+
+def open_client(provider: str | ProviderSpec = "jev", **kwargs: Any) -> JevClient:
+    """Open a synchronous client for ``provider`` (default ``"jev"``).
+
+    Thin forwarding factory: ``kwargs`` go to
+    ``JevClient.for_provider`` unchanged.
+    """
+    return JevClient.for_provider(provider, **kwargs)
+
+
+def open_async_client(
+    provider: str | ProviderSpec = "jev", **kwargs: Any
+) -> AsyncJevClient:
+    """Open an asynchronous client for ``provider`` (default ``"jev"``).
+
+    Thin forwarding factory: ``kwargs`` go to
+    ``AsyncJevClient.for_provider`` unchanged.
+    """
+    return AsyncJevClient.for_provider(provider, **kwargs)
 
 
 def _parse_models(payload: Any) -> list[ModelCard]:

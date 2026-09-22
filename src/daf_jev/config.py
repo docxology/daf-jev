@@ -6,7 +6,10 @@ Resolution precedence everywhere: injected ``env`` mapping > process environment
 Retry behavior is resolved by :func:`resolve_retry` from ``JEV_MAX_ATTEMPTS``,
 ``JEV_BACKOFF_BASE``, ``JEV_BACKOFF_MAX`` and ``JEV_JITTER``; the request
 timeout by :func:`resolve_timeout` from ``JEV_TIMEOUT`` (seconds). Unset or
-invalid values fall back to the documented defaults.
+invalid values fall back to the documented defaults. Per-provider resolution
+(``load_settings(provider=...)``) and the provider registry live in
+:mod:`daf_jev.providers`; the module-level resolvers here are the ``jev``
+compatibility surface.
 """
 
 from __future__ import annotations
@@ -15,8 +18,12 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from daf_jev._retry import RetryPolicy
+
+if TYPE_CHECKING:
+    from daf_jev.providers import ProviderSpec
 
 DEFAULT_BASE_URL = "https://api.typesafe.ai"
 DEFAULT_MODEL = "jev-latest"
@@ -108,19 +115,44 @@ def _lookup(
     return None
 
 
+def _provider_spec(provider: str | ProviderSpec) -> ProviderSpec:
+    """Normalize a provider argument to its :class:`ProviderSpec`.
+
+    Imports :mod:`daf_jev.providers` lazily: that module imports this one
+    at module level, so this module must not import it eagerly.
+    """
+    from daf_jev.providers import ProviderSpec, get_provider
+
+    if isinstance(provider, ProviderSpec):
+        return provider
+    return get_provider(provider)
+
+
 def resolve_api_key(env: Mapping[str, str] | None = None) -> str | None:
-    """Resolve the API key: ``JEV_API_KEY`` then ``TYPESAFE_API_KEY``."""
-    return _lookup(API_KEY_VARS, env)
+    """Resolve the ``jev`` API key: ``JEV_API_KEY`` then ``TYPESAFE_API_KEY``.
+
+    The ``jev`` compatibility surface, delegating to the ``jev`` spec in
+    :mod:`daf_jev.providers`.
+    """
+    return _lookup(_provider_spec("jev").api_key_vars, env)
 
 
 def resolve_base_url(env: Mapping[str, str] | None = None) -> str:
-    """Resolve the API base URL, defaulting to ``DEFAULT_BASE_URL``."""
-    return _lookup(BASE_URL_VARS, env) or DEFAULT_BASE_URL
+    """Resolve the ``jev`` API base URL, defaulting to ``DEFAULT_BASE_URL``.
+
+    The ``jev`` compatibility surface, delegating to the ``jev`` spec in
+    :mod:`daf_jev.providers`.
+    """
+    return _lookup(_provider_spec("jev").base_url_vars, env) or DEFAULT_BASE_URL
 
 
 def resolve_model(env: Mapping[str, str] | None = None) -> str:
-    """Resolve the default model name, defaulting to ``DEFAULT_MODEL``."""
-    return _lookup(MODEL_VARS, env) or DEFAULT_MODEL
+    """Resolve the ``jev`` default model, defaulting to ``DEFAULT_MODEL``.
+
+    The ``jev`` compatibility surface, delegating to the ``jev`` spec in
+    :mod:`daf_jev.providers`.
+    """
+    return _lookup(_provider_spec("jev").model_vars, env) or DEFAULT_MODEL
 
 
 @dataclass(frozen=True)
@@ -130,17 +162,40 @@ class Settings:
     model: str
     retry: RetryPolicy = field(default_factory=RetryPolicy)
     timeout: float | None = None
+    provider: str = "jev"
 
-def load_settings(env: Mapping[str, str] | None = None) -> Settings:
+def load_settings(
+    env: Mapping[str, str] | None = None,
+    provider: str | ProviderSpec | None = None,
+) -> Settings:
     """Resolve every setting at once, reading ``.env`` once and sharing the
-    parsed mapping with every resolver."""
+    parsed mapping with every resolver.
+
+    ``provider`` (key or :class:`ProviderSpec`) selects which provider's
+    env variables and defaults resolve ``api_key`` / ``base_url`` /
+    ``model``; the default ``None`` keeps the ``jev`` behavior. Retry and
+    timeout always resolve from the ``JEV_*`` variables. The returned
+    ``Settings.provider`` is the resolved provider key.
+    """
     file_env = load_dotenv()
+    if provider is None:
+        return Settings(
+            api_key=_lookup(API_KEY_VARS, env, file_env),
+            base_url=_lookup(BASE_URL_VARS, env, file_env) or DEFAULT_BASE_URL,
+            model=_lookup(MODEL_VARS, env, file_env) or DEFAULT_MODEL,
+            retry=_resolve_retry(env, file_env),
+            timeout=_resolve_timeout(env, file_env),
+        )
+    spec = _provider_spec(provider)
     return Settings(
-        api_key=_lookup(API_KEY_VARS, env, file_env),
-        base_url=_lookup(BASE_URL_VARS, env, file_env) or DEFAULT_BASE_URL,
-        model=_lookup(MODEL_VARS, env, file_env) or DEFAULT_MODEL,
+        api_key=_lookup(spec.api_key_vars, env, file_env),
+        base_url=(
+            _lookup(spec.base_url_vars, env, file_env) or spec.default_base_url
+        ),
+        model=_lookup(spec.model_vars, env, file_env) or spec.default_model,
         retry=_resolve_retry(env, file_env),
         timeout=_resolve_timeout(env, file_env),
+        provider=spec.key,
     )
 
 

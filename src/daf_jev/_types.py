@@ -318,6 +318,8 @@ class SystemOneResponse:
 def parse_response(payload: dict, request_id: str | None = None) -> SystemOneResponse:
     """Parse a strict System One response payload.
 
+    Unknown extra top-level fields (e.g. kev's ``latency_ms``) are
+    tolerated and ignored.
     Raises ValueError when the top-level keys are missing or malformed, an
     answer has an unknown type, or an answer or usage value has the wrong
     type.

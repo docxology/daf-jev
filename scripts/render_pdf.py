@@ -31,7 +31,14 @@ errors and unknown-@online-type warnings are pre-existing and benign); the
 gate counters above are the real contract. SOURCE_DATE_EPOCH is pinned from
 HEAD so identical inputs render byte-identical PDFs.
 """
-import json, os, pathlib, re, shutil, subprocess, sys, tempfile
+import json
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 ORDER = ['00_abstract', '01_introduction', '02_the_jev_model', '03_methodology',
@@ -47,7 +54,8 @@ PANDOC = ['pandoc', 'combined.md', '-o', 'out.tex', '--standalone', '--natbib',
 
 
 def build(install: bool) -> int:
-    vars = json.load(open(REPO / 'output/data/manuscript_variables.json'))
+    with (REPO / 'output/data/manuscript_variables.json').open() as fh:
+        vars = json.load(fh)
     parts = []
     for name in ORDER:
         text = (REPO / 'manuscript' / f'{name}.md').read_text()
