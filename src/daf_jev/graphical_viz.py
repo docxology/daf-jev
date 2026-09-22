@@ -272,7 +272,7 @@ def plot_posterior_trajectory(
         ]
         ax.bar(centers, values[index], width=bar_width * 0.9, label=key)
     ax.set_xticks(list(range(len(steps_list))))
-    ax.set_xticklabels(step_labels)
+    ax.set_xticklabels(step_labels, rotation=20, ha="right", fontsize=9)
     ax.set_ylabel("P(true)")
     ax.set_ylim(0.0, 1.05)
     ax.grid(axis="y", alpha=0.3)
