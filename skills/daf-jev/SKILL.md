@@ -5,12 +5,15 @@ description: >
   typed question builders (noul/choice/score), sync and async clients,
   concurrent evaluation, composable decision patterns (composite scoring,
   confidence and tiered gates), usage accounting (UsageLedger), an opt-in
-  circuit breaker, calibration utilities, a CLI, an MCP server, and
+  circuit breaker, calibration utilities, a CLI, an MCP server,
   multi-provider dispatch (jev, jeff, kev, localjev, openthai-systemone,
-  openrouter). Use when writing or reviewing daf-jev code, integrating
+  openrouter), and Jev as a factor source for discrete Bayes nets (batched
+  CPT elicitation, pairwise structure proposal, exact inference, GraphSpec
+  interchange). Use when writing or reviewing daf-jev code, integrating
   System One judgments into a Python project, evaluating a question set
-  over many states, wiring Jev tools into an MCP-capable agent, or pointing
-  the toolkit at a self-hosted System One server.
+  over many states, eliciting Bayes-net factors from Jev, wiring Jev tools
+  into an MCP-capable agent, or pointing the toolkit at a self-hosted
+  System One server.
 ---
 
 # daf-jev
@@ -87,13 +90,39 @@ never be committed, printed, or read by tests.
   n_buckets=10)`, `reliability_table(pairs, *, n_buckets=10)`,
   `expected_calibration_error(pairs, *, n_buckets=10)`,
   `brier_score(pairs)` — pairs are `(confidence, correct: bool)` tuples.
+- **Graphical models** (`daf_jev.graphical` +
+  `daf_jev.graphical_elicitation`) — Jev as a factor source for discrete
+  Bayes nets: `Variable(key, description, states)`, `Edge(parent,
+  child)`, `CPT(child, parents, table)`, `BayesNet(variables, edges,
+  cpts)` with `.validate()`, `.topological_order()`,
+  `.query(variable, evidence)` / `.posterior(evidence)` (exact variable
+  elimination, pure stdlib), and `.to_json()` / `.from_json()` —
+  GraphSpec `dafjev.bayesnet/1`, the interchange with GNN / RxInfer.jl /
+  GTSAM-style engines. `elicit_cpts(variables, edges, *, client, ...)`
+  elicits every CPT row of the whole net in one batched ask
+  (deterministic ids, ordered state options, chunking via
+  `max_questions_per_request`); `propose_structure(variables, *,
+  client, ...)` proposes the DAG from one batched ask over all variable
+  pairs (edges only; exact ordering search to `exact_limit=8`, greedy
+  above with `edge_penalty`).
+- **Graphical viz** (`daf_jev.graphical_viz`) — `to_mermaid(net)`
+  (zero-dependency mermaid `graph TD` source), `plot_network(net, path)`
+  (deterministic layered PNG), `plot_posterior_trajectory(net,
+  query_keys, steps, path, labels=...)` (grouped P(true) bars over
+  cumulative evidence steps; "true" = the last state of each variable's
+  states tuple); matplotlib imports lazily inside the plotters
+  (`figures` extra). Thin runner `scripts/bayes_experiment.py`
+  reproduces the Asia experiment into `--out-dir` (default
+  `output/experiments/asia`): `asia_graphspec.json`, `network.png`,
+  `posterior_trajectory.png`, `mermaid.txt`.
 - **Config** — package-root re-exports `load_settings`, `resolve_retry`,
   `resolve_timeout`; the API-key/base-URL resolvers live in
   `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
-decider, provider dispatch); each skips cleanly without a key.
+decider, provider dispatch, Asia Bayes net); each skips cleanly without
+a key.
 
 ## CLI
 

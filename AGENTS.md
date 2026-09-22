@@ -98,10 +98,27 @@ here.
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
+  - `graphical.py` — discrete Bayes nets (`Variable`, `Edge`, `CPT`,
+    `BayesNet`): graph helpers + deterministic `topological_order`,
+    `validate()`, exact inference (`posterior` / `query`, pure-stdlib
+    variable elimination, no numpy), and the `dafjev.bayesnet/1`
+    GraphSpec JSON round-trip — a cross-repo contract with the GNN
+    bridge (see invariants).
+  - `graphical_elicitation.py` — `elicit_cpts` (every CPT row of a net
+    in one batched `choice` ask; deterministic ids, chunking via
+    `max_questions_per_request`) and `propose_structure` (one batched
+    ask over all variable pairs -> DAG proposal, edges only); both take
+    any object with `.ask(state, questions)`.
+  - `graphical_viz.py` — `to_mermaid` (zero-dependency `graph TD`
+    diagram), `plot_network` (layered topological-layout PNG),
+    `plot_posterior_trajectory` (grouped P(true) bars across cumulative
+    evidence steps; "true" = last state); matplotlib imports lazily
+    inside the plotters (`figures` extra).
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
-  manuscript_variables, calibration, and mcp_server modules),
+  manuscript_variables, calibration, and mcp_server modules, plus
+  test_graphical_viz.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
@@ -122,12 +139,21 @@ here.
   runs the render gates (zero unresolved bibtex entries / undefined refs /
   unloadable images; `SOURCE_DATE_EPOCH` pinned from HEAD); `--install`
   also replaces the root PDF.
-- `examples/` — seven runnable walkthroughs (`quickstart.py`,
+- `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
+  `graphical_elicitation` + `graphical_viz`; CLI: `--provider`,
+  `--model`, `--edge-penalty FLOAT` (default 1.0), `--propose-structure`
+  (prints the proposal, continues with the reference edges), `--out-dir`
+  (default `output/experiments/asia`); writes `asia_graphspec.json`,
+  `network.png`, `posterior_trajectory.png`, `mermaid.txt`; keyless SKIP.
+- `examples/` — eight runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
-  `gated_fallback.py`, `decider_loop.py`, `providers_example.py`) +
-  `README.md`; each prints `SKIP: JEV_API_KEY not set` and exits 0 without
-  a key (see invariants); `providers_example.py` makes no network call
-  even with a key (injected transport).
+  `gated_fallback.py`, `decider_loop.py`, `providers_example.py`,
+  `asia_bayes.py`) + `README.md`; each prints `SKIP: JEV_API_KEY not set`
+  and exits 0 without a key (see invariants); `providers_example.py` makes
+  no network call even with a key (injected transport); `asia_bayes.py`
+  builds the Asia net from Jev factors (elicit + propose against the
+  selected provider), walks the posterior trajectory, and writes
+  `asia_graphspec.json`.
 - `skills/` — agent-facing skill docs: `daf-jev/SKILL.md` (frontmatter +
   Markdown skill) + `README.md` (install notes). Documentation only — never
   imported by code.
@@ -142,8 +168,9 @@ here.
   `_util.py` holds shared SKIP/percentile/JSON-writer helpers.
 - `docs/ARCHITECTURE.md` — contract (see `docs/README.md`); it now covers
   the newer modules (evaluate, calibration, ledger, resilience, decider,
-  questions, docs_verify, mcp_server, providers) and the figure/variables
-  scripts. The manuscript-pipeline module internals (`figures.py`,
+  questions, docs_verify, mcp_server, providers, graphical,
+  graphical_elicitation) and the figure/variables scripts. The
+  manuscript-pipeline module internals (`figures.py`,
   `manuscript_variables.py`) are the one remaining gap — the map above is
   the detailed on-disk truth for those.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
@@ -153,7 +180,7 @@ here.
   (`manuscript_variables.json`), `manuscript/` (token-substituted sections),
   `pdf/` (`daf-jev_combined.pdf`), `reports/` (template validation reports,
   rendered provenance).
-- `pyproject.toml` — setuptools build, version 0.5.0, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
@@ -211,7 +238,7 @@ here.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
   `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
   live at the repo root and MUST stay in sync with the pyproject version
-  (currently 0.5.0) and the deposit DOIs above.
+  (currently 0.6.0) and the deposit DOIs above.
 - **`.env` is gitignored and holds the real key.** Never print, copy, or
   commit its value. Tests MUST never read it: unit config tests pass
   explicit env mappings; live tests read `os.environ["JEV_API_KEY"]` only.
@@ -304,6 +331,11 @@ here.
   (Providers section) + `docs/ARCHITECTURE.md` (Provider dispatch) +
   `skills/daf-jev/SKILL.md` (provider quick reference) sync in the same
   commit.
+- **GraphSpec `dafjev.bayesnet/1` is a cross-repo contract.** The format
+  string emitted by `BayesNet.to_json()` / `from_json()` is consumed and
+  produced by the GNN bridge (GeneralizedNotationNotation): changing it
+  (or its row/shape semantics) requires both repos to land in the same
+  wave. Do not bump it unilaterally.
 - **`skills/` is documentation.** `skills/daf-jev/SKILL.md` is agent-facing
   documentation, never imported by code; keep it consistent with
   `README.md` and `docs/ARCHITECTURE.md` facts.

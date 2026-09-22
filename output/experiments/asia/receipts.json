@@ -1,0 +1,79 @@
+{
+  "provider": "openrouter",
+  "model": "jev-latest",
+  "proposed_structure_used": true,
+  "proposed_edges": [
+    [
+      "asia",
+      "tub"
+    ],
+    [
+      "tub",
+      "either"
+    ],
+    [
+      "tub",
+      "xray"
+    ],
+    [
+      "smoke",
+      "lung"
+    ],
+    [
+      "smoke",
+      "bronc"
+    ],
+    [
+      "lung",
+      "either"
+    ],
+    [
+      "lung",
+      "xray"
+    ],
+    [
+      "lung",
+      "dysp"
+    ],
+    [
+      "bronc",
+      "dysp"
+    ],
+    [
+      "either",
+      "xray"
+    ]
+  ],
+  "cpts_elicited": [
+    "asia",
+    "bronc",
+    "dysp",
+    "either",
+    "lung",
+    "smoke",
+    "tub",
+    "xray"
+  ],
+  "posterior_trajectory": {
+    "priors": {
+      "tub": 0.15250000000000002,
+      "lung": 0.14800000000000002,
+      "bronc": 0.24900000000000003
+    },
+    "asia=false": {
+      "tub": 0.13,
+      "lung": 0.148,
+      "bronc": 0.249
+    },
+    "asia=false, xray=true": {
+      "tub": 0.3697861431061353,
+      "lung": 0.406298127023064,
+      "bronc": 0.26483022400103295
+    },
+    "asia=false, xray=true, dysp=true": {
+      "tub": 0.4303520167692499,
+      "lung": 0.47518827047121537,
+      "bronc": 0.33234094036310724
+    }
+  }
+}

@@ -54,7 +54,7 @@ from daf_jev.providers import (
 )
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "CPT",

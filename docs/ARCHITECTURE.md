@@ -345,11 +345,13 @@ contradictions (report the delta; do not silently deviate).
     Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (52 names incl. `__version__`): the original 41-name list plus five
+  (58 names incl. `__version__`): the original 41-name list plus five
   intentional additions — `ModelCard`, `Answer`, `JSONContent`,
   `answer_from_wire`, `parse_response` — plus the six provider-dispatch
   additions — `ProviderSpec`, `register_provider`, `get_provider`,
-  `list_providers`, `open_client`, `open_async_client` — i.e.:
+  `list_providers`, `open_client`, `open_async_client` — plus the six
+  graphical-model additions — `Variable`, `Edge`, `CPT`, `BayesNet`,
+  `elicit_cpts`, `propose_structure` — i.e.:
   `JevClient, AsyncJevClient, NoulQuestion, ChoiceQuestion, ScoreQuestion, Question,
   Answer, JSONContent, NoulAnswer, ChoiceAnswer, ScoreAnswer, Usage, SystemOneResponse,
   ModelCard, RetryPolicy, TypeSafeError, RateLimitError, OverloadedError, APITimeoutError,
@@ -358,7 +360,8 @@ contradictions (report the delta; do not silently deviate).
   Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
   CircuitOpenError, CircuitState, Budget, ConfidenceGate, DecisionEvent,
   Decider, answer_from_wire, parse_response, ProviderSpec, register_provider,
-  get_provider, list_providers, open_client, open_async_client, __version__`.
+  get_provider, list_providers, open_client, open_async_client, Variable,
+  Edge, CPT, BayesNet, elicit_cpts, propose_structure, __version__`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
@@ -409,6 +412,18 @@ contradictions (report the delta; do not silently deviate).
   (default `"jev"`; validated via `get_provider` — unknown providers return
   a JSON-safe error result listing the available keys, no traceback); MCP
   stays stdio-only. Details in the Provider dispatch section.
+- `graphical.py` — discrete Bayes nets as frozen dataclasses (`Variable`,
+  `Edge`, `CPT`, `BayesNet`): graph helpers (`variable`, `parents_of`,
+  `children_of`, deterministic `topological_order`), `validate()`, exact
+  inference (`posterior` / `query` — pure-stdlib variable elimination, no
+  numpy), and the GraphSpec `dafjev.bayesnet/1` JSON round-trip. Full
+  contract in the Graphical models section below.
+- `graphical_elicitation.py` — Jev as a factor source: `elicit_cpts`
+  (every CPT row of a net as one batched `choice` ask; deterministic ids,
+  chunking via `max_questions_per_request`) and `propose_structure` (one
+  batched ask over all variable pairs -> DAG proposal, edges only). Both
+  take any object with `.ask(state, questions)`. Full contract in the
+  Graphical models section below.
 
 ## Provider dispatch
 
@@ -526,6 +541,180 @@ CLI + MCP (`cli.py` / `mcp_server.py`):
   (default "jev"), validated via `get_provider`; unknown provider => error
   result listing available keys (JSON-safe, no traceback). MCP stays
   stdio-only.
+
+## Graphical models
+
+Jev as a factor source for graphical models (per Dellaert's Jev+GTSAM
+experiments): one batched request elicits every CPT of a Bayes net; a
+second proposes the net's topology via pairwise 3-way choices; a
+pure-Python engine turns those factors into exact inference. Jev sits
+UPSTREAM (structure + CPTs), WITHIN (the factors are Jev probabilities),
+and DOWNSTREAM (evidence queries / re-asking). Engines such as GTSAM or
+RxInfer.jl consume the same factors through the GraphSpec interchange
+below. Python >= 3.10, stdlib only — no numpy.
+
+Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
+
+- `Variable`: `key: str` (unique, `[A-Za-z_][A-Za-z0-9_-]*`, e.g.
+  `"tub"`), `description: str` (natural-language meaning; drives
+  elicitation), `states: tuple[str, ...]` (ordered outcome labels, >= 2,
+  e.g. `("false", "true")`).
+- `Edge`: `parent: str`, `child: str`.
+- `CPT`: `child: str`, `parents: tuple[str, ...]` (ordered; empty tuple =
+  prior), `table: tuple[tuple[tuple[str, ...], tuple[float, ...]], ...]` —
+  (assignment-tuple, probability-tuple) rows; assignment labels follow
+  each parent's states order; every parent assignment present exactly
+  once.
+- `BayesNet`: `variables: tuple[Variable, ...]`, `edges: tuple[Edge, ...]`,
+  `cpts: Mapping[str, CPT]` (child key -> CPT):
+  - `variable(key) -> Variable` — `KeyError` with a message naming the
+    key; `parents_of(key) -> tuple[str, ...]`; `children_of(key) ->
+    tuple[str, ...]`.
+  - `topological_order() -> tuple[str, ...]` — deterministic: Kahn with
+    insertion-order tiebreak; `ValueError` on a cycle.
+  - `validate() -> None` — rejects: unknown edge endpoints, duplicate
+    edges, self-loops, missing/duplicate CPT, CPT parents not equal to
+    the graph parents (same set; order asserted), CPT child states not
+    equal to `Variable.states`, parent assignments not present exactly
+    once, non-finite or negative probabilities, and any row not summing
+    to 1 within 1e-6 (rows stored as given; renormalization is the
+    caller's choice).
+  - `to_json() -> dict` / `from_json(data) -> BayesNet` — GraphSpec
+    interchange (below); `format` must be `"dafjev.bayesnet/1"` exactly;
+    the round-trip is lossless (`==` after both directions).
+  - `posterior(evidence: Mapping[str, str]) ->
+    dict[str, tuple[float, ...]]` — exact inference: variable elimination
+    over discrete factors; evidence reduces factors; returns the marginal
+    distribution per variable in each `Variable.states` order; unknown
+    evidence key/state => `ValueError` (empty evidence = priors). Factors
+    are `dict[tuple[str, ...], float]` keyed by variable-key tuples (pure
+    stdlib float math). Implementation freedom: factors multiply
+    row-wise, eliminated variables are summed out in a deterministic
+    elimination order (topological or min-degree; deterministic tiebreak
+    REQUIRED — same input => same float result ordering); one elimination
+    pass answers ALL marginals in `posterior` (or VE per hidden var — the
+    RESULT must be exact and deterministic either way). Float discipline:
+    factors never introduce negatives; sums normalize only by division at
+    the final marginal.
+  - `query(variable: str, evidence: Mapping[str, str] | None = None) ->
+    tuple[float, ...]` — one marginal.
+
+Elicitation (`src/daf_jev/graphical_elicitation.py` — pure orchestration
+over an injected client; no I/O of its own):
+
+- `elicit_cpts(variables, edges, *, client, instructions: str | None = None,
+  max_questions_per_request: int | None = None) -> BayesNet` —
+  `variables: Sequence[Variable]`; `edges` define the DAG (validated
+  acyclic). For every child and EVERY parent assignment: one `choice()`
+  question whose options are the child's states IN ORDER. Question id
+  scheme: `f"cpt::{child}|{'|'.join(f'{p}={v}' for p,v in assignment)}"`
+  (deterministic). Shared base instructions (default text provided; the
+  caller may prepend context like population/unknown-treatment — the
+  Asia experiment's framing). ONE batched ask when total rows <=
+  `max_questions_per_request` (None = one request regardless); otherwise
+  chunk deterministically in order, one ask per chunk (network
+  round-trips stay O(ceil(rows/chunk))). Probabilities come from the
+  answer's choice distribution mapped by state label; rows assemble into
+  CPTs; returns a validated `BayesNet`. Errors: a missing answer for a
+  row raises `ValueError` naming the question id; non-finite
+  /out-of-order probabilities follow the repo's fail-closed rules.
+- `propose_structure(variables, *, client, instructions: str | None = None,
+  edge_penalty: float = 1.0, exact_limit: int = 8) -> BayesNet` — one
+  batched ask over ALL unordered variable pairs (n(n-1)/2 questions); per
+  pair `(a, b)` the options IN ORDER are `f"{a}->{b}"`, `f"{b}->{a}"`,
+  `"no-edge"`; shared base instructions say to judge DIRECT dependency
+  accounting for mediation through the other variables (the experiment's
+  framing). Edge score = log(probability of the chosen edge option). DAG
+  assembly: enumerate topological orderings (exact when n <=
+  `exact_limit`; an n! search like the experiment — documented
+  complexity; n > `exact_limit` uses the greedy fallback: start empty,
+  repeatedly add the highest-scoring edge that keeps the graph acyclic
+  while its log-prob gain exceeds `edge_penalty`). Exact search score for
+  an ordering = sum of log p over edges consistent with the ordering
+  MINUS `edge_penalty` * number of those edges; the best ordering wins
+  (deterministic tiebreak: lexicographic ordering tuple). Returns a
+  `BayesNet` with edges only (the `cpts` mapping is EMPTY; `validate()`
+  is NOT yet satisfied) — the two-step flow is explicit:
+  `propose_structure`, then `elicit_cpts` fills the CPTs.
+- Both functions accept `client` as any object with `.ask(state,
+  questions)` / `.ask(state, questions_dict) -> SystemOneResponse` (the
+  real `JevClient` / `AsyncJevClient` or a test stand-in) — the PUBLIC
+  client API only; provider choice happened upstream (`open_client`
+  etc.). The `state` default is a composed description of the variable
+  meanings (deterministic text), overridable.
+
+Visualization (`src/daf_jev/graphical_viz.py` — pure over the public
+`BayesNet` API; the only I/O is the file write the caller asks for, plus
+creating the output's parent directory when missing):
+
+- `to_mermaid(net: BayesNet) -> str` — zero-dependency mermaid `graph TD`
+  source: one node per variable (`key["key<br/>description"]`, the
+  description truncated to ~40 chars at a word boundary and `[<>"]`
+  stripped from the label text), one `parent --> child` line per edge;
+  deterministic node/edge order = `BayesNet.variables` / `.edges` order.
+- `plot_network(net: BayesNet, path: str | Path) -> Path` — matplotlib PNG
+  (import inside the function; the ImportError names the `figures` extra:
+  `uv sync --extra figures`). Layered layout: topological generations
+  top-to-bottom, deterministic coordinates within a generation by
+  variable index; FancyArrowPatch parent->child arcs with slight
+  curvature; node boxes labeled key (+ description truncated to two
+  lines); no title by default (the caller adds one).
+- `plot_posterior_trajectory(net: BayesNet, query_keys: Sequence[str],
+  steps: Sequence[Mapping[str, str]], path: str | Path, *,
+  labels: Sequence[str] | None = None) -> Path` — one grouped bar chart:
+  x = step index (labels, default the index as a string), one bar per
+  query variable showing P(state=true), where "true" is the LAST state of
+  the variable's states tuple (binary convention) and values come from
+  `net.posterior(evidence)` per step; legend = query keys; default
+  matplotlib color cycle. Fail closed before any figure is drawn: empty
+  `steps`/`query_keys`, a label-count mismatch, unknown query keys
+  (`KeyError` naming the key), invalid evidence (`ValueError`).
+
+Experiment runner (`scripts/bayes_experiment.py` — thin orchestrator; ALL
+logic lives in src):
+
+- Flags: `--provider KEY` (default `jev`, resolved via
+  `load_settings(provider=...)`), `--model NAME`, `--edge-penalty FLOAT`
+  (default 1.0; only used with `--propose-structure`),
+  `--propose-structure` (default OFF — the reference Asia edges; when
+  ON, run `propose_structure`, print the proposal vs the reference
+  edges, then continue with the REFERENCE edges for CPTs — the
+  reproducible choice), `--out-dir PATH` (default
+  `output/experiments/asia`).
+- Behavior: build the eight Asia variables (canonical binary fixture
+  text); structure step + mermaid diagram of the resulting structure to
+  stdout; `elicit_cpts` over the reference edges (one batched ask);
+  posterior walkthrough `[]` -> `asia=false` -> `+xray=true` ->
+  `+dysp=true` printed as a P(true) table for tub/lung/bronc ("true" =
+  last state); artifacts into `--out-dir`: `asia_graphspec.json`
+  (GraphSpec `dafjev.bayesnet/1`), `network.png`,
+  `posterior_trajectory.png`, `mermaid.txt` (the source of the net the
+  experiment actually used — the reference edges). Keyless: prints
+  `SKIP: JEV_API_KEY not set` and exits 0 BEFORE any network use.
+
+GraphSpec interchange JSON (cross-repo contract with GNN / RxInfer — see
+the AGENTS.md invariant):
+
+```json
+{
+  "format": "dafjev.bayesnet/1",
+  "variables": [{"key": "asia", "description": "Recent visit to Asia?",
+                 "states": ["false", "true"]}],
+  "edges": [{"parent": "asia", "child": "tub"}],
+  "cpts": {"tub": {"child": "tub", "parents": ["asia"],
+                   "rows": [{"assignment": {"asia": "false"},
+                             "probabilities": [0.97, 0.03]},
+                            {"assignment": {"asia": "true"},
+                             "probabilities": [0.68, 0.32]}]}}
+}
+```
+
+- `to_json` / `from_json` validate `format` == `"dafjev.bayesnet/1"`
+  exactly; the rows list order is parent-assignment lexicographic by each
+  parent's states order (canonical, deterministic); the round-trip must
+  be lossless (`==` after both directions).
+- This JSON is what GNN's bridge consumes/produces and what the
+  RxInfer.jl example reads. The schema lives here; GNN docs reference it.
 
 ## Tests (tests/) — template "no-mock" convention
 

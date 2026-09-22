@@ -1,0 +1,17 @@
+graph TD
+    asia["asia<br/>Recently visited Asia?"]
+    tub["tub<br/>Has tuberculosis"]
+    smoke["smoke<br/>Is a smoker"]
+    lung["lung<br/>Has lung cancer"]
+    bronc["bronc<br/>Has bronchitis"]
+    either["either<br/>Has tuberculosis or lung cancer"]
+    xray["xray<br/>Abnormal X-ray result"]
+    dysp["dysp<br/>Has dyspnoea (shortness of breath)"]
+    asia --> tub
+    smoke --> lung
+    smoke --> bronc
+    lung --> either
+    tub --> either
+    either --> xray
+    either --> dysp
+    bronc --> dysp

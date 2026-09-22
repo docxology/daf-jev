@@ -56,6 +56,13 @@ reproducible manuscript pipeline.
   state, compose a batched ask, gate the answers, and fail open to a
   deterministic fallback, with a call/token budget, a per-decision cache,
   a consecutive-failure latch, and JSON-safe event receipts.
+- **Graphical models** — Jev as a factor source for discrete Bayes nets:
+  `elicit_cpts` elicits every CPT of a network in one batched ask,
+  `propose_structure` proposes the topology via pairwise choices, and
+  `BayesNet` runs exact local inference (pure-Python variable
+  elimination); `to_json()` emits the `dafjev.bayesnet/1` GraphSpec
+  interchange for GNN / RxInfer.jl / GTSAM-style engines (see
+  [Graphical models](#graphical-models)).
 - **Calibration** — pure reliability statistics in `daf_jev.calibration`
   (`bucket_index`, `reliability_table`, `expected_calibration_error`,
   `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
@@ -132,10 +139,10 @@ verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 
 ## Examples
 
-Seven runnable scripts live in `examples/` (walkthrough per script in
+Eight runnable scripts live in `examples/` (walkthrough per script in
 [`examples/README.md`](examples/README.md)). Each resolves the API key from
 the environment or `.env` and — when no key is found — prints
-`SKIP: JEV_API_KEY not set` and exits 0, so all seven are offline-safe:
+`SKIP: JEV_API_KEY not set` and exits 0, so all eight are offline-safe:
 
 ```bash
 python examples/quickstart.py         # one mixed ask call; answers, usage, request id
@@ -145,12 +152,13 @@ python examples/evaluate_corpus.py    # Evaluator over an inline four-state corp
 python examples/gated_fallback.py     # heuristic-first: model called only when it adds value
 python examples/decider_loop.py       # decision-point loop: gate, budget, fail-open fallback
 python examples/providers_example.py  # provider registry + dispatch; injected transport, no network
+python examples/asia_bayes.py         # Bayes net from Jev factors: CPT elicitation, structure proposal, posterior walkthrough
 ```
 
-All seven take `--model NAME` (default: provider-resolved — for the default
-`jev` provider: `JEV_MODEL`, then `TYPESAFE_DEFAULT_MODEL`, then
-`jev-latest`); `evaluate_corpus.py` also takes `--concurrency N`
-(default 2).
+All eight take `--model NAME` (default: provider-resolved — for the
+default `jev` provider: `JEV_MODEL`, then `TYPESAFE_DEFAULT_MODEL`, then
+`jev-latest`); `asia_bayes.py` also takes `--provider KEY` (default
+`jev`); `evaluate_corpus.py` also takes `--concurrency N` (default 2).
 
 ## Evaluating a corpus
 
@@ -287,6 +295,91 @@ retries; consumers wanting retries pass their own `client_factory`. With a
 `(declared confidence, gate-accepted)` pairs — a self-consistency proxy to
 feed into `daf_jev.calibration`.
 
+## Graphical models
+
+Jev doubles as a **factor source for graphical models**: zero-shot
+probabilistic factors that a Bayes-net engine turns into reusable
+inference (per Frank Dellaert's Jev+GTSAM experiments). Two batched
+requests cover a whole discrete network — one asks for **every CPT at
+once** (`elicit_cpts`: an 8-variable binary net is 18 rows in a single
+call), the other proposes the **topology itself** via pairwise three-way
+choices (`propose_structure`: `a->b` / `b->a` / `no-edge` over all
+n(n-1)/2 pairs, scored into a DAG by log-probability). Inference is
+local and exact: `BayesNet.query` / `.posterior` run pure-Python variable
+elimination over the elicited factors — stdlib only, no numpy, no API
+calls at query time.
+
+Jev appears at three seams:
+
+- **Upstream** — the net's structure and CPTs are elicited from a Jev
+  provider (any of them; the provider is chosen where the client is
+  built).
+- **Within** — the factors themselves are Jev probabilities.
+- **Downstream** — evidence queries run locally and exactly; a posterior
+  can drive a follow-up `ask` (re-asking) in the same workflow.
+
+```python
+from daf_jev import Variable, elicit_cpts, propose_structure
+
+variables = [...]                        # e.g. the 8 Asia variables
+proposal = propose_structure(variables, client=client)      # edges only
+net = elicit_cpts(variables, proposal.edges, client=client) # fills every CPT
+p_tub = net.query("tub", evidence={"xray": "true"})[1]      # exact marginal
+spec = net.to_json()                     # GraphSpec interchange
+```
+
+| Surface | What it does |
+| --- | --- |
+| `Variable(key, description, states)` | one discrete variable — unique key, natural-language meaning, ordered states (>= 2) |
+| `Edge(parent, child)` | one DAG edge |
+| `CPT(child, parents, table)` | one conditional probability table (empty `parents` = prior) |
+| `BayesNet(variables, edges, cpts)` | the validated net: `.query(variable, evidence)`, `.posterior(evidence)` (exact variable elimination), `.validate()`, `.topological_order()` |
+| `BayesNet.to_json()` / `.from_json(data)` | GraphSpec `dafjev.bayesnet/1` interchange (lossless round-trip) |
+| `elicit_cpts(variables, edges, *, client, ...)` | every CPT row as one batched ask; deterministic question ids and state options; chunking via `max_questions_per_request` |
+| `propose_structure(variables, *, client, ...)` | one batched ask over all variable pairs -> DAG proposal (edges only); exact ordering search up to `exact_limit=8`, greedy above with `edge_penalty` |
+
+`to_json()` emits **GraphSpec** (`"format": "dafjev.bayesnet/1"`), the
+interchange between this client and downstream graphical-model engines:
+the GNN bridge consumes/produces it and the RxInfer.jl example reads it;
+GTSAM-style engines map the same elicited factors onto their own discrete
+types. The format string is a cross-repo contract — it changes only
+together with the consuming bridges in the same wave (see `AGENTS.md`).
+
+End-to-end walkthrough: [`examples/asia_bayes.py`](examples/asia_bayes.py)
+— the eighth example (keyless skip; `--provider` / `--model` flags) builds
+the Asia variables, runs both batched requests, walks the posterior
+trajectory from the experiment (`asia=false`, then `+xray=true`, then
+`+dysp=true`, printing the tub/lung/bronc marginals at each step), and
+writes `asia_graphspec.json`.
+
+The same surfaces ship with **visualization**: `to_mermaid(net)` renders a
+zero-dependency mermaid `graph TD` diagram of the DAG (one labeled node per
+variable, one arrow per edge, deterministic order), and the two matplotlib
+plotters write artifacts — `plot_network(net, path)` (layered layout:
+topological generations top-to-bottom, deterministic coordinates) and
+`plot_posterior_trajectory(net, query_keys, steps, path, labels=...)`
+(grouped bars of P(state=true) per query variable across cumulative
+evidence steps, where "true" is the last state of each variable's states
+tuple and values come from `net.posterior`). Matplotlib imports lazily
+inside the plotters; install the `figures` extra with
+`uv sync --extra figures`.
+
+The Dellaert-style Asia experiment runs end-to-end through one thin
+orchestrator:
+
+```bash
+uv run python scripts/bayes_experiment.py [--provider KEY] [--model NAME] \
+    [--edge-penalty FLOAT] [--propose-structure] [--out-dir PATH]
+```
+
+It prints the mermaid diagram, elicits the Asia CPTs in one batched ask,
+walks the posterior trajectory (`priors` -> `asia=false` -> `+xray=true`
+-> `+dysp=true`) as a P(true) table for tub/lung/bronc, and writes four
+artifacts into `--out-dir` (default `output/experiments/asia`):
+`asia_graphspec.json`, `network.png`, `posterior_trajectory.png`, and
+`mermaid.txt`. Keyless runs print `SKIP: JEV_API_KEY not set` and exit 0
+before any network use.
+
 ## CLI
 
 ```bash
@@ -327,7 +420,7 @@ flowchart TB
         CLI["CLI<br/>ask · evaluate · models · providers · docs-verify"]
         MCP["MCP server (stdio)<br/>jev_ask · jev_evaluate · jev_models<br/>jev_composite_score · jev_confidence_gate<br/>jev_tiered_gate · jev_docs_verify"]
         SKILL["agent skill<br/>skills/daf-jev/SKILL.md"]
-        EX["examples/<br/>7 runnable scripts"]
+        EX["examples/<br/>8 runnable scripts"]
     end
     CLI --> K["JevClient / compose / calibration"]
     MCP --> K
@@ -572,7 +665,7 @@ both render it), or paste this BibTeX:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.5.0}
+  version = {0.6.0}
 }
 ```
 

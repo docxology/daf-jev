@@ -368,6 +368,60 @@ Adjacent model families without confirmed wire servers:
 
 Trackers: mrjev.com, awesomejev.com, systemonemodels.org.
 
+## 12. Jev as a factor source for graphical models
+
+Beyond single decisions, Jev's calibrated `choice` answers can act as
+**factors for graphical models** — discrete Bayes nets whose conditional
+probability tables are elicited from the model instead of measured. Two
+experiments anchor the design (the Jev+GTSAM Asia experiments, Frank
+Dellaert's line of work): (1) **one batched request elicits every CPT of
+an 8-variable Bayes net at once** — all 18 parent-assignment rows in a
+single call; (2) **the topology itself is proposed zero-shot** — one
+batched request of pairwise three-way choices (`a->b` / `b->a` /
+`no-edge`) over all variable pairs, scored by log-probability into a
+DAG. Inference stays local and exact: variable elimination over the
+elicited factors, pure stdlib — no API calls at query time.
+
+In daf-jev this ships as `daf_jev.graphical` (`BayesNet` with
+`validate()`, exact `posterior()` / `query()`) and
+`daf_jev.graphical_elicitation` (`elicit_cpts`, `propose_structure`),
+plus the `dafjev.bayesnet/1` **GraphSpec** JSON interchange — the seam
+toward downstream engines (GTSAM, RxInfer.jl) and bridges such as the
+GNN one. Jev sits upstream (structure + CPTs), within (the factors), and
+downstream (evidence queries / re-asking); see the README's
+[Graphical models](../README.md#graphical-models) section and
+`docs/ARCHITECTURE.md`.
+
+The calibration caveats from
+[Section 4](#4-calibration-methodology) carry over: elicited CPTs are
+model judgments, not measured frequencies — group calibration is the
+vendor claim, individual CPT entries carry no ground truth, and exact
+arithmetic downstream does not make elicited probabilities correct.
+Validate elicited nets against domain data before clinical-grade use.
+
+**Literature anchors.** The pointers below were collected in an
+AI-assisted literature sweep and have **not** been verified line-by-line
+against the papers — weaker provenance than every other claim on this
+page; treat them as navigation, not as verified claims:
+
+- **Kiciman et al. (TMLR 2024)** — LLMs as causal reasoners: the
+  "language models can carry this family of reasoning" anchor.
+- **Long et al. (2023)** — early work on deriving Bayesian-network
+  structure/parameters from LLM judgments.
+- **Darvariu et al. (2024)** — decisions and planning cast as
+  graphical-model inference with model-supplied factors.
+- **Babakov et al. (COLING 2025)** — LLM-elicited probabilistic
+  structure.
+- **Zhang et al. (2026)** — PromptBN / ReActBN: prompting LLMs to build
+  and reason with Bayes nets.
+- **Nafar et al. (TMLR 2026)** — teaching and evaluating probabilistic
+  reasoning with LLMs in the loop.
+- **Jin et al. (ICLR 2024)** — LLMs repurposed for structured
+  probabilistic prediction tasks.
+
+None of these anchors has a cite key in `manuscript/references.bib`;
+they are navigational pointers for the feature, not manuscript sources.
+
 ## Sources
 
 Primary (TypeSafe):
