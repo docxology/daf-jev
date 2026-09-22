@@ -150,9 +150,9 @@ here.
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Zenodo deposits (v0.4.1 published 2026-09-21).** The v0.4.1 release is
-  archived as Zenodo deposit id **22884676** (version DOI
-  `10.5281/zenodo.22884676`, record
+- **Zenodo deposits (v0.4.1 published 2026-09-21; v0.4.2 deposit
+  pending).** The v0.4.1 release is archived as Zenodo deposit id
+  **22884676** (version DOI `10.5281/zenodo.22884676`, record
   <https://zenodo.org/records/22884676>; source zip from tag `v0.4.1` +
   the rendered PDF); v0.4.0 remains deposit **22884305** (version DOI
   `10.5281/zenodo.22884305`);
@@ -163,11 +163,19 @@ here.
   superseded deposit in the same concept family — never cite or pin it. New
   releases MUST be new version deposits on the same concept via the Zenodo
   deposits API (`POST /api/records/<latest-id>/versions`, then PUT metadata
-  — this build wants RDM shapes: `person_or_org` creators with
-  `family_name`/`given_names`, `resource_type {"id": "software"}`, license
-  via the `rights` field, and a `publisher` string for DataCite DOI
-  registration — never a fresh deposit, which would mint a new concept
-  DOI). Files of a PUBLISHED record are immutable (the edit-draft bucket
+  — this build wants: creators in the FLAT shape `{"name": "Friedman,
+  Daniel Ari", "affiliation": "...", "orcid": "..."}` (verified: the RDM
+  `person_or_org` shape is silently stripped of its name by this build —
+  the v0.4.0/v0.4.1 deposits currently project authorless creators; fix
+  their metadata via the edit-draft when touching them again),
+  `resource_type {"id": "software"}`, license via the `rights` field, and
+  a `publisher` string for DataCite DOI registration — never a fresh
+  deposit, which would mint a new concept DOI). BEFORE publishing a
+  version deposit, verify the rendered PDF text (pymupdf over every page:
+  zero `??`, zero `{{`, cover shows the release version and the concept
+  DOI) — the v0.4.1 PDF shipped with four unresolved citations because
+  this check was missing. Files of a PUBLISHED record are immutable (the
+  edit-draft bucket
   is locked: content PUTs 403) — the ONLY way to add/change files is a new
   version deposit. File uploads: POST the files URL with an ARRAY body
   (`[{"key": ...}]`), PUT the content link with
@@ -290,14 +298,25 @@ uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
 uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
 uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mismatch
+                                            # repo-checkout only: docs/reference/ is not
+                                            # packaged into wheels (module-anchored
+                                            # manifest path); installed copies fail
 python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # offline
 uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
 uv run python scripts/z_generate_manuscript_variables.py   # 49 tokens + injection
 
-# Render + validate from the template checkout (currently blocked: the leaf
-# symlink was removed 2026-09-18 — see the render-path invariant above):
+# Render the PDF manually (the template checkout render is currently
+# blocked: the leaf symlink was removed 2026-09-18 — see the render-path
+# invariant above). The in-repo fallback reproduces the template render via
+# pandoc --natbib; inputs are manuscript/render/{preamble,cover}.tex and the
+# generated token map; gates: zero unresolved bibtex entries / undefined
+# refs / unloadable images; SOURCE_DATE_EPOCH pinned from HEAD.
+uv run python scripts/render_pdf.py            # render + gates
+uv run python scripts/render_pdf.py --install  # also replace the root PDF
+
+# Template-pipeline path (for reference; currently blocked):
 cd /Volumes/external_drive/Git/template && \
   uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
 cd /Volumes/external_drive/Git/template && \
