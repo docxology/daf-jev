@@ -41,6 +41,8 @@ from daf_jev.config import (
 )
 from daf_jev.decider import Budget, ConfidenceGate, Decider, DecisionEvent
 from daf_jev.evaluate import EvaluationRecord, Evaluator
+from daf_jev.graphical import CPT, BayesNet, Edge, Variable
+from daf_jev.graphical_elicitation import elicit_cpts, propose_structure
 from daf_jev.ledger import UsageLedger, UsageSnapshot
 from daf_jev.models import pick_model
 from daf_jev.primitives import QuestionSet, choice, noul, score
@@ -55,10 +57,12 @@ from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 __version__ = "0.5.0"
 
 __all__ = [
+    "CPT",
     "APIConnectionError",
     "APITimeoutError",
     "Answer",
     "AsyncJevClient",
+    "BayesNet",
     "Budget",
     "ChoiceAnswer",
     "ChoiceQuestion",
@@ -68,6 +72,7 @@ __all__ = [
     "ConfidenceGate",
     "Decider",
     "DecisionEvent",
+    "Edge",
     "EvaluationRecord",
     "Evaluator",
     "JSONContent",
@@ -89,11 +94,13 @@ __all__ = [
     "Usage",
     "UsageLedger",
     "UsageSnapshot",
+    "Variable",
     "__version__",
     "answer_from_wire",
     "choice",
     "composite_score",
     "confidence_gate",
+    "elicit_cpts",
     "get_provider",
     "list_providers",
     "load_settings",
@@ -102,6 +109,7 @@ __all__ = [
     "open_client",
     "parse_response",
     "pick_model",
+    "propose_structure",
     "register_provider",
     "resolve_retry",
     "resolve_timeout",
