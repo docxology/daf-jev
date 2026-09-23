@@ -289,15 +289,24 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   superseded deposit in the same concept family — never cite or pin it. New
   releases MUST be new version deposits on the same concept via the Zenodo
   deposits API (`POST /api/records/<latest-id>/versions`, then PUT metadata
-  — this build wants: creators in the FLAT shape `{"name": "Friedman,
-  Daniel Ari", "affiliation": "...", "orcid": "..."}` (verified: the RDM
-  `person_or_org` shape is silently stripped of its name by this build —
-  the v0.4.0/v0.4.1 deposits currently project authorless creators; fix
-  their metadata via the edit-draft when touching them again),
-  `resource_type {"id": "software"}`, license via the `rights` field, and
-  a `publisher` string for DataCite DOI registration — never a fresh
-  deposit, which would mint a new concept DOI). BEFORE publishing a
-  version deposit, verify the rendered PDF text (pymupdf over every page:
+  — this build wants (re-verified 2026-09-23 against the live API; the
+  older flat-shape note below was wrong): creators in the RDM nested form
+  `{"person_or_org": {"type": "personal", "family_name": "Friedman",
+  "given_name": "Daniel Ari", "identifiers": [{"scheme": "orcid",
+  "identifier": "0000-0001-6232-9096"}]}, "affiliations": [{"name":
+  "Active Inference Institute"}]}` — publish-time validation REQUIRES the
+  explicit `type: "personal"` + `family_name`/`given_name` inside
+  `person_or_org` (`type` absent → the PUT silently strips the name;
+  `family_name` blank at publish → 400), `resource_type {"id":
+  "software"}` (the `{"title","type"}` form is silently dropped), license
+  via the `rights` field, and a `publisher` string for DataCite DOI
+  registration — never a fresh deposit, which would mint a new concept
+  DOI). The v0.4.0/v0.4.1 deposits currently project authorless
+  creators (pre-fix metadata); fix their metadata via the edit-draft when
+  touching them again. If a deposit fails mid-flight (e.g. publish 400),
+  DELETE the orphaned new-version draft (`DELETE /api/records/<id>/draft`
+  → 204) before re-running — a second `versions` POST while a draft
+  exists 400s. BEFORE publishing a version deposit, verify the rendered PDF text (pymupdf over every page:
   zero `??`, zero `{{`, cover shows the release version and the concept
   DOI) — the v0.4.1 PDF shipped with four unresolved citations because
   this check was missing. Files of a PUBLISHED record are immutable (the
