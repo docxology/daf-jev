@@ -26,11 +26,14 @@ Steps:
      ``network.png`` (``plot_network``), ``posterior_trajectory.png``
      (``plot_posterior_trajectory``), and ``mermaid.txt`` (the mermaid
      source of the net the experiment actually used — the reference
-     edges)
+     edges). With ``--animate`` also ``posterior_animation.gif``
+     (``animate_posterior``) and ``network_animation.gif``
+     (``animate_network``)
 
 Keyless: prints ``SKIP: JEV_API_KEY not set`` and exits 0 BEFORE any
-network use (checked via ``load_settings(provider=...)``). Plotting needs
-the ``figures`` extra (matplotlib): ``uv sync --extra figures``.
+network use (checked via ``load_settings(provider=...)``). Plotting and
+the ``--animate`` GIFs need the ``figures`` extra (matplotlib + pillow):
+``uv sync --extra figures``.
 
 Options:
     --provider KEY          daf-jev provider key (default: jev)
@@ -40,6 +43,8 @@ Options:
     --propose-structure     run propose_structure and print the proposal
                             against the reference edges (CPTs still use
                             the reference edges)
+    --animate               also write posterior_animation.gif and
+                            network_animation.gif into --out-dir
     --out-dir PATH          artifact directory (default output/experiments/asia)
 
 Exit codes:
@@ -131,6 +136,12 @@ def main() -> int:
         action="store_true",
         help="propose the topology via pairwise choices and print it against "
         "the reference edges (CPTs are still elicited over the reference edges)",
+    )
+    parser.add_argument(
+        "--animate",
+        action="store_true",
+        help="also write posterior_animation.gif and network_animation.gif "
+        "into --out-dir (needs the figures extra: matplotlib + pillow)",
     )
     parser.add_argument(
         "--out-dir",
@@ -231,6 +242,28 @@ def main() -> int:
         )
         mermaid_path = out_dir / "mermaid.txt"
         mermaid_path.write_text(to_mermaid(net) + "\n", encoding="utf-8")
+        animation_files: list[str] = []
+        if args.animate:
+            from daf_jev.graphical_animation import (
+                animate_network,
+                animate_posterior,
+            )
+
+            posterior_gif = animate_posterior(
+                net,
+                QUERY_KEYS,
+                [evidence for _label, evidence in WALKTHROUGH],
+                out_dir / "posterior_animation.gif",
+                labels=[label for label, _evidence in WALKTHROUGH],
+            )
+            network_gif = animate_network(
+                net,
+                [evidence for _label, evidence in WALKTHROUGH],
+                out_dir / "network_animation.gif",
+            )
+            animation_files = [posterior_gif.name, network_gif.name]
+            print(f"wrote {posterior_gif}")
+            print(f"wrote {network_gif}")
 
         receipts_path = out_dir / "receipts.json"
         with receipts_path.open("w", encoding="utf-8") as fh:
@@ -248,6 +281,7 @@ def main() -> int:
                         }
                         for label, evidence in WALKTHROUGH
                     },
+                    "animations": animation_files,
                 },
                 fh,
                 indent=2,

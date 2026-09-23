@@ -105,6 +105,12 @@ never be committed, printed, or read by tests.
   client, ...)` proposes the DAG from one batched ask over all variable
   pairs (edges only; exact ordering search to `exact_limit=8`, greedy
   above with `edge_penalty`).
+  `.most_probable_explanation(evidence)` (most probable joint assignment
+  consistent with the evidence; deterministic lexicographic tiebreak),
+  `.sample(n, rng=None)` (ancestral sampling in topological order), and
+  `.conditional_scenarios(variable, evidence=None, targets=None)`
+  (per-state posterior marginals of the targets) round out the
+  inference surface.
 - **Graphical viz** (`daf_jev.graphical_viz`) — `to_mermaid(net)`
   (zero-dependency mermaid `graph TD` source), `plot_network(net, path)`
   (deterministic layered PNG), `plot_posterior_trajectory(net,
@@ -115,6 +121,12 @@ never be committed, printed, or read by tests.
   reproduces the Asia experiment into `--out-dir` (default
   `output/experiments/asia`): `asia_graphspec.json`, `network.png`,
   `posterior_trajectory.png`, `mermaid.txt`.
+  `animate_posterior(net, query_keys, evidence_steps, path, *,
+  labels=None, fps=1, dpi=110)` and `animate_network(net,
+  evidence_steps, path, *, fps=1)` — in `daf_jev.graphical_animation` —
+  render the same walkthrough as GIFs (PillowWriter; `pillow` in the
+  `figures` extra); the runner's `--animate` flag writes
+  `posterior_animation.gif` + `network_animation.gif`.
 - **Config** — package-root re-exports `load_settings`, `resolve_retry`,
   `resolve_timeout`; the API-key/base-URL resolvers live in
   `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
@@ -133,7 +145,7 @@ computes marginals, and posteriors feed back into daf-jev. GraphSpec
 across both repos).
 
 1. Elicit — `scripts/bayes_experiment.py` (`--provider`, `--model`,
-   `--propose-structure`, `--out-dir`): `propose_structure` +
+   `--propose-structure`, `--animate`, `--out-dir`): `propose_structure` +
    `elicit_cpts`, two batched asks.
 2. Artifacts — `output/experiments/asia/`: `asia_graphspec.json`
    (`dafjev.bayesnet/1` interchange), `network.png`,
@@ -161,7 +173,8 @@ Deep links (resolve from the repo checkout):
   and [Provider dispatch](../../docs/ARCHITECTURE.md#provider-dispatch)
 - [`graphical.py`](../../src/daf_jev/graphical.py) ·
   [`graphical_elicitation.py`](../../src/daf_jev/graphical_elicitation.py) ·
-  [`graphical_viz.py`](../../src/daf_jev/graphical_viz.py)
+  [`graphical_viz.py`](../../src/daf_jev/graphical_viz.py) ·
+  [`graphical_animation.py`](../../src/daf_jev/graphical_animation.py)
 - [`scripts/bayes_experiment.py`](../../scripts/bayes_experiment.py) ·
   [receipts.json](../../output/experiments/asia/receipts.json) (live run)
 

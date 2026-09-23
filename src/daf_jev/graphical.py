@@ -24,6 +24,7 @@ import dataclasses
 import heapq
 import itertools
 import math
+import random
 import re
 from collections.abc import Mapping, Sequence
 
@@ -461,10 +462,12 @@ class BayesNet:
         (the posterior is undefined there).
         """
         checked, domains, factors, order = self._prepare(evidence)
-        return {
+        marginals = {
             var.key: self._marginal(var, checked, domains, factors, order)
             for var in self.variables
         }
+        self._guard_fully_observed(checked, factors, evidence)
+        return marginals
 
     def query(
         self, variable: str, evidence: Mapping[str, str] | None = None
@@ -477,7 +480,180 @@ class BayesNet:
         checked, domains, factors, order = self._prepare(
             {} if evidence is None else evidence
         )
-        return self._marginal(self.variable(variable), checked, domains, factors, order)
+        marginal = self._marginal(
+            self.variable(variable), checked, domains, factors, order
+        )
+        self._guard_fully_observed(checked, factors, evidence or {})
+        return marginal
+
+    def most_probable_explanation(self, evidence: Mapping[str, str]) -> dict[str, str]:
+        """Most probable explanation: the single joint assignment over ALL
+        variables with the highest probability consistent with ``evidence``.
+
+        Every assignment consistent with the evidence is enumerated and
+        scored as the product of its CPT entries — complexity grows with
+        the product of the state counts (2**n for binary nets), so this
+        targets small nets (n <= 12). Exhaustive enumeration is what makes
+        the tiebreak exact: among assignments achieving the maximum
+        probability, the lexicographically smallest tuple of state labels
+        in variable-declaration order wins, so identical inputs give
+        identical results. Evidence variables are pinned to their observed
+        states in the returned mapping. Unknown evidence keys or states
+        raise ``ValueError`` as in :meth:`posterior`, as does
+        zero-probability evidence (no assignment consistent with it has
+        positive probability).
+        """
+        self.validate()
+        checked = self._checked_evidence(evidence)
+        keys = tuple(var.key for var in self.variables)
+        index_of = {key: index for index, key in enumerate(keys)}
+        domains = [
+            (checked[var.key],) if var.key in checked else var.states
+            for var in self.variables
+        ]
+        scored = [
+            (tuple(index_of[name] for name in scope), table)
+            for scope, table in (self._factor_of(var) for var in self.variables)
+        ]
+        best_probability = -1.0
+        best: tuple[str, ...] | None = None
+        for combo in itertools.product(*domains):
+            probability = 1.0
+            for positions, table in scored:
+                probability *= table[tuple(combo[i] for i in positions)]
+                if probability <= 0.0:
+                    break
+            if probability > best_probability or (
+                probability == best_probability and best is not None and combo < best
+            ):
+                best_probability = probability
+                best = combo
+        if best is None or best_probability <= 0.0:
+            raise ValueError(
+                f"evidence {dict(evidence)!r} has zero probability; "
+                "the most probable explanation is undefined"
+            )
+        return dict(zip(keys, best, strict=True))
+
+    def _guard_fully_observed(
+        self,
+        checked: Mapping[str, str],
+        factors: list[_Factor],
+        evidence: Mapping[str, str],
+    ) -> None:
+        """Raise when the evidence is fully observed AND inconsistent.
+
+        Observed variables short-circuit to indicator marginals before the
+        zero-total check in ``_marginal`` can run, so a fully-observed
+        inconsistent case would silently normalize fabricated indicators.
+        With at least one hidden variable, that hidden marginal's
+        zero-total check covers the whole evidence mass.
+        """
+        if len(checked) != len(self.variables):
+            return
+        domains = {
+            var.key: (checked[var.key],) if var.key in checked else var.states
+            for var in self.variables
+        }
+        _scope, table = _fold_multiply(list(factors), domains)
+        if math.fsum(table.values()) <= 0.0:
+            raise ValueError(
+                f"evidence {dict(evidence)!r} has zero probability; "
+                "the posterior is undefined"
+            )
+
+    def sample(self, n: int, rng: random.Random | None = None) -> list[dict[str, str]]:
+        """Draw ``n`` joint assignments by ancestral sampling.
+
+        Variables are drawn in :meth:`topological_order` order; each
+        state is a categorical draw over its CPT row given the
+        already-drawn parent states, via ``rng.random()`` against the
+        row's cumulative distribution. ``rng`` defaults to a fresh
+        :class:`random.Random`; pass a seeded instance for reproducible
+        draws. ``n`` must be an integer >= 1. Rows are used as stored
+        (summing to 1 within the :meth:`validate` tolerance); a
+        float-rounding guard falls back to the last state with positive
+        probability. No evidence handling — rejection sampling is
+        caller-composed (draw, then keep the draws consistent with the
+        wanted evidence).
+        """
+        if not isinstance(n, int) or isinstance(n, bool) or n < 1:
+            raise ValueError(f"n must be an integer >= 1, got {n!r}")
+        self.validate()
+        generator = random.Random() if rng is None else rng
+        order = self.topological_order()
+        states = {var.key: var.states for var in self.variables}
+        rows = {var.key: dict(self.cpts[var.key].table) for var in self.variables}
+        parents = {var.key: self.cpts[var.key].parents for var in self.variables}
+        draws: list[dict[str, str]] = []
+        for _ in range(n):
+            values: dict[str, str] = {}
+            for key in order:
+                probabilities = rows[key][tuple(values[p] for p in parents[key])]
+                threshold = generator.random()
+                cumulative = 0.0
+                chosen: str | None = None
+                for state, probability in zip(states[key], probabilities, strict=True):
+                    cumulative += probability
+                    if threshold < cumulative:
+                        chosen = state
+                        break
+                if chosen is None:
+                    for state, probability in zip(
+                        reversed(states[key]), reversed(probabilities), strict=True
+                    ):
+                        if probability > 0.0:
+                            chosen = state
+                            break
+                if chosen is None:
+                    raise ValueError(
+                        f"internal error: CPT row for {key!r} has no positive "
+                        "probability"
+                    )
+                values[key] = chosen
+            draws.append(values)
+        return draws
+
+    def conditional_scenarios(
+        self,
+        variable: str,
+        evidence: Mapping[str, str] | None = None,
+        targets: Sequence[str] | None = None,
+    ) -> dict[str, dict[str, tuple[float, ...]]]:
+        """"What-if" scenarios over one variable's states.
+
+        For each state of ``variable``, the posterior marginal of every
+        target under ``evidence`` plus ``{variable: state}`` — one
+        :meth:`posterior` call per state, returned as
+        ``{state: {target: distribution}}``. ``targets`` defaults to all
+        other variables, in declaration order; a scenario state overrides
+        the same key in ``evidence``. Unknown ``variable`` or target keys
+        raise ``ValueError`` naming the offender; evidence keys, states,
+        and zero-probability scenarios surface from :meth:`posterior`
+        unchanged.
+        """
+        var = next((v for v in self.variables if v.key == variable), None)
+        if var is None:
+            raise ValueError(f"unknown variable {variable!r}")
+        if targets is None:
+            target_keys = [v.key for v in self.variables if v.key != variable]
+        else:
+            if not isinstance(targets, Sequence) or isinstance(targets, str):
+                raise ValueError(
+                    "targets must be a sequence of variable keys, "
+                    f"got {type(targets).__name__}"
+                )
+            target_keys = list(targets)
+        known = {v.key for v in self.variables}
+        for target in target_keys:
+            if target not in known:
+                raise ValueError(f"unknown target variable {target!r}")
+        base = {} if evidence is None else evidence
+        scenarios: dict[str, dict[str, tuple[float, ...]]] = {}
+        for state in var.states:
+            posterior = self.posterior({**base, variable: state})
+            scenarios[state] = {key: posterior[key] for key in target_keys}
+        return scenarios
 
     def _prepare(
         self, evidence: Mapping[str, str]

@@ -114,12 +114,23 @@ here.
     `plot_posterior_trajectory` (grouped P(true) bars across cumulative
     evidence steps; "true" = last state); matplotlib imports lazily
     inside the plotters (`figures` extra).
+  - `graphical_animation.py` — `animate_posterior(net, query_keys,
+    evidence_steps, path, *, labels=None, fps=1, dpi=110)` (grouped
+    P(true) bars growing per cumulative evidence step; same
+    P(true)-is-last-state convention as `plot_posterior_trajectory`)
+    and `animate_network(net, evidence_steps, path, *, fps=1)`
+    (layered network layout mirroring `plot_network`'s coordinate
+    scheme, node fill color = P(true) at the step, coolwarm 0..1);
+    GIF via PillowWriter; lazy matplotlib import with the
+    figures-extra hint; fail-closed validation before any figure
+    (`figures` extra).
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
   manuscript_variables, calibration, and mcp_server modules, plus
-  test_graphical.py, test_graphical_elicitation.py, and
-  test_graphical_viz.py),
+  test_graphical.py, test_graphical_elicitation.py,
+  test_graphical_viz.py, test_graphical_methods.py, and
+  test_graphical_animation.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
@@ -141,9 +152,12 @@ here.
   unloadable images; `SOURCE_DATE_EPOCH` pinned from HEAD); `--install`
   also replaces the root PDF.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
-  `graphical_elicitation` + `graphical_viz`; CLI: `--provider`,
-  `--model`, `--edge-penalty FLOAT` (default 1.0), `--propose-structure`
-  (prints the proposal, continues with the reference edges), `--out-dir`
+  `graphical_elicitation` + `graphical_viz` + `graphical_animation`;
+  CLI: `--provider`, `--model`, `--edge-penalty FLOAT` (default 1.0),
+  `--propose-structure` (prints the proposal, continues with the
+  reference edges), `--animate` (writes `posterior_animation.gif` +
+  `network_animation.gif` into `--out-dir` after the five artifacts and
+  records them under `animations` in `receipts.json`), `--out-dir`
   (default `output/experiments/asia`); writes `asia_graphspec.json`,
   `network.png`, `posterior_trajectory.png`, `mermaid.txt`, and
   `receipts.json` (per-run provenance: provider/model, proposed edges,
@@ -429,6 +443,13 @@ uv run daf-jev serve --help                     # serve subcommand smoke; --tran
 uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
 uv run python scripts/z_generate_manuscript_variables.py   # 49 tokens + injection
+uv run python scripts/bayes_experiment.py --animate   # keyless: prints SKIP and
+                                                      # exits 0 before any network
+                                                      # use (no artifacts written);
+                                                      # with a key: the five
+                                                      # artifacts +
+                                                      # posterior_animation.gif +
+                                                      # network_animation.gif
 
 # Render the PDF manually (the template checkout render is currently
 # blocked: the leaf symlink was removed 2026-09-18 — see the render-path

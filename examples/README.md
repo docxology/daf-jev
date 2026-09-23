@@ -136,6 +136,14 @@ current directory. No network beyond the selected provider's endpoint.
 python examples/asia_bayes.py [--provider KEY] [--model NAME]
 ```
 
+The elicited net's method-level what-if surfaces live in
+[`graphical.py`](../src/daf_jev/graphical.py):
+`most_probable_explanation(evidence)` (most probable joint assignment
+consistent with the evidence; deterministic lexicographic tiebreak),
+`sample(n, rng=None)` (ancestral sampling in topological order), and
+`conditional_scenarios(variable, evidence=None, targets=None)`
+(per-state posterior marginals of the targets).
+
 #### Committed experiment artifacts
 
 The committed artifact set in `output/experiments/asia/` was produced by the
@@ -157,6 +165,11 @@ The trajectory under cumulative evidence — priors → `asia=false` →
 `+xray=true` → `+dysp=true` — moves P(tub) 0.120 → 0.371 → 0.434
 (values from [`receipts.json`](../output/experiments/asia/receipts.json);
 P(lung) 0.131 → 0.389 → 0.460, P(bronc) 0.227 → 0.244 → 0.322).
+For animation, the thin runner
+[`scripts/bayes_experiment.py`](../scripts/bayes_experiment.py) takes
+`--animate`: after the five artifacts it writes `posterior_animation.gif`
+and `network_animation.gif` into `--out-dir` and records them under
+`animations` in `receipts.json`.
 
 The GraphSpec hand-off continues in the GNN repo's RxInfer bridge
 ([PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165))

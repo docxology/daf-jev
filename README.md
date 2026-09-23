@@ -73,7 +73,8 @@ reproducible manuscript pipeline.
   `elicit_cpts` elicits every CPT of a network in one batched ask,
   `propose_structure` proposes the topology via pairwise choices, and
   `BayesNet` runs exact local inference (pure-Python variable
-  elimination); `to_json()` emits the `dafjev.bayesnet/1` GraphSpec
+  elimination) plus MPE, ancestral sampling, and what-if scenario
+  sweeps; `to_json()` emits the `dafjev.bayesnet/1` GraphSpec
   interchange for GNN / RxInfer.jl / GTSAM-style engines (see
   [Graphical models](#graphical-models)).
 - **Calibration** — pure reliability statistics in `daf_jev.calibration`
@@ -88,8 +89,8 @@ reproducible manuscript pipeline.
   `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`) plus a
   `jev://docs/snapshot` resource, over stdio (see [MCP server](#mcp-server)).
 
-Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` for
-figures). Managed with `uv`.
+Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` +
+`pillow` for figures). Managed with `uv`.
 
 ## Architecture at a glance
 
@@ -413,6 +414,9 @@ spec = net.to_json()                     # GraphSpec interchange
 | `Edge(parent, child)` | one DAG edge |
 | `CPT(child, parents, table)` | one conditional probability table (empty `parents` = prior) |
 | `BayesNet(variables, edges, cpts)` | the validated net: `.query(variable, evidence)`, `.posterior(evidence)` (exact variable elimination), `.validate()`, `.topological_order()` |
+| `BayesNet.most_probable_explanation(evidence)` | most probable joint assignment consistent with the evidence (max-product argmax; deterministic lexicographic tiebreak); `ValueError` on unknown keys/states or zero-probability evidence |
+| `BayesNet.sample(n, rng=None)` | ancestral sampling in topological order — per-variable categorical draw over the CPT CDF with an injectable `random.Random` |
+| `BayesNet.conditional_scenarios(variable, evidence=None, targets=None)` | what-if sweep — for each state of `variable`, the posterior marginals of `targets` (default: all other variables) under evidence + {variable: state} |
 | `BayesNet.to_json()` / `.from_json(data)` | GraphSpec `dafjev.bayesnet/1` interchange (lossless round-trip) |
 | `elicit_cpts(variables, edges, *, client, ...)` | every CPT row as one batched ask; deterministic question ids and state options; chunking via `max_questions_per_request` |
 | `propose_structure(variables, *, client, ...)` | one batched ask over all variable pairs -> DAG proposal (edges only); exact ordering search up to `exact_limit=8`, greedy above with `edge_penalty` |
@@ -439,16 +443,23 @@ topological generations top-to-bottom, deterministic coordinates) and
 `plot_posterior_trajectory(net, query_keys, steps, path, labels=...)`
 (grouped bars of P(state=true) per query variable across cumulative
 evidence steps, where "true" is the last state of each variable's states
-tuple and values come from `net.posterior`). Matplotlib imports lazily
-inside the plotters; install the `figures` extra with
-`uv sync --extra figures`.
+tuple and values come from `net.posterior`). `animate_posterior(net,
+query_keys, evidence_steps, path, *, labels=None, fps=1, dpi=110)` and
+`animate_network(net, evidence_steps, path, *, fps=1)` — both in
+[`graphical_animation.py`](src/daf_jev/graphical_animation.py) — render
+the same walkthrough as animated GIFs: grouped P(true) bars growing per
+evidence step (same P(true)-is-last-state convention) and the network
+with node fills shaded by P(true) at each step (coolwarm 0..1);
+PillowWriter writes the frames (`pillow` ships in the `figures` extra).
+Matplotlib imports lazily inside the plotters and animators; install the
+`figures` extra with `uv sync --extra figures`.
 
 The Dellaert-style Asia experiment runs end-to-end through one thin
 orchestrator:
 
 ```bash
 uv run python scripts/bayes_experiment.py [--provider KEY] [--model NAME] \
-    [--edge-penalty FLOAT] [--propose-structure] [--out-dir PATH]
+    [--edge-penalty FLOAT] [--propose-structure] [--animate] [--out-dir PATH]
 ```
 
 It prints the mermaid diagram, elicits the Asia CPTs in one batched ask,
@@ -457,6 +468,9 @@ walks the posterior trajectory (`priors` -> `asia=false` -> `+xray=true`
 artifacts into `--out-dir` (default `output/experiments/asia`):
 `asia_graphspec.json`, `network.png`, `posterior_trajectory.png`,
 `mermaid.txt`, and `receipts.json` (see [Live receipts](#live-receipts)).
+With `--animate` the runner additionally writes `posterior_animation.gif`
+and `network_animation.gif` into `--out-dir` and records them under
+`animations` in `receipts.json`.
 Keyless runs print `SKIP: JEV_API_KEY not set` and exit 0 before any
 network use.
 
@@ -878,6 +892,7 @@ source to contract. Module contracts live in
 | `graphical` | [`graphical.py`](src/daf_jev/graphical.py) | `Variable` / `Edge` / `CPT` / `BayesNet` — exact VE, GraphSpec round-trip |
 | `graphical_elicitation` | [`graphical_elicitation.py`](src/daf_jev/graphical_elicitation.py) | `elicit_cpts` / `propose_structure` — Jev as factor source |
 | `graphical_viz` | [`graphical_viz.py`](src/daf_jev/graphical_viz.py) | `to_mermaid`, `plot_network`, `plot_posterior_trajectory` |
+| `graphical_animation` | [`graphical_animation.py`](src/daf_jev/graphical_animation.py) | `animate_posterior` / `animate_network` — GIF renders of the posterior trajectory and network walkthroughs |
 | `figures` | [`figures.py`](src/daf_jev/figures.py) | matplotlib figure registry (7 figures + registry JSON) |
 | `manuscript_variables` | [`manuscript_variables.py`](src/daf_jev/manuscript_variables.py) | 49 `{{TOKEN}}` manuscript variables generated from the tree |
 
@@ -900,7 +915,7 @@ Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 
 | Script | Purpose |
 | --- | --- |
-| [`bayes_experiment.py`](scripts/bayes_experiment.py) | Asia experiment runner — elicits, walks posteriors, writes the five artifacts |
+| [`bayes_experiment.py`](scripts/bayes_experiment.py) | Asia experiment runner — elicits, walks posteriors, writes the five artifacts (+ the two GIFs with `--animate`) |
 | [`generate_figures.py`](scripts/generate_figures.py) | renders the 7 figures + `figure_registry.json` |
 | [`render_pdf.py`](scripts/render_pdf.py) | in-repo pandoc PDF render with validation gates |
 | [`scrape_docs.py`](scripts/scrape_docs.py) | re-scrapes the docs snapshot; `--check` verifies the manifest |
@@ -922,8 +937,10 @@ Methodology and the committed-receipts policy:
 - Agent skill: [`skills/daf-jev/SKILL.md`](skills/daf-jev/SKILL.md)
   (install notes in [`skills/README.md`](skills/README.md)).
 - Test suite: the shared stub server [`tests/conftest.py`](tests/conftest.py),
-  24 unit modules under [`tests/unit/`](tests/unit/), 2 live tests in
-  [`tests/live/test_live_api.py`](tests/live/test_live_api.py).
+  26 unit modules under [`tests/unit/`](tests/unit/) — incl.
+  [`test_graphical_methods.py`](tests/unit/test_graphical_methods.py) and
+  [`test_graphical_animation.py`](tests/unit/test_graphical_animation.py) —
+  2 live tests in [`tests/live/test_live_api.py`](tests/live/test_live_api.py).
 - Docs: contract [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), model
   reference [`docs/models.md`](docs/models.md), index
   [`docs/README.md`](docs/README.md), 108-page hashed snapshot under

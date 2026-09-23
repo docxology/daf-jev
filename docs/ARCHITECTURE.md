@@ -738,6 +738,28 @@ repo, and the net becomes an RxInfer.jl model in the GNN checkout
 Commands are signature-exact; step 1 runs from this repo, steps 2-3 from
 the GNN repo root — relative links cannot cross repos, so GNN-side
 paths are named, not linked.
+```mermaid
+flowchart LR
+    subgraph jev["daf-jev (this repo)"]
+        A["propose_structure + elicit_cpts<br/>2 batched asks"]
+        G["calibration · re-ask<br/>decider.py · evaluate.py"]
+    end
+    subgraph art["output/experiments/asia"]
+        C["asia_graphspec.json<br/>dafjev.bayesnet/1"]
+    end
+    subgraph gnn["GNN repo (PR #165)"]
+        D["rxinfer_bridge.py<br/>GraphSpec → @model"]
+        E["examples/rxinfer/<br/>asia_model.jl"]
+    end
+    subgraph jl["Julia (RxInfer.jl)"]
+        F["marginals<br/>evidence updates stay local"]
+    end
+    A --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+```
 
 ```bash
 # 1. this repo — propose the structure (printed vs the reference edges),

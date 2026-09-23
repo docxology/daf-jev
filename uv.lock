@@ -712,6 +712,7 @@ dev = [
 figures = [
     { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow" },
 ]
 mcp = [
     { name = "mcp" },
@@ -725,6 +726,7 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.2,<2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19" },
+    { name = "pillow", marker = "extra == 'figures'", specifier = ">=10,<13" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.3.0" },
