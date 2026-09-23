@@ -47,7 +47,7 @@ The MCP extra (`pip install "daf-jev[mcp]"` or `uv sync --extra mcp`) is the onl
 
 ## Worked examples
 
-Six self-contained scripts under `examples/` walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer:
+Eight self-contained scripts under `examples/` walk the typical integration path from a first call to a batch evaluation, doubling as executable documentation of the composition layer:
 
 - **`quickstart.py`** — the shortest path to a typed answer: build a question set, make one call, read the typed answers;
 - **`triage_router.py`** — confidence-gated routing end to end: a `choice` call dispatched by `route()` with a fallback for low-confidence answers;
