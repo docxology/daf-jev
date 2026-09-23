@@ -2,7 +2,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![v0.4.1 on Zenodo](https://img.shields.io/badge/Zenodo-v0.4.1-1F77B4)](https://zenodo.org/records/22884676)
+[![v0.6.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.6.0-1F77B4)](https://zenodo.org/records/22921974)
 
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
@@ -831,7 +831,11 @@ resolves to the latest published version.
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
-- **v0.4.1 version record**: https://zenodo.org/records/22884676
+- **v0.6.0 version record (latest)**: https://zenodo.org/records/22921974
+  (version DOI `10.5281/zenodo.22921974`; earlier: v0.5.0 at
+  [22921963](https://zenodo.org/records/22921963), v0.4.2 at
+  [22921823](https://zenodo.org/records/22921823), v0.4.1 at
+  [22884676](https://zenodo.org/records/22884676)
   (version DOI `10.5281/zenodo.22884676`; earlier: v0.4.0 at
   [22884305](https://zenodo.org/records/22884305), v0.3.0 at
   [22817425](https://zenodo.org/records/22817425)).
