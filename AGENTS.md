@@ -101,9 +101,11 @@ here.
   - `graphical.py` — discrete Bayes nets (`Variable`, `Edge`, `CPT`,
     `BayesNet`): graph helpers + deterministic `topological_order`,
     `validate()`, exact inference (`posterior` / `query`, pure-stdlib
-    variable elimination, no numpy), and the `dafjev.bayesnet/1`
-    GraphSpec JSON round-trip — a cross-repo contract with the GNN
-    bridge (see invariants).
+    variable elimination, no numpy; zero-probability evidence —
+    including the fully-observed case — raises), decision methods
+    (`most_probable_explanation`, `sample`, `conditional_scenarios`),
+    and the `dafjev.bayesnet/1` GraphSpec JSON round-trip — a
+    cross-repo contract with the GNN bridge (see invariants).
   - `graphical_elicitation.py` — `elicit_cpts` (every CPT row of a net
     in one batched `choice` ask; deterministic ids, chunking via
     `max_questions_per_request`) and `propose_structure` (one batched
