@@ -304,8 +304,10 @@ fallback environment is `src/gnn/execute/rxinfer/`).
 
 - **Self-versioned git repo, canonical checkout in the flat mirror**
   (branch `main`; remote `origin` → https://github.com/docxology/daf-jev;
-  local `main` @ `22be3ac` is 2 commits ahead of `origin/main` (`5591d31`):
-  jaggedness `0f342cf` + `22be3ac`, unpushed as of 2026-09-24).
+  local `main` @ `7d93bc7` is 20 commits ahead of `origin/main` (`5591d31`):
+  jaggedness `0f342cf` + `22be3ac`, wave-1 folds + housekeeping + fixups
+  (tip was `7816b44`, PR #1), and wave-2 folds `31e8875`/`03d51d0`/`7d93bc7`
+  (upstream landing via PR; unpushed as of 2026-09-24).
   Commit meaningful changes locally — the template's provenance validation
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
