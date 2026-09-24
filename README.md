@@ -81,6 +81,11 @@ reproducible manuscript pipeline.
   (`bucket_index`, `reliability_table`, `expected_calibration_error`,
   `brier_score`) over `(confidence, correct)` pairs, plus a live calibration
   benchmark (`benchmarks/bench_calibration.py`).
+- **Model jaggedness** — pure uniformity statistics in `daf_jev.jaggedness`
+  (`uniform_chi2`, `uniform_deviation`, `runs_test_z`, `max_streak`,
+  `position_slope`, `noul_choice_delta`) over repeated stochastic prompts
+  (coin, d6), plus a live multi-provider jaggedness benchmark
+  (`benchmarks/bench_jaggedness.py`).
 - **Figures & manuscript** — a matplotlib figure registry (7 figures +
   `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
   10-section manuscript in `manuscript/` free of hardcoded results.
@@ -822,6 +827,34 @@ mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
 
+### Jaggedness benchmark
+
+`benchmarks/bench_jaggedness.py` measures how far repeated answers to
+**stochastic prompts** (coin flips, six-sided rolls) deviate from their
+stated uniform distributions:
+
+```bash
+uv run python benchmarks/bench_jaggedness.py --providers jeff,kev
+# flags: --providers 'jeff,kev,jev', --fixtures, --repeats 50,
+# --concurrent 32, --timeout, --model
+```
+
+Per provider and fixture it reports the uniformity chi-square (with
+p-value) and total variation, chosen-label degeneracy over identical
+repeats (deterministic servers make the choice a point mass, which is
+itself the finding), option-order rotation sensitivity (position bias,
+argmax flips), concurrent-batch wobble, and the noul-vs-choice
+cross-instrument delta on the coin fixture. Keys resolve per provider
+(`JEV_API_KEY` / `JEFF_API_KEY` / `KEV_API_KEY`; registry defaults
+`localhost:8000` jeff, `localhost:8009` kev — see
+[`docs/models.md` §10](docs/models.md#10-sibling-system-one-servers-jeff-and-kev));
+a provider without its key prints `SKIP[<provider>]` and the run
+continues. Results land in
+`output/benchmarks/jaggedness_<YYYYMMDD>.json`. **Caveat:** the numbers
+quantify stated-distribution deviation, NOT accuracy; local self-hosted
+servers (jeff: temperature-scaled sigmoids; kev: calibrated pointer head)
+behave differently from the hosted jev endpoint.
+
 Releases are tagged on GitHub and archived as version deposits on the same
 Zenodo concept — v0.3.0 as deposit 22817425 (released 2026-09-17); the
 v0.4.x deposits publish on that concept, so the concept DOI below always
@@ -887,6 +920,7 @@ source to contract. Module contracts live in
 | `evaluate` | [`evaluate.py`](src/daf_jev/evaluate.py) | `Evaluator` — concurrent batch evaluation with per-state error capture |
 | `decider` | [`decider.py`](src/daf_jev/decider.py) | `Decider` decision loop, `ConfidenceGate`, `Budget`, JSON event receipts |
 | `calibration` | [`calibration.py`](src/daf_jev/calibration.py) | ECE, Brier, reliability tables over `(confidence, correct)` pairs |
+| `jaggedness` | [`jaggedness.py`](src/daf_jev/jaggedness.py) | `run_battery` uniformity/degeneracy/wobble/runs stats over repeated stochastic prompts (`COIN`, `D6`, `COIN_NOUL`) |
 | `resilience` | [`resilience.py`](src/daf_jev/resilience.py) | opt-in `CircuitBreaker` with injectable clock |
 | `ledger` | [`ledger.py`](src/daf_jev/ledger.py) | `UsageLedger` — thread-safe request/token accounting |
 | `models` | [`models.py`](src/daf_jev/models.py) | `pick_model` over the models listing |
@@ -932,6 +966,7 @@ Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 | [`bench_batching.py`](benchmarks/bench_batching.py) | [`batching_20260916.json`](output/benchmarks/batching_20260916.json) |
 | [`bench_patterns.py`](benchmarks/bench_patterns.py) | [`patterns_20260916.json`](output/benchmarks/patterns_20260916.json) |
 | [`bench_calibration.py`](benchmarks/bench_calibration.py) | [`calibration_20260916.json`](output/benchmarks/calibration_20260916.json) |
+| [`bench_jaggedness.py`](benchmarks/bench_jaggedness.py) | `output/benchmarks/jaggedness_<YYYYMMDD>.json` (receipt added at integration) |
 
 Methodology and the committed-receipts policy:
 [`benchmarks/README.md`](benchmarks/README.md#committed-receipts).

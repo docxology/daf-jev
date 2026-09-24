@@ -43,6 +43,20 @@ from daf_jev.decider import Budget, ConfidenceGate, Decider, DecisionEvent
 from daf_jev.evaluate import EvaluationRecord, Evaluator
 from daf_jev.graphical import CPT, BayesNet, Edge, Variable
 from daf_jev.graphical_elicitation import elicit_cpts, propose_structure
+from daf_jev.jaggedness import (
+    COIN,
+    COIN_NOUL,
+    D6,
+    JaggednessFixture,
+    chi2_sf,
+    max_streak,
+    noul_choice_delta,
+    position_slope,
+    run_battery,
+    runs_test_z,
+    uniform_chi2,
+    uniform_deviation,
+)
 from daf_jev.ledger import UsageLedger, UsageSnapshot
 from daf_jev.models import pick_model
 from daf_jev.primitives import QuestionSet, choice, noul, score
@@ -57,7 +71,10 @@ from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 __version__ = "0.6.0"
 
 __all__ = [
+    "COIN",
+    "COIN_NOUL",
     "CPT",
+    "D6",
     "APIConnectionError",
     "APITimeoutError",
     "Answer",
@@ -76,6 +93,7 @@ __all__ = [
     "EvaluationRecord",
     "Evaluator",
     "JSONContent",
+    "JaggednessFixture",
     "JevClient",
     "ModelCard",
     "NoulAnswer",
@@ -97,6 +115,7 @@ __all__ = [
     "Variable",
     "__version__",
     "answer_from_wire",
+    "chi2_sf",
     "choice",
     "composite_score",
     "confidence_gate",
@@ -104,15 +123,22 @@ __all__ = [
     "get_provider",
     "list_providers",
     "load_settings",
+    "max_streak",
     "noul",
+    "noul_choice_delta",
     "open_async_client",
     "open_client",
     "parse_response",
     "pick_model",
+    "position_slope",
     "propose_structure",
     "register_provider",
     "resolve_retry",
     "resolve_timeout",
     "route",
+    "run_battery",
+    "runs_test_z",
     "score",
+    "uniform_chi2",
+    "uniform_deviation",
 ]

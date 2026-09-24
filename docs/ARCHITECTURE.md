@@ -211,6 +211,16 @@ contradictions (report the delta; do not silently deviate).
   each confidence in [0, 1] through the shared `_check_confidence` (NaN fails
   the chained comparison) — `ValueError` otherwise; `brier_score` also
   rejects empty `pairs`.
+- `jaggedness.py` — model-jaggedness instrument: repeated asking of
+  stochastic prompts (coin flips, dice rolls) across the provider registry,
+  quantifying statistical deviation from the stated uniform distribution.
+  `JaggednessFixture` plus the built-in fixtures `COIN` / `D6` /
+  `COIN_NOUL`; pure statistics `chi2_sf`, `uniform_chi2`,
+  `uniform_deviation`, `runs_test_z`, `max_streak`, `position_slope`;
+  `noul_choice_delta` — the cross-instrument noul-vs-choice gap on the coin
+  fixture; `run_battery` drives a fixture battery and returns a JSON-safe
+  dict (choice counts, uniformity chi-square, degeneracy, prob mean/std,
+  wobble, runs/streak, order-rotation and concurrent-batch metrics).
 - `config.py` —
   - `load_dotenv(path: Path = Path(".env")) -> dict[str, str]` (KEY=VALUE, ignore
     comments/blank, no quoting gymnastics needed; never raise on missing file).
@@ -850,6 +860,13 @@ bridge.
 - `bench_patterns.py` — latency of composite-score pipeline and confidence routing
   decisions end-to-end (1 call each); report p50/p95 over >= 10 runs.
 - Both: argparse `--runs`, exit 0 with "SKIP: JEV_API_KEY not set" when key absent.
+- `bench_jaggedness.py` — model-jaggedness battery: repeated asking of
+  stochastic prompts per provider; report uniformity deviation
+  (chi-square/total variation), choice degeneracy, runs/streak, order
+  rotation, concurrent wobble, and the noul-vs-choice delta to stdout and
+  `output/benchmarks/jaggedness_<date>.json`.
+  Multi-provider: `--providers 'jeff,kev,jev'`; a provider without its key
+  prints `SKIP[<provider>]` and the run continues.
 
 ## Conventions (template_code_project)
 
