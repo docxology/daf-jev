@@ -199,6 +199,8 @@ def plot_network(
     _checked_dpi(dpi)
     _checked_figsize(figsize)
     plt = _pyplot()
+    from matplotlib.patches import FancyArrowPatch
+
     from daf_jev.figures import (
         ARROW_LW,
         ARROW_STYLE,
@@ -207,7 +209,6 @@ def plot_network(
         COLOR_TEXT,
         FONT_BOX,
     )
-    from matplotlib.patches import FancyArrowPatch
 
     order = net.topological_order()
     level: dict[str, int] = {}

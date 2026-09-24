@@ -350,6 +350,9 @@ def animate_network(
     plt = _pyplot()
     _require_pillow()
 
+    from matplotlib import colormaps
+    from matplotlib.patches import FancyArrowPatch
+
     from daf_jev.figures import (
         ARROW_LW,
         ARROW_STYLE,
@@ -358,8 +361,6 @@ def animate_network(
         COLOR_TEXT,
         FONT_BOX,
     )
-    from matplotlib import colormaps
-    from matplotlib.patches import FancyArrowPatch
 
     cmap = colormaps["coolwarm"]
     fig, ax = plt.subplots(figsize=(max(6.0, width + 3.0), max(3.5, height + 2.5)))
