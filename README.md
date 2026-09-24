@@ -966,7 +966,7 @@ Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 | [`bench_batching.py`](benchmarks/bench_batching.py) | [`batching_20260916.json`](output/benchmarks/batching_20260916.json) |
 | [`bench_patterns.py`](benchmarks/bench_patterns.py) | [`patterns_20260916.json`](output/benchmarks/patterns_20260916.json) |
 | [`bench_calibration.py`](benchmarks/bench_calibration.py) | [`calibration_20260916.json`](output/benchmarks/calibration_20260916.json) |
-| [`bench_jaggedness.py`](benchmarks/bench_jaggedness.py) | `output/benchmarks/jaggedness_<YYYYMMDD>.json` (receipt added at integration) |
+| [`bench_jaggedness.py`](benchmarks/bench_jaggedness.py) | [`jaggedness_20260924.json`](output/benchmarks/jaggedness_20260924.json) |
 
 Methodology and the committed-receipts policy:
 [`benchmarks/README.md`](benchmarks/README.md#committed-receipts).
