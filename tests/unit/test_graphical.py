@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from itertools import product
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
