@@ -609,6 +609,22 @@ Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
     the final marginal.
   - `query(variable: str, evidence: Mapping[str, str] | None = None) ->
     tuple[float, ...]` — one marginal.
+  - `decompose_single_parent(net: BayesNet) -> BayesNet` — returns a copy
+    in which every ORIGINAL variable has at most one parent: each
+    multi-parent CPT `P(X|B1..Bk)` (k >= 2) is replaced by a chain of
+    deterministic auxiliary variables (`X__aux1` conditioned on `B1`;
+    `X__auxi` on `X__aux{i-1}`, `Bi`; `X` on `X__auxk`), aux states
+    enumerating the joint parent-state indices in `itertools.product`
+    order with every aux CPT row an exact point mass, so `X`'s rewritten
+    CPT re-indexes the original rows. The joint distribution over the
+    original variables is preserved exactly — posteriors/queries over
+    originals (evidence still propagates) are unchanged; aux marginals
+    are deterministic bookkeeping, not elicited beliefs; aux `i >= 2`
+    nodes carry two deterministic parents (the minimal joint-preserving
+    merge). Mitigation seam for the RxInfer 5.5.x multi-parent
+    `DiscreteTransition` stall (single-parent nets run end-to-end; the
+    multi-parent stall is upstream ReactiveMP) — a bridge can lower the
+    degenerate deterministic aux CPTs outside the graphical model.
 
 Elicitation (`src/daf_jev/graphical_elicitation.py` — pure orchestration
 over an injected client; no I/O of its own):

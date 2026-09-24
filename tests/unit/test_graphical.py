@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import math
 from itertools import product
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 
@@ -645,6 +645,363 @@ def test_json_rejects_negative_probability() -> None:
         type(_asia_net()).from_json(_mutated_spec(negative))
 
 
+def _unknown_top_level_key(spec: dict) -> None:
+    spec["provenance"] = {"emitted_by": "unit-test"}
+
+
+def _unknown_variables_item_key(spec: dict) -> None:
+    spec["variables"][0]["source"] = "wire"
+
+
+def _unknown_edges_item_key(spec: dict) -> None:
+    spec["edges"][0]["weight"] = 0.5
+
+
+def _unknown_cpts_item_key(spec: dict) -> None:
+    spec["cpts"]["tub"]["emitted_at"] = "2026-01-01T00:00:00Z"
+
+
+def _unknown_row_key(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["note"] = "reordered in flight"
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        _unknown_top_level_key,
+        _unknown_variables_item_key,
+        _unknown_edges_item_key,
+        _unknown_cpts_item_key,
+        _unknown_row_key,
+    ],
+)
+def test_json_tolerates_unknown_extra_fields(
+    mutate: Callable[[dict], None],
+) -> None:
+    net = type(_asia_net()).from_json(_mutated_spec(mutate))
+    assert net == _asia_net()
+
+
+@pytest.mark.parametrize("section", ["variables", "edges", "cpts"])
+def test_json_rejects_missing_section(section: str) -> None:
+    def drop_section(spec: dict) -> None:
+        del spec[section]
+
+    with pytest.raises(ValueError, match=rf"missing required key: '{section}'"):
+        type(_asia_net()).from_json(_mutated_spec(drop_section))
+
+
+def _variables_not_a_list(spec: dict) -> None:
+    spec["variables"] = {"asia": list(STATES)}
+
+
+def _edges_not_a_list(spec: dict) -> None:
+    spec["edges"] = "asia->tub"
+
+
+def _cpts_not_a_dict(spec: dict) -> None:
+    spec["cpts"] = [("tub", {"child": "tub", "parents": [], "rows": []})]
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _variables_not_a_list,
+            r"GraphSpec variables must be a list, got dict",
+        ),
+        (_edges_not_a_list, r"GraphSpec edges must be a list, got str"),
+        (_cpts_not_a_dict, r"GraphSpec cpts must be a dict, got list"),
+    ],
+)
+def test_json_rejects_wrong_section_container(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _variables_item_not_a_dict(spec: dict) -> None:
+    spec["variables"][0] = "asia"
+
+
+def _edges_item_not_a_dict(spec: dict) -> None:
+    spec["edges"][0] = ["asia", "tub"]
+
+
+def _cpt_row_not_a_dict(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0] = "asia=false"
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _variables_item_not_a_dict,
+            r"GraphSpec variables\[0\] must be a dict, got str",
+        ),
+        (
+            _edges_item_not_a_dict,
+            r"GraphSpec edges\[0\] must be a dict, got list",
+        ),
+        (
+            _cpt_row_not_a_dict,
+            r"GraphSpec cpts\['tub'\]\.rows\[0\] must be a dict, got str",
+        ),
+    ],
+)
+def test_json_rejects_non_dict_item(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _variable_key_not_a_string(spec: dict) -> None:
+    spec["variables"][0]["key"] = 7
+
+
+def _variable_description_not_a_string(spec: dict) -> None:
+    spec["variables"][0]["description"] = None
+
+
+def _variable_states_not_a_list(spec: dict) -> None:
+    spec["variables"][0]["states"] = "false"
+
+
+def _variable_states_with_non_string(spec: dict) -> None:
+    spec["variables"][0]["states"] = ["false", 1]
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _variable_key_not_a_string,
+            r"variables\[0\]\.key must be a string, got 7",
+        ),
+        (
+            _variable_description_not_a_string,
+            r"variables\[0\]\.description must be a string, got NoneType",
+        ),
+        (
+            _variable_states_not_a_list,
+            r"variables\[0\]\.states must be a list of strings, got 'false'",
+        ),
+        (
+            _variable_states_with_non_string,
+            r"variables\[0\]\.states must be a list of strings, got \['false', 1\]",
+        ),
+    ],
+)
+def test_json_rejects_variable_field_type_error(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _edge_parent_not_a_string(spec: dict) -> None:
+    spec["edges"][0]["parent"] = 7
+
+
+def _edge_child_not_a_string(spec: dict) -> None:
+    spec["edges"][0]["child"] = 7
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _edge_parent_not_a_string,
+            r"parent and child must be strings, got parent=7 child='tub'",
+        ),
+        (
+            _edge_child_not_a_string,
+            r"parent and child must be strings, got parent='asia' child=7",
+        ),
+    ],
+)
+def test_json_rejects_non_string_edge_endpoint(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _cpt_child_mismatch(spec: dict) -> None:
+    spec["cpts"]["tub"]["child"] = "lung"
+
+
+def _cpt_parents_not_a_list(spec: dict) -> None:
+    spec["cpts"]["xray"]["parents"] = "either"
+
+
+def _cpt_parents_with_non_string(spec: dict) -> None:
+    spec["cpts"]["xray"]["parents"] = ["either", 1]
+
+
+def _cpt_rows_not_a_list(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"] = {"first": {}}
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _cpt_child_mismatch,
+            r"cpts\['tub'\]\.child must be 'tub', got 'lung'",
+        ),
+        (
+            _cpt_parents_not_a_list,
+            r"cpts\['xray'\]\.parents must be a list of strings, got 'either'",
+        ),
+        (
+            _cpt_parents_with_non_string,
+            r"cpts\['xray'\]\.parents must be a list of strings, got \['either', 1\]",
+        ),
+        (_cpt_rows_not_a_list, r"cpts\['tub'\]\.rows must be a list, got dict"),
+    ],
+)
+def test_json_rejects_malformed_cpt_entry(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _row_assignment_not_a_dict(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["assignment"] = "asia=false"
+
+
+def _row_assignment_outside_parents(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["assignment"] = {"lung": "true"}
+
+
+def _row_assignment_missing_parent(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["assignment"] = {}
+
+
+def _row_probabilities_not_a_list(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["probabilities"] = "0.5"
+
+
+def _row_probability_bool(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["probabilities"] = [True, 0.01]
+
+
+def _row_probability_string(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"][0]["probabilities"] = ["0.5", 0.5]
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _row_assignment_not_a_dict,
+            r"cpts\['tub'\]\.rows\[0\]\.assignment must be a dict, got str",
+        ),
+        (
+            _row_assignment_outside_parents,
+            r"cpts\['tub'\]\.rows\[0\]\.assignment names variables outside parents",
+        ),
+        (
+            _row_assignment_missing_parent,
+            r"cpts\['tub'\]\.rows\[0\]\.assignment is missing parents \['asia'\]",
+        ),
+        (
+            _row_probabilities_not_a_list,
+            r"cpts\['tub'\]\.rows\[0\]\.probabilities must be a list of numbers, "
+            r"got '0\.5'",
+        ),
+        (
+            _row_probability_bool,
+            r"cpts\['tub'\]\.rows\[0\]\.probabilities\[0\] must be a number, got True",
+        ),
+        (
+            _row_probability_string,
+            r"cpts\['tub'\]\.rows\[0\]\.probabilities\[0\] must be a number, "
+            r"got '0\.5'",
+        ),
+    ],
+)
+def test_json_rejects_malformed_cpt_row(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def _cpts_entry_for_unknown_variable(spec: dict) -> None:
+    spec["cpts"]["bogus"] = {"child": "bogus", "parents": [], "rows": []}
+
+
+def _cpts_missing_entry(spec: dict) -> None:
+    del spec["cpts"]["dysp"]
+
+
+def _cpts_entry_with_no_rows(spec: dict) -> None:
+    spec["cpts"]["tub"]["rows"] = []
+
+
+@pytest.mark.parametrize(
+    ("mutate", "match"),
+    [
+        (
+            _cpts_entry_for_unknown_variable,
+            r"CPT stored under unknown variable key 'bogus'",
+        ),
+        (_cpts_missing_entry, r"missing CPT for variable 'dysp'"),
+        (
+            _cpts_entry_with_no_rows,
+            r"CPT for 'tub' must have exactly 2 rows .* got 0",
+        ),
+    ],
+)
+def test_json_rejects_validation_stage_cpt_shape(
+    mutate: Callable[[dict], None], match: str
+) -> None:
+    # These shapes pass JSON parsing and surface from the net-level
+    # validation that from_json runs after construction.
+    with pytest.raises(ValueError, match=match):
+        type(_asia_net()).from_json(_mutated_spec(mutate))
+
+
+def test_json_keeps_rows_as_given_and_resorts_on_reserialize() -> None:
+    def shuffle(spec: dict) -> None:
+        dysp_rows = spec["cpts"]["dysp"]["rows"]
+        spec["cpts"]["dysp"]["rows"] = list(reversed(dysp_rows))
+        tub_rows = spec["cpts"]["tub"]["rows"]
+        spec["cpts"]["tub"]["rows"] = [tub_rows[1], tub_rows[0]]
+
+    net_cls = type(_asia_net())
+    canonical = _asia_net()
+    shuffled = net_cls.from_json(_mutated_spec(shuffle))
+    # Rows are kept in wire order, so the net is not the canonical one.
+    assert shuffled != canonical
+    # dysp wire order is the canonical order reversed: first row is (T, T).
+    assert shuffled.cpts["dysp"].table[0][0] == ("true", "true")
+    assert shuffled.cpts["dysp"].table == tuple(reversed(canonical.cpts["dysp"].table))
+    # tub wire order is the canonical order swapped: first row is (T,).
+    assert shuffled.cpts["tub"].table[0][0] == ("true",)
+    assert shuffled.cpts["tub"].table == canonical.cpts["tub"].table[::-1]
+    # to_json re-sorts rows into canonical order, so a re-parse restores
+    # the canonical net exactly.
+    assert net_cls.from_json(shuffled.to_json()) == canonical
+
+
+def test_json_coerces_integer_probabilities_to_float() -> None:
+    def integer_probs(spec: dict) -> None:
+        spec["cpts"]["tub"]["rows"][0]["probabilities"] = [1, 0]
+
+    net = type(_asia_net()).from_json(_mutated_spec(integer_probs))
+    probabilities = net.cpts["tub"].table[0][1]
+    assert all(isinstance(p, float) for p in probabilities)
+    assert probabilities == (1.0, 0.0)
+
+
+
+
 # --------------------------------------------------- 4. exact inference ------
 
 
@@ -733,3 +1090,260 @@ def test_posterior_rejects_unknown_evidence_key_and_state() -> None:
         net.posterior({"tub": "perhaps"})
     with pytest.raises(ValueError, match=r"venus"):
         net.query("tub", {"venus": "true"})
+
+
+# ------------------------------- 5. single-parent decomposition --------------
+
+
+# decompose_single_parent() rewrites every multi-parent CPT into a chain of
+# deterministic auxiliary variables. The contract is the joint distribution
+# over the ORIGINAL variables; auxiliary marginals are deterministic
+# bookkeeping, NOT elicited beliefs, so every equivalence check below compares
+# the decomposed net against the untouched original net — never against the
+# helper's own re-derived numbers.
+
+ORIGINAL_KEYS = ("p1", "p2", "p3", "X", "w")
+
+EVIDENCE_CASES: tuple[dict[str, str], ...] = (
+    {},
+    {"p1": "a"},
+    {"p3": "z"},
+    {"p1": "b", "p3": "y"},
+)
+
+
+def _prior(key: str, probabilities: tuple[float, ...]):
+    """A CPT with no parents: one row over the child's states."""
+    graphical = _graphical()
+    return graphical.CPT(key, (), (((), probabilities),))
+
+
+def _table(
+    child: str,
+    parents: tuple[str, ...],
+    rows: list[tuple[tuple[str, ...], tuple[float, ...]]],
+):
+    graphical = _graphical()
+    return graphical.CPT(
+        child,
+        parents,
+        tuple(
+            (tuple(assignment), tuple(probabilities))
+            for assignment, probabilities in rows
+        ),
+    )
+
+
+def _three_parent_net():
+    """p1 -> p2; p1, p2, p3 -> X; p3 -> w. X carries the 3-parent CPT."""
+    graphical = _graphical()
+    net = graphical.BayesNet(
+        (
+            graphical.Variable("p1", "parent one", ("a", "b")),
+            graphical.Variable("p2", "parent two", ("yes", "no")),
+            graphical.Variable("p3", "parent three", ("x", "y", "z")),
+            graphical.Variable("X", "three-parent child", ("low", "high")),
+            graphical.Variable("w", "single-parent child", ("m", "n")),
+        ),
+        (
+            graphical.Edge("p1", "p2"),
+            graphical.Edge("p1", "X"),
+            graphical.Edge("p2", "X"),
+            graphical.Edge("p3", "X"),
+            graphical.Edge("p3", "w"),
+        ),
+        {
+            "p1": _prior("p1", (0.3, 0.7)),
+            "p2": _table(
+                "p2", ("p1",), [(("a",), (0.6, 0.4)), (("b",), (0.2, 0.8))]
+            ),
+            "p3": _prior("p3", (0.5, 0.3, 0.2)),
+            "X": _table(
+                "X",
+                ("p1", "p2", "p3"),
+                [
+                    (("a", "yes", "x"), (0.9, 0.1)),
+                    (("a", "yes", "y"), (0.4, 0.6)),
+                    (("a", "yes", "z"), (0.25, 0.75)),
+                    (("a", "no", "x"), (0.55, 0.45)),
+                    (("a", "no", "y"), (0.1, 0.9)),
+                    (("a", "no", "z"), (0.35, 0.65)),
+                    (("b", "yes", "x"), (0.05, 0.95)),
+                    (("b", "yes", "y"), (0.6, 0.4)),
+                    (("b", "yes", "z"), (0.8, 0.2)),
+                    (("b", "no", "x"), (0.45, 0.55)),
+                    (("b", "no", "y"), (0.7, 0.3)),
+                    (("b", "no", "z"), (0.15, 0.85)),
+                ],
+            ),
+            "w": _table(
+                "w",
+                ("p3",),
+                [
+                    (("x",), (0.25, 0.75)),
+                    (("y",), (0.5, 0.5)),
+                    (("z",), (0.7, 0.3)),
+                ],
+            ),
+        },
+    )
+    net.validate()
+    return net
+
+
+def _single_parent_net():
+    """A strictly single-parent net: decompose must be a pure copy."""
+    graphical = _graphical()
+    net = graphical.BayesNet(
+        (
+            graphical.Variable("root", "root", ("0", "1")),
+            graphical.Variable("leaf", "leaf", ("0", "1")),
+        ),
+        (graphical.Edge("root", "leaf"),),
+        {
+            "root": _prior("root", (0.35, 0.65)),
+            "leaf": _table(
+                "leaf", ("root",), [(("0",), (0.8, 0.2)), (("1",), (0.1, 0.9))]
+            ),
+        },
+    )
+    net.validate()
+    return net
+
+
+def _assert_original_posteriors_match(
+    net: Any, dec: Any, evidence: dict[str, str], keys: tuple[str, ...]
+) -> None:
+    before = net.posterior(evidence)
+    after = dec.posterior(evidence)
+    for key in keys:
+        assert after[key] == pytest.approx(before[key], abs=1e-12)
+
+
+def _assert_point_masses(dec: Any, key: str) -> None:
+    for _, probabilities in dec.cpts[key].table:
+        assert probabilities.count(1.0) == 1
+        assert all(value == 0.0 for value in probabilities if value != 1.0)
+
+
+def test_decompose_three_parent_structure() -> None:
+    net = _three_parent_net()
+    dec = _graphical().decompose_single_parent(net)
+    dec.validate()
+
+    assert dec.parents_of("X") == ("X__aux3",)
+    assert dec.cpts["X"].parents == ("X__aux3",)
+    assert dec.parents_of("X__aux1") == ("p1",)
+    assert dec.parents_of("X__aux2") == ("X__aux1", "p2")
+    assert dec.parents_of("X__aux3") == ("X__aux2", "p3")
+    assert dec.variable("X__aux1").states == ("0", "1")
+    assert dec.variable("X__aux2").states == ("0,0", "0,1", "1,0", "1,1")
+    assert dec.variable("X__aux3").states == tuple(
+        f"{i},{j},{k}" for i, j, k in product(range(2), range(2), range(3))
+    )
+    assert (
+        dec.variable("X__aux2").description
+        == "deterministic joint state of (p1, p2) for X"
+    )
+    for key in ORIGINAL_KEYS:
+        assert dec.variable(key).states == net.variable(key).states
+    assert dec.cpts["w"] == net.cpts["w"]
+    for aux_key in ("X__aux1", "X__aux2", "X__aux3"):
+        _assert_point_masses(dec, aux_key)
+    assert dict(dec.cpts["X"].table)[("1,0,2",)] == (0.8, 0.2)
+
+    expected_edges = {
+        ("p1", "p2"),
+        ("p3", "w"),
+        ("p1", "X__aux1"),
+        ("X__aux1", "X__aux2"),
+        ("p2", "X__aux2"),
+        ("X__aux2", "X__aux3"),
+        ("p3", "X__aux3"),
+        ("X__aux3", "X"),
+    }
+    actual = {(edge.parent, edge.child) for edge in dec.edges}
+    assert actual == expected_edges
+    assert len(dec.edges) == len(expected_edges)
+    assert tuple(var.key for var in dec.variables) == (
+        "p1",
+        "p2",
+        "p3",
+        "X",
+        "w",
+        "X__aux1",
+        "X__aux2",
+        "X__aux3",
+    )
+
+
+@pytest.mark.parametrize("evidence", EVIDENCE_CASES)
+def test_decompose_preserves_joint_over_originals(evidence: dict[str, str]) -> None:
+    net = _three_parent_net()
+    dec = _graphical().decompose_single_parent(net)
+    _assert_original_posteriors_match(net, dec, evidence, ORIGINAL_KEYS)
+    assert dec.query("X", evidence) == pytest.approx(
+        net.query("X", evidence), abs=1e-12
+    )
+
+
+def test_decompose_is_deterministic() -> None:
+    net = _three_parent_net()
+    decompose = _graphical().decompose_single_parent
+    first = decompose(net)
+    second = decompose(net)
+    assert first is not second
+    assert first == second
+
+
+def test_decomposed_net_graphspec_round_trips() -> None:
+    net = _three_parent_net()
+    dec = _graphical().decompose_single_parent(net)
+    back = type(dec).from_json(dec.to_json())
+    assert back == dec
+    for evidence in EVIDENCE_CASES:
+        _assert_original_posteriors_match(net, back, evidence, ORIGINAL_KEYS)
+
+
+def test_decompose_nested_multi_parent_asia() -> None:
+    # Asia nests: `either` is multi-parent (lung, tub) and feeds the
+    # multi-parent `dysp` (either, bronc), so one decompose pass must clean
+    # up both levels while leaving the joint over the 8 original variables
+    # untouched.
+    net = _asia_net()
+    dec = _graphical().decompose_single_parent(net)
+    dec.validate()
+
+    original_keys = tuple(var.key for var in net.variables)
+    for key in original_keys:
+        assert len(dec.parents_of(key)) <= 1
+        assert dec.variable(key).states == net.variable(key).states
+
+    # Asia has no key collisions, so the aux names are the plain scheme.
+    for aux_key in ("either__aux1", "either__aux2", "dysp__aux1", "dysp__aux2"):
+        assert aux_key in dec.cpts
+    assert dec.parents_of("either") == ("either__aux2",)
+    assert dec.parents_of("dysp") == ("dysp__aux2",)
+
+    for evidence in (
+        {},
+        {"asia": "false"},
+        {"xray": "true"},
+        {"asia": "false", "dysp": "true"},
+    ):
+        _assert_original_posteriors_match(net, dec, evidence, original_keys)
+
+
+def test_decompose_single_parent_net_returns_equivalent_copy() -> None:
+    net = _single_parent_net()
+    dec = _graphical().decompose_single_parent(net)
+    assert dec is not net
+    assert dec == net
+    assert dec.cpts is not net.cpts
+    assert dec.variables == net.variables
+    assert dec.edges == net.edges
+
+
+def test_decompose_rejects_non_bayesnet() -> None:
+    with pytest.raises(TypeError, match=r"BayesNet"):
+        _graphical().decompose_single_parent({"variables": []})  # type: ignore[arg-type]
