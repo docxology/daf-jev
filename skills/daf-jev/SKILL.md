@@ -90,6 +90,18 @@ never be committed, printed, or read by tests.
   n_buckets=10)`, `reliability_table(pairs, *, n_buckets=10)`,
   `expected_calibration_error(pairs, *, n_buckets=10)`,
   `brier_score(pairs)` — pairs are `(confidence, correct: bool)` tuples.
+- **Jaggedness** (`daf_jev.jaggedness`, pure stdlib) — how far repeated
+  answers to stochastic prompts (coin flips, die rolls; built-in `COIN` /
+  `COIN_NOUL` / `D6` fixtures) stray from the stated uniform distribution:
+  `uniform_chi2` (chi-square + df + p), `uniform_deviation` (max |Δp| +
+  total variation), `runs_test_z` / `max_streak` (serial structure),
+  `position_slope` (order-rotation position bias), `noul_choice_delta`
+  (the same coin asked as noul vs choice). `run_battery(client, fixtures,
+  *, repeats=50, concurrent=32, timeout=None)` drives any duck-typed
+  `ask` client; degeneracy (one label on every identical ask) is a
+  reported finding, not an error. Live battery:
+  `benchmarks/bench_jaggedness.py` (per-provider SKIP without its key;
+  see `benchmarks/README.md`).
 - **Graphical models** (`daf_jev.graphical` +
   `daf_jev.graphical_elicitation`) — Jev as a factor source for discrete
   Bayes nets: `Variable(key, description, states)`, `Edge(parent,

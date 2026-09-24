@@ -27,10 +27,25 @@ contradictions (report the delta; do not silently deviate).
   honoring `Retry-After` when present: the `Retry-After-ms` header wins when set, then
   the numeric `Retry-After` form — both clamped to [0, 300] seconds; the HTTP-date form
   is intentionally unsupported and falls back to exponential backoff.
+  Status→exception mapping is centralized in `_errors.py`: each
+  status-specific `_HTTPStatusError` subclass pins a `_STATUS` ClassVar
+  (400/401/403/404/422/429/529) and `error_from_status()` resolves a
+  status code to that class — unmapped 5xx become `InternalServerError`,
+  statuses < 400 return `None`.
 - Models listing exists in the official SDK (Models resource). Exact HTTP path/shape:
   read `docs/reference/sdk/python/api/clients/sync/models.md` and `.../client.md`
   before implementing; if the snapshot gives a path, use it. If no explicit path is
   documented, implement `models()` as `GET /v1/models` and note the assumption in code.
+
+Wire strictness (pinned by `tests/unit/test_types.py:249-353`): answer
+float fields (`noul`, `choice` `probabilities` values, `score`,
+`confidence`) reject bools AND numeric strings — no `float()` coercion;
+usage integer fields (`input_tokens`, `output_tokens`) reject `None`,
+numeric strings, and bools, and deliberately accept integral floats
+(`100.0` means 100 tokens; non-integral floats like `3.7` are rejected);
+score `legend` parsing is strict (`legend` required, string level-index
+keys → string descriptions; non-string values rejected). Nothing on the
+wire path is silently coerced.
 
 ## Environment
 
@@ -859,7 +874,14 @@ bridge.
   and speedup to stdout and `output/benchmarks/batching_<date>.json`.
 - `bench_patterns.py` — latency of composite-score pipeline and confidence routing
   decisions end-to-end (1 call each); report p50/p95 over >= 10 runs.
-- Both: argparse `--runs`, exit 0 with "SKIP: JEV_API_KEY not set" when key absent.
+- `bench_calibration.py` — self-consistency confidence calibration: for N
+  short states, the same three-option choice question is asked R times
+  (modal choice across repeats = self-consistency proxy, NOT ground
+  truth); report ECE, Brier, reliability table, and mean pairwise |Δnoul|
+  stability to stdout and `output/benchmarks/calibration_<date>.json`;
+  flags `--states N` / `--repeats N` / `--model NAME`, exit 0 with
+  "SKIP: JEV_API_KEY not set" when key absent.
+- The first two: argparse `--runs`, exit 0 with "SKIP: JEV_API_KEY not set" when key absent.
 - `bench_jaggedness.py` — model-jaggedness battery: repeated asking of
   stochastic prompts per provider; report uniformity deviation
   (chi-square/total variation), choice degeneracy, runs/streak, order
