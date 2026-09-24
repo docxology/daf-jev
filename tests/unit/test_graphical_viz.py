@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from daf_jev import graphical_viz
 from daf_jev.graphical import CPT, BayesNet, Edge, Variable
 from daf_jev.graphical_viz import plot_network, plot_posterior_trajectory, to_mermaid
 
@@ -276,3 +277,15 @@ def test_plotters_without_matplotlib_name_figures_extra(
         plot_network(_chain_net(), tmp_path / "network.png")
     with pytest.raises(ImportError, match="uv sync --extra figures"):
         plot_posterior_trajectory(_chain_net(), ("b",), [{}], tmp_path / "t.png")
+
+
+def test_dpi_default_matches_shared_theme() -> None:
+    """The def-time dpi default mirrors the shared figures theme.
+
+    ``_DPI`` stays a literal (signatures frozen by wave-1 pins); this pin
+    guards the documented exception against drift from ``figures.DPI``.
+    """
+    pytest.importorskip("matplotlib")
+    from daf_jev.figures import DPI
+
+    assert graphical_viz._DPI == DPI

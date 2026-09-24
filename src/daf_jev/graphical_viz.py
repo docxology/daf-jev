@@ -19,6 +19,10 @@ optional ``figures`` extra they raise ImportError pointing at
 ``uv sync --extra figures``. Every function is pure over its inputs
 except the file writes it is told to make (the plotters also create the
 output's parent directory when missing); no global state.
+
+Plotters draw with the shared figures theme (``src/daf_jev/figures.py``
+color/font/size constants, imported lazily per call together with
+matplotlib); ``to_mermaid`` stays matplotlib-free.
 """
 
 from __future__ import annotations
@@ -45,12 +49,15 @@ _MERMAID_DESCRIPTION_LIMIT = 40
 _MERMAID_DIRECTIONS = ("TD", "TB", "BT", "RL", "LR")
 _UNSAFE_LABEL_CHARS = str.maketrans("", "", '<>"')
 
-# Shared plot style (mirrors src/daf_jev/figures.py).
+# Theme consumption: colors, fonts, and arrow style come from the shared
+# figures theme (src/daf_jev/figures.py), imported lazily inside the
+# plotters together with matplotlib — never duplicated here, and never at
+# module import (``to_mermaid`` stays matplotlib-free). Local literals
+# below are documented exceptions: ``_DPI`` is a def-time signature
+# default (== figures.DPI, sync-pinned in tests) and ``_NODE_FACE`` has
+# no theme counterpart in figures.py.
 _DPI = 200
-_EDGE_COLOR = "#444444"
 _NODE_FACE = "#EAF2FA"
-_NODE_EDGE = "#2E5E8C"
-_TEXT_COLOR = "#222222"
 _NODE_SPACING_X = 2.4
 _NODE_SPACING_Y = 2.0
 _PLOT_DESCRIPTION_WIDTH = 24
@@ -177,7 +184,9 @@ def plot_network(
     FancyArrowPatch arcs parent->child (slight curvature, drawn below the
     node boxes); nodes are rounded boxes labeled with the key and the
     description truncated to two lines. No title is drawn (the caller
-    adds one). matplotlib imports lazily — ImportError names the
+    adds one). Colors, fonts, and the arrow style come from the shared
+    figures theme (``src/daf_jev/figures.py`` constants, imported lazily
+    together with matplotlib). matplotlib imports lazily — ImportError names the
     ``figures`` extra — and the output's parent directory is created when
     missing. Keyword-only options: ``dpi`` sets the saved figure's pixel
     density and ``figsize`` overrides the computed figure size in inches
@@ -190,6 +199,14 @@ def plot_network(
     _checked_dpi(dpi)
     _checked_figsize(figsize)
     plt = _pyplot()
+    from daf_jev.figures import (
+        ARROW_LW,
+        ARROW_STYLE,
+        COLOR_EDGE,
+        COLOR_LAYER_MAIN,
+        COLOR_TEXT,
+        FONT_BOX,
+    )
     from matplotlib.patches import FancyArrowPatch
 
     order = net.topological_order()
@@ -230,10 +247,10 @@ def plot_network(
                 (x0, y0),
                 (x1, y1),
                 connectionstyle=f"arc3,rad={_ARROW_CURVATURE}",
-                arrowstyle="-|>",
+                arrowstyle=ARROW_STYLE,
                 mutation_scale=14,
-                color=_EDGE_COLOR,
-                lw=1.4,
+                color=COLOR_EDGE,
+                lw=ARROW_LW,
                 zorder=1,
             )
         )
@@ -246,12 +263,12 @@ def plot_network(
             _node_label(var),
             ha="center",
             va="center",
-            fontsize=9,
-            color=_TEXT_COLOR,
+            fontsize=FONT_BOX,
+            color=COLOR_TEXT,
             bbox=dict(
                 boxstyle="round,pad=0.35",
                 facecolor=_NODE_FACE,
-                edgecolor=_NODE_EDGE,
+                edgecolor=COLOR_LAYER_MAIN,
             ),
             zorder=2,
         )
@@ -286,12 +303,12 @@ def plot_posterior_trajectory(
     ``states=("false", "true")`` that is P(true). The x axis is the step
     index, labeled ``labels`` when given (same length as ``steps``) and
     the step index as a string otherwise; the legend lists the query keys;
-    colors follow the default matplotlib cycle. Deterministic. Fail
+    colors follow the shared figures theme cycle. Deterministic. Fail
     closed before any figure is drawn: empty ``steps`` or ``query_keys``,
     a label-count mismatch, unknown query keys (``KeyError`` naming the
     key), invalid evidence (``ValueError`` from ``posterior``), or a
     non-positive ``dpi`` / a malformed ``figsize``. ``figsize=None``
-    keeps the ``(7.5, 4.2)`` default size.
+    keeps the shared theme's ``SIZE_CHART`` (7.5, 4.2) default size.
     """
     steps_list = list(steps)
     keys = list(query_keys)
@@ -319,7 +336,21 @@ def plot_posterior_trajectory(
     ]
 
     plt = _pyplot()
-    fig_size = figsize if figsize is not None else (7.5, 4.2)
+    from daf_jev.figures import (
+        COLOR_ACCENT,
+        COLOR_EXTERNAL,
+        COLOR_LAYER_MAIN,
+        COLOR_LAYER_SIDE,
+        FONT_ANNOTATE,
+        SIZE_CHART,
+    )
+
+    # D4: grouped bars follow the shared theme's _style() prop_cycle order
+    # (documented here; no new theme API added to figures.py).
+    series_colors = (
+        COLOR_LAYER_MAIN, COLOR_ACCENT, COLOR_LAYER_SIDE, COLOR_EXTERNAL
+    )
+    fig_size = figsize if figsize is not None else SIZE_CHART
     fig, ax = plt.subplots(figsize=fig_size)
     group_width = 0.8
     bar_width = group_width / len(keys)
@@ -328,9 +359,15 @@ def plot_posterior_trajectory(
             step - group_width / 2 + (index + 0.5) * bar_width
             for step in range(len(steps_list))
         ]
-        ax.bar(centers, values[index], width=bar_width * 0.9, label=key)
+        ax.bar(
+            centers,
+            values[index],
+            width=bar_width * 0.9,
+            color=series_colors[index % len(series_colors)],
+            label=key,
+        )
     ax.set_xticks(list(range(len(steps_list))))
-    ax.set_xticklabels(step_labels, rotation=20, ha="right", fontsize=9)
+    ax.set_xticklabels(step_labels, rotation=20, ha="right", fontsize=FONT_ANNOTATE)
     ax.set_ylabel("P(true)")
     ax.set_ylim(0.0, 1.05)
     ax.grid(axis="y", alpha=0.3)
