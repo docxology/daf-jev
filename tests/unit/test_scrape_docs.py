@@ -1,4 +1,4 @@
-"""Unit tests for scripts/scrape_docs.py --check mode (no network, no writes).
+"""Unit tests for scripts/scrape_docs.py --check mode and prune-on-refresh.
 
 The script is standalone (stdlib urllib) and lives outside the package, so it
 is loaded via importlib.util from its file path.
@@ -230,3 +230,158 @@ def test_unrecognized_index_line_warns_but_scrape_proceeds(
         (out_dir / "MANIFEST.json").read_text(encoding="utf-8")
     )
     assert manifest["page_count"] == 1
+
+
+# ------------------------------------------------------- prune-on-refresh ----
+
+
+def test_prune_orphans_removes_unlisted_pages_only(tmp_path: Path) -> None:
+    """Offline unit: unlisted .md pages are removed; listed pages,
+    MANIFEST.json and non-.md files survive; the return value lists
+    exactly what was pruned."""
+    module = load_script()
+    manifest_path = build_fixture(tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    orphan = tmp_path / "legacy" / "old-client.md"
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_text("# Legacy client page\n", encoding="utf-8")
+    stray = tmp_path / "notes.txt"
+    stray.write_text("not a page\n", encoding="utf-8")
+
+    pruned = module.prune_orphans(manifest, out_dir=tmp_path)
+
+    assert pruned == ["legacy/old-client.md"]
+    assert not orphan.exists()
+    assert (tmp_path / "introduction.md").exists()
+    assert (tmp_path / "concepts" / "system-one.md").exists()
+    assert manifest_path.exists()
+    assert stray.exists()
+    # Only files are deleted; the emptied directory remains.
+    assert (tmp_path / "legacy").is_dir()
+
+
+def test_full_rescrape_prunes_orphans_and_reports_receipt(
+    stub, tmp_path: Path, capsys
+) -> None:
+    """Two scrapes against the stub: the second index drops a page; the
+    orphan is pruned and the summary receipt lists exactly the removed
+    paths; the pruned snapshot verifies offline."""
+    module = load_script()
+    index_first = (
+        "# TypeSafe docs\n"
+        "- [Intro](introduction.md)\n"
+        "- [System One](concepts/system-one.md)\n"
+        "- [Legacy Client](legacy/old-client.md)\n"
+    )
+    pages = {
+        "introduction.md": b"# Introduction\n\nhello\n",
+        "concepts/system-one.md": b"# System One\n\nbody text\n",
+        "legacy/old-client.md": b"# Legacy client page\n",
+    }
+    stub.enqueue(text=index_first)
+    for body in pages.values():
+        stub.enqueue(text=body.decode("utf-8"))
+    out_dir = tmp_path / "reference"
+    assert module.main(
+        ["--index-url", f"{stub.base_url}/llms.txt", "--out-dir", str(out_dir)]
+    ) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert first["pruned"] == []
+    assert (out_dir / "legacy" / "old-client.md").exists()
+
+    index_second = (
+        "# TypeSafe docs\n"
+        "- [Intro](introduction.md)\n"
+        "- [System One](concepts/system-one.md)\n"
+    )
+    stub.enqueue(text=index_second)
+    stub.enqueue(text=pages["introduction.md"].decode("utf-8"))
+    stub.enqueue(text=pages["concepts/system-one.md"].decode("utf-8"))
+    assert module.main(
+        ["--index-url", f"{stub.base_url}/llms.txt", "--out-dir", str(out_dir)]
+    ) == 0
+    second = json.loads(capsys.readouterr().out)
+    assert second["pruned"] == ["legacy/old-client.md"]
+    assert not (out_dir / "legacy" / "old-client.md").exists()
+    assert (out_dir / "introduction.md").exists()
+    assert (out_dir / "concepts" / "system-one.md").exists()
+    assert (out_dir / "MANIFEST.json").exists()
+
+    # The pruned snapshot verifies offline: custody-green after the prune.
+    assert run_check(module, out_dir / "MANIFEST.json") == 0
+
+
+def test_check_offline_never_deletes(tmp_path: Path) -> None:
+    """--check (offline form) reports the unlisted page as ``added`` and
+    writes nothing: the orphan, the manifest and listed pages all
+    survive byte-identical."""
+    module = load_script()
+    manifest_path = build_fixture(tmp_path)
+    orphan = tmp_path / "legacy" / "old-client.md"
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_text("# Legacy client page\n", encoding="utf-8")
+    manifest_before = manifest_path.read_bytes()
+    listed = {
+        rel: (tmp_path / rel).read_bytes()
+        for rel in ("introduction.md", "concepts/system-one.md")
+    }
+
+    assert run_check(module, manifest_path) == 1  # orphan reported as added
+
+    assert orphan.read_text(encoding="utf-8") == "# Legacy client page\n"
+    assert manifest_path.read_bytes() == manifest_before
+    for rel, body in listed.items():
+        assert (tmp_path / rel).read_bytes() == body
+
+
+def test_check_online_never_deletes(stub, tmp_path: Path, capsys) -> None:
+    """--check (online form) against a restructured index: the page the
+    new index dropped is reported as drift and nothing on disk is
+    deleted or rewritten."""
+    module = load_script()
+    index_first = (
+        "# TypeSafe docs\n"
+        "- [Intro](introduction.md)\n"
+        "- [System One](concepts/system-one.md)\n"
+        "- [Legacy Client](legacy/old-client.md)\n"
+    )
+    pages = {
+        "introduction.md": b"# Introduction\n\nhello\n",
+        "concepts/system-one.md": b"# System One\n\nbody text\n",
+        "legacy/old-client.md": b"# Legacy client page\n",
+    }
+    stub.enqueue(text=index_first)
+    for body in pages.values():
+        stub.enqueue(text=body.decode("utf-8"))
+    out_dir = tmp_path / "reference"
+    assert module.main(
+        ["--index-url", f"{stub.base_url}/llms.txt", "--out-dir", str(out_dir)]
+    ) == 0
+    capsys.readouterr()
+    manifest_before = (out_dir / "MANIFEST.json").read_bytes()
+
+    index_second = (
+        "# TypeSafe docs\n"
+        "- [Intro](introduction.md)\n"
+        "- [System One](concepts/system-one.md)\n"
+    )
+    stub.enqueue(text=index_second)
+    stub.enqueue(text=pages["introduction.md"].decode("utf-8"))
+    stub.enqueue(text=pages["concepts/system-one.md"].decode("utf-8"))
+    code = module.main(
+        [
+            "--check",
+            "--index-url",
+            f"{stub.base_url}/llms.txt",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
+    assert code == 1
+    report = json.loads(capsys.readouterr().out)
+    assert "legacy/old-client.md (in manifest, not in index)" in report["drifted"]
+    assert (out_dir / "MANIFEST.json").read_bytes() == manifest_before
+    assert (out_dir / "legacy" / "old-client.md").read_bytes() == pages["legacy/old-client.md"]
+    for rel in ("introduction.md", "concepts/system-one.md"):
+        assert (out_dir / rel).read_bytes() == pages[rel]
