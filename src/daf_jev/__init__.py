@@ -41,7 +41,7 @@ from daf_jev.config import (
 )
 from daf_jev.decider import Budget, ConfidenceGate, Decider, DecisionEvent
 from daf_jev.evaluate import EvaluationRecord, Evaluator
-from daf_jev.graphical import CPT, BayesNet, Edge, Variable
+from daf_jev.graphical import CPT, BayesNet, Edge, Variable, decompose_single_parent
 from daf_jev.graphical_elicitation import elicit_cpts, propose_structure
 from daf_jev.jaggedness import (
     COIN,
@@ -119,6 +119,7 @@ __all__ = [
     "choice",
     "composite_score",
     "confidence_gate",
+    "decompose_single_parent",
     "elicit_cpts",
     "get_provider",
     "list_providers",

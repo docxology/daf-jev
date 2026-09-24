@@ -24,21 +24,7 @@ SKILL_MD = REPO_ROOT / "skills" / "daf-jev" / "SKILL.md"
 # set of test_skill_md_mentions_every_public_module automatically.
 # jaggedness.py is deliberately ABSENT from this ledger: W1-A adds its
 # mention in wave 1, so the pin enforces it post-fold.
-_SKILL_MD_LAGGING_MODULES = frozenset(
-    {
-        "client",
-        "providers",
-        "evaluate",
-        "models",
-        "primitives",
-        "questions",
-        "docs_verify",
-        "cli",
-        "mcp_server",
-        "figures",
-        "manuscript_variables",
-    }
-)
+_SKILL_MD_LAGGING_MODULES = frozenset()
 
 
 def _public_module_stems() -> list[str]:
