@@ -527,6 +527,31 @@ wire path is silently coerced.
   Full contract in the Animation part of the Graphical models section
   below.
 
+Shared figures theme: `figures.py` owns the single visual identity — the
+named `COLOR_*` / `FONT_*` / `SIZE_*` constants, `DPI`, `ARROW_STYLE` /
+`ARROW_LW`, the `_style()` rcParams including the 4-color
+`axes.prop_cycle` (`COLOR_LAYER_MAIN` -> `COLOR_ACCENT` ->
+`COLOR_LAYER_SIDE` -> `COLOR_EXTERNAL`), and `_ROLE_FACECOLORS` over the
+shared `_ARCHITECTURE_NODES` / `_ARCHITECTURE_EDGES` spec consumed by
+both the PNG drawer and `architecture_mermaid()` (the shared style
+surface is noted in the `figures.py` bullet above). The figures-adjacent
+plotters (`graphical_viz`, `graphical_animation`) import those constants
+lazily per call, together with matplotlib — a module-level import would
+break `to_mermaid`'s zero-dependency contract, pinned by
+`test_plotters_without_matplotlib_name_figures_extra` (the
+missing-matplotlib `ImportError` names `uv sync --extra figures`). The
+def-time `dpi` signature defaults are the one accepted literal pair
+(module-local, not resolved from the theme): `graphical_viz._DPI ==
+figures.DPI` is sync-pinned by `test_dpi_default_matches_shared_theme`,
+while the animation plotters keep their own `dpi: int = 110` GIF-frame
+defaults, outside that pin. Documented viz-local exceptions (NOT theme
+API): the node face `#EAF2FA`, the bar-grid alpha, the coolwarm posterior
+fills, and the arrow curvature / mutation-scale geometry constants. Bar
+series in `plot_posterior_trajectory` and `animate_posterior` follow the
+`_style()` prop_cycle order (cycling per query-variable series); registry
+PNGs never route through the viz modules — every `generate_<name>()`
+draws inside `figures.py`.
+
 ## Provider dispatch
 
 One shared wire contract (`POST /v1/systemone`, `GET /v1/models`), many
