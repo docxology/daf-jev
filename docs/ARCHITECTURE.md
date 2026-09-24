@@ -410,6 +410,55 @@ wire path is silently coerced.
   `output/figures/figure_registry.json` (the `FIGURES` token derives from
   that registry, never a raw PNG glob) — rather than fabricating values;
   `--allow-draft` emits `N/A` sentinels instead.
+- `figures.py` — the manuscript figure registry (matplotlib imported at
+  module level, headless `Agg`; NEVER import from core modules). One
+  `generate_<name>()` per manuscript figure — `graphical_abstract`,
+  `architecture`, `primitives`, `batching`, `latency`, `confidence`,
+  `calibration` (7 figures in `_REGISTRY`; `generate_one(name, ...)`
+  raises `ValueError` naming the valid choices on an unknown name) —
+  orchestrated by `generate_all(out_dir, project_root)`: renders in
+  registry order and ALWAYS writes `figure_registry.json` after the
+  PNGs via `write_figure_registry` (one entry per `fig:*` label:
+  `figure_id` `figure_NNN`, filename, caption, section, width,
+  `placement: "h"`, `metadata.alt_text` — static metadata, no measured
+  statistics; template validation consumes it). Data-driven figures
+  (`batching`, `latency`, `calibration`, `graphical_abstract`) read the
+  newest benchmark JSONs under `output/benchmarks/` via
+  `_latest_benchmark` and raise `FileNotFoundError` naming the missing
+  file; `architecture`, `primitives`, and `confidence` are data-free
+  and always renderable. `architecture_mermaid() -> str` re-renders the
+  architecture diagram as byte-deterministic mermaid from the same
+  static `_ARCHITECTURE_NODES` / `_ARCHITECTURE_EDGES` tables the PNG
+  drawer consumes (nodes sorted by id, edges by (src, dst), the
+  duplicate `primitives -> client` arrow kept; `graph TD`; no trailing
+  newline) — deliberately NOT a registry entry; `generate_figures.py`
+  writes it as the sibling `architecture.mmd` on every run. Shared
+  style surface: `_style()` (module-level rcParams constants — DPI 200,
+  DejaVu Sans, palette, light gridlines; every generator calls it
+  first) and `_ROLE_FACECOLORS` (`main` / `side` / `external` role ->
+  facecolor; side modules draw dashed).
+- `manuscript_variables.py` — the `{{TOKEN}}` map generator (no
+  matplotlib): `generate_variables(project_root, *,
+  require_analysis_outputs=True) -> dict[str, str]` returns the flat
+  UPPERCASE_KEY token map (no braces) and `save_variables(variables,
+  output_path)` persists it as JSON. Strict mode (default) raises
+  `FileNotFoundError` naming the missing analysis output — manuscript
+  config, docs snapshot manifest, benchmark JSONs, or
+  `output/figures/figure_registry.json`; draft mode (`--allow-draft`)
+  emits `"N/A"` sentinels; test counts and coverage degrade to `"N/A"`
+  in both modes. FIGURES derivation: the registry JSON is consumed
+  entry-by-entry — every entry must be a dict with a string `filename`
+  (`ValueError` naming the label otherwise), and `FIGURES` is the
+  sorted filenames joined with ", " (empty registry -> `"N/A"`). The
+  registry path is the module-local `_FIGURE_REGISTRY` constant, a
+  deliberate mirror of `figures.FIGURE_REGISTRY_FILENAME` — never a
+  `daf_jev.figures` import, which would pull matplotlib into core;
+  `_load_manifest` (docs snapshot `MANIFEST.json`) follows the same
+  loader shape (strict-raise vs draft-empty). The 49-token set derives
+  from manuscript/config.yaml (`CONFIG_*`; batch-width token NAMES
+  derive from the configured widths, canonical 5/10/20 fallback),
+  pyproject metadata, AST-derived code stats, pytest collection +
+  coverage, benchmark JSONs, and provenance — no hardcoded results.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
   `graphical_elicitation` (+ `graphical_viz` for the rendered artifacts):
   CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
@@ -467,6 +516,16 @@ wire path is silently coerced.
   kwargs), and `plot_posterior_trajectory` (grouped P(true) bars over
   cumulative evidence steps; `dpi`/`figsize` kwargs). Full contract in the
   Visualization part of the Graphical models section below.
+- `graphical_animation.py` — GIF animations over the public `BayesNet`
+  API (optional `figures` extra): `animate_posterior` (grouped P(true)
+  bars growing one cumulative evidence step per frame; `labels`/`fps`/
+  `dpi` kwargs) and `animate_network` (the layered DAG layout with node
+  fills set to P(true) per step; `fps`/`dpi` kwargs). matplotlib and
+  Pillow import lazily INSIDE the call — without the `figures` extra
+  the ImportError names `uv sync --extra figures`. Fail-closed
+  validation precedes any figure; deterministic byte-identical output.
+  Full contract in the Animation part of the Graphical models section
+  below.
 
 ## Provider dispatch
 
@@ -641,6 +700,42 @@ Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
     the final marginal.
   - `query(variable: str, evidence: Mapping[str, str] | None = None) ->
     tuple[float, ...]` — one marginal.
+  - `most_probable_explanation(evidence: Mapping[str, str]) ->
+    dict[str, str]` — most probable explanation: the single joint
+    assignment over ALL variables with the highest probability
+    consistent with `evidence` (evidence variables pinned to their
+    observed states in the result). Consistent assignments are
+    enumerated exhaustively and scored as the product of their CPT
+    entries (exponential in the state counts — 2**n for binary nets;
+    targets small nets), which makes the tiebreak exact: among
+    maxima, the lexicographically smallest state tuple in
+    variable-declaration order wins. Unknown evidence keys/states
+    raise `ValueError` as in `posterior`; zero-probability evidence
+    raises `ValueError` (no consistent assignment has positive
+    probability, so the MPE is undefined).
+  - `sample(n: int, rng: random.Random | None = None) ->
+    list[dict[str, str]]` — `n` joint assignments by ancestral
+    sampling: variables in `topological_order()` order, each state a
+    categorical draw over its CPT row given the already-drawn parent
+    states (`rng.random()` against the row's cumulative distribution).
+    `rng` defaults to a fresh `random.Random` — pass a seeded instance
+    for reproducible draws; `n` must be an integer >= 1 (`bool`
+    rejected, `ValueError`); rows are used as stored with a
+    float-rounding fallback to the last state of positive probability.
+    No evidence handling — rejection sampling is caller-composed.
+  - `conditional_scenarios(variable: str,
+    evidence: Mapping[str, str] | None = None,
+    targets: Sequence[str] | None = None) ->
+    dict[str, dict[str, tuple[float, ...]]]` — "what-if" enumeration
+    over one variable: for each state of `variable`, the posterior
+    marginal of every target under `evidence` plus
+    `{variable: state}` (one `posterior` call per state; the scenario
+    state overrides the same key in `evidence`), returned as
+    `{state: {target: distribution}}`. `targets` defaults to all
+    other variables in declaration order. Unknown `variable` or
+    target keys raise `ValueError` naming the offender (`targets`
+    must be a sequence, not a string); evidence keys, states, and
+    zero-probability scenarios surface from `posterior` unchanged.
   - `decompose_single_parent(net: BayesNet) -> BayesNet` — returns a copy
     in which every ORIGINAL variable has at most one parent: each
     multi-parent CPT `P(X|B1..Bk)` (k >= 2) is replaced by a chain of
@@ -739,6 +834,46 @@ creating the output's parent directory when missing):
   `steps`/`query_keys`, a label-count mismatch, unknown query keys
   (`KeyError` naming the key), invalid evidence (`ValueError`), a
   non-positive `dpi`, or a malformed `figsize`.
+
+Animation (`src/daf_jev/graphical_animation.py` — GIF writers over the
+public `BayesNet` API; matplotlib and Pillow import lazily INSIDE the
+call — without the optional `figures` extra both raise `ImportError`
+naming `uv sync --extra figures`; the layered-layout and style
+constants mirror `graphical_viz` locally so the two renderers stay
+decoupled at import time; deterministic — identical inputs give
+byte-identical GIFs; every frame's posteriors are computed before any
+figure exists):
+
+- `animate_posterior(net: BayesNet, query_keys: Sequence[str],
+  evidence_steps: Sequence[Mapping[str, str]], path: str | Path, *,
+  labels: Sequence[str] | None = None, fps: float = 1,
+  dpi: int = 110) -> Path` — one frame per evidence step (applied
+  cumulatively, the same contract as
+  `graphical_viz.plot_posterior_trajectory`): frame `k` draws grouped
+  bars for steps `0..k` (growing left-to-right), one bar per query
+  variable showing P(state=true) with the same LAST-state binary
+  convention; the frame title names the evidence ADDED at that step;
+  the legend lists the query keys and the x tick labels come from
+  `labels` (step indices as strings when omitted). Fail closed before
+  any figure: empty `evidence_steps` / `query_keys`, a labels-count
+  mismatch, unknown query keys, unknown/zero-probability evidence
+  (`ValueError` from `posterior`), or non-positive `fps`/`dpi` — no
+  file is written in any of those cases; the output parent directory
+  is created when missing.
+- `animate_network(net: BayesNet,
+  evidence_steps: Sequence[Mapping[str, str]], path: str | Path, *,
+  fps: float = 1, dpi: int = 110) -> Path` — the layered DAG of
+  `plot_network`'s coordinate scheme (private `_layered_layout`:
+  longest-path levels over the topological order, deterministic
+  coordinates within a generation; FancyArrowPatch parent->child arcs
+  drawn below the node boxes), each node's fill color set to P(true)
+  per step (coolwarm, 0..1; LAST state) and the frame title carrying
+  the FULL evidence mapping (`priors` when the first step is empty).
+  The empty-net guard is hoisted before any figure (`ValueError`
+  "cannot animate an empty Bayes net: no variables"); otherwise the
+  same fail-closed-before-figure rules as `animate_posterior` (no
+  query keys or labels here). GIF encoding via
+  `matplotlib.animation.PillowWriter` at the given `fps`/`dpi`.
 
 Experiment runner (`scripts/bayes_experiment.py` — thin orchestrator; ALL
 logic lives in src):
