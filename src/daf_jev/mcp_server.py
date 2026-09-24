@@ -354,6 +354,9 @@ async def jev_docs_verify(
     manifest: str | None = None, provider: str = "jev"
 ) -> dict:
     """Verify the docs/reference snapshot against its manifest.
+    ``manifest`` selects an explicit manifest path; ``None`` (default)
+    verifies the shipped snapshot manifest
+    (``daf_jev.docs_verify.DEFAULT_MANIFEST``).
 
     Same verifier as the ``daf-jev docs-verify`` CLI command
     (:func:`daf_jev.docs_verify.verify_manifest`). On success returns
@@ -363,7 +366,7 @@ async def jev_docs_verify(
     An unknown ``provider`` returns the ``{error, message, ok: false}``
     shape instead of raising.
     """
-    manifest_path = Path(manifest) if manifest is not None else DEFAULT_MANIFEST
+    manifest_path = Path(manifest) if manifest is not None else None
     try:
         _validate_provider(provider)
         return verify_manifest(manifest_path)
@@ -374,10 +377,17 @@ async def jev_docs_verify(
 # ------------------------------------------------------------- server setup
 
 
-def _docs_snapshot() -> dict[str, Any]:
-    """Summarize the docs snapshot manifest (``jev://docs/snapshot``)."""
+def _snapshot_summary(manifest_path: Path | None = None) -> dict[str, Any]:
+    """Summarize a docs snapshot manifest (``jev://docs/snapshot`` body).
+
+    ``manifest_path=None`` (the default) resolves to the shipped
+    :data:`DEFAULT_MANIFEST`; pass an explicit path to summarize another
+    manifest — the parameterized seam the tests use instead of patching.
+    """
+    if manifest_path is None:
+        manifest_path = DEFAULT_MANIFEST
     try:
-        manifest = json.loads(DEFAULT_MANIFEST.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return {"error": type(exc).__name__, "message": str(exc), "ok": False}
     return {
@@ -386,6 +396,11 @@ def _docs_snapshot() -> dict[str, Any]:
         "scraped_at": manifest.get("scraped_at_utc"),
         "index_sha256": manifest.get("index_sha256"),
     }
+
+
+def _docs_snapshot() -> dict[str, Any]:
+    """Resource body for ``jev://docs/snapshot`` (the shipped snapshot)."""
+    return _snapshot_summary()
 
 
 def build_server() -> FastMCP:

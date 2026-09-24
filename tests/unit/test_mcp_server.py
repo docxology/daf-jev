@@ -530,14 +530,11 @@ def test_docs_snapshot_resource_body_exposes_manifest_fields() -> None:
     assert body["page_count"] == manifest["page_count"]
 
 
-def test_docs_snapshot_resource_error_shape_when_manifest_missing(
-    monkeypatch, tmp_path
-) -> None:
-    # Input relocation, not behavior patching: point the resource at a
-    # manifest path that does not exist so its error branch runs.
-    monkeypatch.setattr(ms, "DEFAULT_MANIFEST", tmp_path / "absent.json")
-    server = ms.build_server()
-    body = _run(_resource_body(server, SNAPSHOT_RESOURCE))
+def test_docs_snapshot_error_shape_when_manifest_missing(tmp_path) -> None:
+    # Input relocation via the parameterized seam, not patching: point the
+    # summary builder at a manifest path that does not exist so its error
+    # branch runs.
+    body = ms._snapshot_summary(tmp_path / "absent.json")
     assert set(body) == {"error", "message", "ok"}
     assert body["ok"] is False
     assert body["error"]

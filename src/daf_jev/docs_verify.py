@@ -34,8 +34,11 @@ def _rel_from_url(url: str) -> str:
     return urlparse(url).path.lstrip("/")
 
 
-def verify_manifest(manifest_path: Path) -> dict[str, Any]:
+def verify_manifest(manifest_path: Path | str | None = None) -> dict[str, Any]:
     """Verify a docs snapshot manifest against the files next to it.
+    ``manifest_path=None`` (the default) resolves to the shipped
+    :data:`DEFAULT_MANIFEST` (repo-root anchored, CWD-independent), so
+    callers never re-derive that path themselves.
 
     Pure read-only. Raises ``ValueError`` when the manifest cannot be read
     or parsed, or when an entry has the wrong shape. The report contains:
@@ -50,6 +53,8 @@ def verify_manifest(manifest_path: Path) -> dict[str, Any]:
       manifest does not list,
     - ``ok``: True when all three finding lists are empty.
     """
+    if manifest_path is None:
+        manifest_path = DEFAULT_MANIFEST
     manifest_path = Path(manifest_path)
     try:
         raw = manifest_path.read_text(encoding="utf-8")
