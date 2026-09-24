@@ -5,11 +5,12 @@ authoritative design contract see `docs/ARCHITECTURE.md` (v1, 2026-09-16 —
 single source of truth; workers must match its signatures exactly and report
 any contradiction rather than silently deviating).
 
-This is a sidecar project under `projects/ongoing/`, now **self-versioned**
-(see invariants). Repo-wide lane policy (symlink topology, never `git add`
-lane paths into an outer repo, doc standard) lives in `../../AGENTS.md` (the
-`ongoing/` root) and `../AGENTS.md` (Code_Tools category) — do not restate it
-here.
+This is a **self-versioned** git repo at
+`projects/platform/hum-docxology/repos/public/daf-jev` — a managed Docxology
+checkout (each checkout there owns its own git history and upstream; the
+hum-docxology worktree intentionally ignores nested checkouts). Container
+rules live in `../../AGENTS.md` (the `repos/` checkout container) — do not
+restate them here; there is no `../AGENTS.md` in this location.
 
 ## Layout
 
@@ -95,9 +96,36 @@ here.
     non-negative probabilities (`ValueError`); imports `mcp` at module
     import (optional `mcp` extra — never import from core modules); every
     tool takes an optional `provider` argument (default `jev`).
+  - `questions.py` — shared native question-mapping builder (no I/O):
+    `question_from_mapping(value, *, context="question")` builds
+    `NoulQuestion` / `ChoiceQuestion` / `ScoreQuestion` from a
+    `{type, instructions, criteria}` mapping with strict validation and
+    actionable `ValueError` messages; the CLI (`evaluate
+    --questions-file`) and the MCP server (`jev_ask` / `jev_evaluate`)
+    route native mappings through it (spec strings keep using
+    `cli.parse_question_spec`).
+  - `docs_verify.py` — shared read-only docs-snapshot manifest verifier:
+    `verify_manifest(manifest_path)` re-hashes every listed page (sha256 +
+    byte length), flags url→path mismatches as `drifted` and extra `.md`
+    files as `added`; report `{manifest, pages, missing, drifted, added,
+    ok}`. Routed through by `daf-jev docs-verify` and MCP
+    `jev_docs_verify`; `DEFAULT_MANIFEST` is module-anchored to the repo
+    checkout (installed copies fail — see the docs-verify battery note).
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
+  - `jaggedness.py` — model-jaggedness statistics (pure stdlib `math`):
+    how far repeated answers to stochastic prompts stray from the stated
+    uniform distribution. Fixtures `COIN` / `COIN_NOUL` / `D6`;
+    `uniform_chi2` (chi-square + df + p via `chi2_sf`),
+    `uniform_deviation` (max |Δp| from 1/k + total variation),
+    `runs_test_z` / `max_streak` (serial structure), `position_slope`
+    (order-rotation position bias), `noul_choice_delta` (same coin,
+    noul vs choice). Entry `run_battery(client, fixtures, *, repeats=50,
+    concurrent=32, timeout=None)` drives a duck-typed `ask` client and
+    returns `{fixture: battery}` (floats rounded to 6 decimals);
+    degeneracy is a reported finding, not an error. No I/O beyond the
+    injected client. Live battery: `benchmarks/bench_jaggedness.py`.
   - `graphical.py` — discrete Bayes nets (`Variable`, `Edge`, `CPT`,
     `BayesNet`): graph helpers + deterministic `topological_order`,
     `validate()`, exact inference (`posterior` / `query`, pure-stdlib
@@ -203,7 +231,9 @@ here.
   rendered provenance), `experiments/` (Asia run:
   `output/experiments/asia/` — `asia_graphspec.json`, `network.png`,
   `posterior_trajectory.png`, `mermaid.txt`, `receipts.json`; the
-  cross-repo artifacts, see Cross-repo pipeline below).
+  cross-repo artifacts, see Cross-repo pipeline below). `web/` —
+  `_combined_manuscript.md`, the template-render combined manuscript
+  (tracked in git, not gitignored; verified 2026-09-24).
 - `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
   `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
@@ -270,24 +300,25 @@ fallback environment is `src/gnn/execute/rxinfer/`).
 
 - **Self-versioned git repo, canonical checkout in the flat mirror**
   (branch `main`; remote `origin` → https://github.com/docxology/daf-jev;
-  local `main` last recorded in sync with `origin/main` @ `7c4db8e`
-  (2026-09-21).
+  local `main` @ `22be3ac` is 2 commits ahead of `origin/main` (`5591d31`):
+  jaggedness `0f342cf` + `22be3ac`, unpushed as of 2026-09-24).
   Commit meaningful changes locally — the template's provenance validation
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
-  this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Zenodo deposits (v0.4.1 published 2026-09-21; v0.4.2 deposit
-  pending).** The v0.4.1 release is archived as Zenodo deposit id
-  **22884676** (version DOI `10.5281/zenodo.22884676`, record
-  <https://zenodo.org/records/22884676>; source zip from tag `v0.4.1` +
-  the rendered PDF); v0.4.0 remains deposit **22884305** (version DOI
-  `10.5281/zenodo.22884305`);
-  v0.3.0 remains deposit **22817425** (version DOI
-  `10.5281/zenodo.22817425`); the concept DOI
-  `10.5281/zenodo.22816187` is stable across versions and always resolves
-  to the latest published version. Deposit **22816188** is the earlier
-  superseded deposit in the same concept family — never cite or pin it. New
-  releases MUST be new version deposits on the same concept via the Zenodo
+  this lane into an OUTER repo (the hum-docxology worktree; container
+  rules in `../../AGENTS.md`).
+- **Zenodo deposits (v0.6.0 published 2026-09-23; family re-verified
+  against the live API 2026-09-24).** The stable concept DOI
+  `10.5281/zenodo.22816187` always resolves to the latest published
+  version. Version deposits: v0.3.0 = **22817425**, v0.4.0 = **22884305**,
+  v0.4.1 = **22884676** (published 2026-09-21; source zip from tag
+  `v0.4.1` + the rendered PDF), v0.4.2 = **22921823** (2026-09-22),
+  v0.5.0 = **22921963** (2026-09-22), v0.6.0 = **22921974** (2026-09-23,
+  latest; version DOI `10.5281/zenodo.22921974`, record
+  <https://zenodo.org/records/22921974>). Deposit **22816188** is the
+  earlier superseded deposit in the same concept family — never cite or
+  pin it. New releases MUST be new version deposits
+  on the same concept via the Zenodo
   deposits API (`POST /api/records/<latest-id>/versions`, then PUT metadata
   — this build wants (re-verified 2026-09-23 against the live API; the
   older flat-shape note below was wrong): creators in the RDM nested form
@@ -445,11 +476,16 @@ uv run mypy src/daf_jev
 uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
 uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
+uv run python benchmarks/bench_jaggedness.py    # live; per-provider SKIP lines; global
+                                                # "SKIP: no provider keys set" + exit 0 when
+                                                # none of JEV/JEFF/KEV_API_KEY is set
+                                                # flags: --providers 'jeff,kev,jev', --fixtures,
+                                                # --repeats 50, --concurrent 32, --timeout, --model
 uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mismatch
                                             # repo-checkout only: docs/reference/ is not
                                             # packaged into wheels (module-anchored
                                             # manifest path); installed copies fail
-python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # offline
+uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # --check re-fetches every linked page (live network, NOT offline); exit 1 on drift
 uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
@@ -478,8 +514,10 @@ cd /Volumes/external_drive/Git/template && \
   uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
 # -> output/pdf/daf-jev_combined.pdf; 9 validation checks
 
-# MCP server full handshake needs the mcp extra: uv sync --extra mcp, then
-# connect any MCP client to `daf-jev serve` over stdio.
-python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
-python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
+# MCP server full handshake needs the mcp extra (mcp>=1.2,<2 — already
+# carried by the `dev` extra, so `uv sync --extra dev` suffices; the
+# separate `mcp` extra only matters for a minimal env): connect any MCP
+# client to `daf-jev serve` over stdio.
+uv run python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
+uv run python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
 ```
