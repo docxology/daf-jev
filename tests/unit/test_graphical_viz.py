@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -131,6 +132,28 @@ def test_to_mermaid_hard_cuts_unbreakable_words() -> None:
     assert to_mermaid(net).splitlines()[1] == '    n["n<br/>' + "x" * 40 + '…"]'
 
 
+def test_to_mermaid_direction_kwarg() -> None:
+    """direction="LR" changes the header; an unknown direction fails closed."""
+    assert to_mermaid(_chain_net(), direction="LR").splitlines()[0] == "graph LR"
+    with pytest.raises(ValueError, match="direction"):
+        to_mermaid(_chain_net(), direction="XX")
+
+
+def test_to_mermaid_description_limit_kwarg() -> None:
+    """description_limit truncates sooner; a non-positive limit fails closed."""
+    net = BayesNet(
+        (Variable("n", "alpha beta gamma", ("a", "b")),),
+        (),
+        {},
+    )
+    assert to_mermaid(net).splitlines()[1] == '    n["n<br/>alpha beta gamma"]'
+    assert to_mermaid(net, description_limit=10).splitlines()[1] == (
+        '    n["n<br/>alpha beta…"]'
+    )
+    with pytest.raises(ValueError, match="description_limit"):
+        to_mermaid(net, description_limit=0)
+
+
 def test_plot_network_handles_empty_description(tmp_path: Path) -> None:
     """A variable with no description labels its node with the key alone."""
     matplotlib = pytest.importorskip("matplotlib")
@@ -163,6 +186,34 @@ def test_plot_network_writes_deterministic_png(tmp_path: Path) -> None:
     assert second.read_bytes() == first.read_bytes()
 
 
+def test_plot_network_figsize_and_dpi_kwargs(tmp_path: Path) -> None:
+    """figsize/dpi overrides render a valid PNG at the requested size."""
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+
+    path = plot_network(
+        _chain_net(), tmp_path / "network.png", figsize=(4.0, 3.0), dpi=72
+    )
+    assert path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_plot_network_rejects_bad_kwargs(tmp_path: Path) -> None:
+    """Non-positive dpi and a malformed figsize fail closed, writing nothing."""
+    with pytest.raises(ValueError, match="dpi"):
+        plot_network(_chain_net(), tmp_path / "bad.png", dpi=0)
+    bad_figsize: Any = (4,)
+    with pytest.raises(ValueError, match="figsize"):
+        plot_network(_chain_net(), tmp_path / "bad.png", figsize=bad_figsize)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_plot_network_rejects_empty_net(tmp_path: Path) -> None:
+    """An empty net fails closed before matplotlib and writes nothing."""
+    with pytest.raises(ValueError, match="empty Bayes net"):
+        plot_network(BayesNet((), (), {}), tmp_path / "empty.png")
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_plot_posterior_trajectory_png(tmp_path: Path) -> None:
     """Trajectory PNG writes; fail-closed on bad steps/labels/keys."""
     matplotlib = pytest.importorskip("matplotlib")
@@ -191,6 +242,29 @@ def test_plot_posterior_trajectory_png(tmp_path: Path) -> None:
         plot_posterior_trajectory(net, (), steps, tmp_path / "w.png")
     with pytest.raises(KeyError, match="nope"):
         plot_posterior_trajectory(net, ("nope",), steps, tmp_path / "z.png")
+
+
+def test_plot_posterior_trajectory_figsize_and_dpi_kwargs(tmp_path: Path) -> None:
+    """figsize/dpi overrides render a valid trajectory PNG."""
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+
+    path = plot_posterior_trajectory(
+        _chain_net(),
+        ("b",),
+        [{}, {"a": "true"}],
+        tmp_path / "trajectory.png",
+        figsize=(6.0, 3.0),
+        dpi=72,
+    )
+    assert path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_plot_posterior_trajectory_rejects_nonpositive_dpi(tmp_path: Path) -> None:
+    """Non-positive dpi fails closed before any figure, writing nothing."""
+    with pytest.raises(ValueError, match="dpi"):
+        plot_posterior_trajectory(_chain_net(), ("b",), [{}], tmp_path / "t.png", dpi=0)
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_plotters_without_matplotlib_name_figures_extra(

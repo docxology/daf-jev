@@ -70,7 +70,7 @@ def test_animate_posterior_gif_magic_and_frames(tmp_path: Path) -> None:
     """A valid GIF with magic bytes and one frame per evidence step."""
     path = animate_posterior(_chain_net(), QUERY_KEYS, STEPS, tmp_path / "post.gif")
     assert path.read_bytes()[:6].startswith(b"GIF8")
-    assert _gif_frames(path) >= len(STEPS)
+    assert _gif_frames(path) == len(STEPS)
 
 
 def test_animate_posterior_byte_determinism(tmp_path: Path) -> None:
@@ -135,7 +135,7 @@ def test_animate_network_gif_magic_and_frames(tmp_path: Path) -> None:
     """The network GIF carries magic bytes and one frame per step."""
     path = animate_network(_chain_net(), STEPS, tmp_path / "net.gif")
     assert path.read_bytes()[:6].startswith(b"GIF8")
-    assert _gif_frames(path) >= len(STEPS)
+    assert _gif_frames(path) == len(STEPS)
 
 
 def test_animate_network_byte_determinism(tmp_path: Path) -> None:
@@ -147,14 +147,31 @@ def test_animate_network_byte_determinism(tmp_path: Path) -> None:
 
 
 def test_animate_network_fail_closed(tmp_path: Path) -> None:
-    """Empty steps, unknown states, and bad fps fail with no file written."""
+    """Empty steps, unknown states, and bad fps/dpi fail with no file."""
     with pytest.raises(ValueError, match="evidence_steps"):
         animate_network(_chain_net(), [], tmp_path / "empty.gif")
     with pytest.raises(ValueError, match="unknown evidence state"):
         animate_network(_chain_net(), [{"a": "maybe"}], tmp_path / "state.gif")
     with pytest.raises(ValueError, match="fps"):
         animate_network(_chain_net(), STEPS, tmp_path / "fps.gif", fps=0)
+    with pytest.raises(ValueError, match="dpi"):
+        animate_network(_chain_net(), STEPS, tmp_path / "dpi.gif", dpi=0)
     assert list(tmp_path.iterdir()) == []
+
+
+def test_animate_network_empty_net_fails_closed(tmp_path: Path) -> None:
+    """An empty net (no variables) fails closed and writes no file."""
+    empty = BayesNet(variables=(), edges=(), cpts={})
+    with pytest.raises(ValueError, match="empty Bayes net"):
+        animate_network(empty, STEPS, tmp_path / "empty.gif")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_animate_network_explicit_dpi_smoke(tmp_path: Path) -> None:
+    """An explicit low dpi still yields a valid one-frame-per-step GIF."""
+    path = animate_network(_chain_net(), STEPS, tmp_path / "net.gif", dpi=72)
+    assert path.read_bytes()[:6].startswith(b"GIF8")
+    assert _gif_frames(path) == len(STEPS)
 
 
 def test_animators_without_matplotlib_name_figures_extra(
