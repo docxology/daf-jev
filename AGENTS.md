@@ -132,6 +132,9 @@ restate them here; there is no `../AGENTS.md` in this location.
     variable elimination, no numpy; zero-probability evidence —
     including the fully-observed case — raises), decision methods
     (`most_probable_explanation`, `sample`, `conditional_scenarios`),
+    plus public `decompose_single_parent` (joint-preserving aux-chain
+    decomposition; single-parent scoped to ORIGINAL nodes — the RxInfer
+    5.5.x multi-parent `DiscreteTransition` stall mitigation),
     and the `dafjev.bayesnet/1` GraphSpec JSON round-trip — a
     cross-repo contract with the GNN bridge (see invariants).
   - `graphical_elicitation.py` — `elicit_cpts` (every CPT row of a net
@@ -192,10 +195,12 @@ restate them here; there is no `../AGENTS.md` in this location.
   `network.png`, `posterior_trajectory.png`, `mermaid.txt`, and
   `receipts.json` (per-run provenance: provider/model, proposed edges,
   elicited CPTs, posterior trajectory); keyless SKIP.
-- `examples/` — eight runnable walkthroughs (`quickstart.py`,
+- `examples/` — twelve runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
   `gated_fallback.py`, `decider_loop.py`, `providers_example.py`,
-  `asia_bayes.py`) + `README.md`; each prints `SKIP: JEV_API_KEY not set`
+  `asia_bayes.py`, `decider_resilience.py`, `evaluate_async.py`,
+  `calibration_walkthrough.py`, `retry_policies.py`) + `README.md`; each
+  prints `SKIP: JEV_API_KEY not set`
   and exits 0 without a key (see invariants); `providers_example.py` makes
   no network call even with a key (injected transport); `asia_bayes.py`
   builds the Asia net from Jev factors (elicit + propose against the
@@ -218,10 +223,9 @@ restate them here; there is no `../AGENTS.md` in this location.
   the newer modules (evaluate, calibration, ledger, resilience, decider,
   questions, docs_verify, mcp_server, providers, graphical,
   graphical_elicitation, graphical_viz) and the figure/variables/experiment
-  scripts. The
-  manuscript-pipeline module internals (`figures.py`,
-  `manuscript_variables.py`) are the one remaining gap — the map above is
-  the detailed on-disk truth for those.
+  scripts, plus the manuscript-pipeline module internals (`figures.py`,
+  `manuscript_variables.py`) — the contract now documents both; the map
+  above remains the quick on-disk map for those.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
@@ -235,8 +239,8 @@ restate them here; there is no `../AGENTS.md` in this location.
   `_combined_manuscript.md`, the template-render combined manuscript
   (tracked in git, not gitignored; verified 2026-09-24).
 - `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
-  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
-  `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
+  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp,
+  mypy, types-PyYAML, ruff), `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
 
@@ -370,6 +374,12 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   hit recording; tests drive the real `HttpxTransport`/`JevClient` through
   it — including retry (429 once with `Retry-After: 0` then 200, assert 2
   hits), error mapping (401/422/529), and timeout (slow handler).
+  Carve-out: the rule bans patching daf-jev behavior. Relocating INPUTS
+  is not patching — point parameterized seams (e.g.
+  `docs_verify.verify_manifest(manifest_path=...)`,
+  `mcp_server._snapshot_summary(manifest_path=...)`) at fixture paths
+  instead of setattr-ing module globals; env-relocation monkeypatch
+  (setenv/delenv/chdir) remains sanctioned.
 - **Live marker.** `tests/live/test_live_api.py` carries
   `pytest.mark.live` + `pytest.mark.skipif(not os.environ.get("JEV_API_KEY"))`
   — the `live` marker is registered in `pyproject.toml`

@@ -72,14 +72,16 @@ deviation, choice degeneracy, runs/streak, order rotation, concurrent
 wobble, and the noul-vs-choice delta; see `benchmarks/README.md`), the
 provider-dispatch
 registry (`providers.py`), and the graphical-models stack
-(`graphical.py`, `graphical_elicitation.py`, `graphical_viz.py`,
+(`graphical.py` — incl. `decompose_single_parent`, the joint-preserving,
+single-parent-scoped mitigation for the RxInfer 5.5.x multi-parent stall;
+`graphical_elicitation.py`, `graphical_viz.py`,
 `scripts/bayes_experiment.py`) — plus the post-wave-A hardening semantics
 (client timeout/error mapping, strict wire parsing, compose validation,
-decider taxonomy). The remaining gap is the manuscript-pipeline module
-internals (`figures.py`, `manuscript_variables.py`), covered by the
-contract only through their script entry points; the root `AGENTS.md`
-module map stays the detailed on-disk truth for those, and the contract
-should be extended rather than contradicted. The Graphical models section
+decider taxonomy). The manuscript-pipeline module internals (`figures.py`,
+`manuscript_variables.py`) are now documented in the contract too
+(module-signature sections); the root `AGENTS.md` module map stays the
+quick on-disk map for those, and the contract should be extended rather
+than contradicted. The Graphical models section
 now carries the [end-to-end pipeline](ARCHITECTURE.md#end-to-end-pipeline) —
 the signature-exact two-repo command sequence and the five experiment
 artifacts.
@@ -153,9 +155,10 @@ code.
 
 ## examples/ — runnable walkthroughs
 
-`examples/` holds eight runnable scripts (quickstart, triage router,
+`examples/` holds twelve runnable scripts (quickstart, triage router,
 composite scoring, corpus evaluation, gated fallback, decider loop,
-providers example, Asia Bayes — see `examples/README.md`); each
+decider resilience, async evaluation, calibration walkthrough, retry
+policies, providers example, Asia Bayes — see `examples/README.md`); each
 prints `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves.
 
 ## calibration

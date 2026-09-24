@@ -36,18 +36,19 @@ never be committed, printed, or read by tests.
 
 ## Python API (`import daf_jev`)
 
-- **Builders** — `noul(instructions, *, true_desc=None, false_desc=None)`,
+- **Builders** (`daf_jev.primitives`) —
+  `noul(instructions, *, true_desc=None, false_desc=None)`,
   `choice(instructions, options: Mapping[str, str | None])`,
   `score(instructions, levels: Sequence[str])` (>= 2 levels);
   `QuestionSet()` with `.add(id, q)`, `.merge(other)`, `.to_wire()`.
-- **Clients** — `JevClient(api_key=None, *, base_url=None, model=None, ...)`
+- **Clients** (`daf_jev.client`) — `JevClient(api_key=None, *, base_url=None, model=None, ...)`
   (`model=None` resolves `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL`, then
   `jev-latest`), `.ask(state, questions, *, model=None, timeout=None,
   request_headers=None) -> SystemOneResponse` (answers by id; cached views
   `.nouls` / `.choices` / `.scores`; `.usage`; `.request_id`).
   `AsyncJevClient` has the same surface, async. Errors form a
   `TypeSafeError` hierarchy; 429/529 retry per `RetryPolicy`.
-- **Evaluation** — `Evaluator(client, questions, *, concurrency=...)`
+- **Evaluation** (`daf_jev.evaluate`) — `Evaluator(client, questions, *, concurrency=...)`
   `.evaluate(states) -> list[EvaluationRecord]`, `.summary()` for
   aggregates; `await .evaluate_async(items)` is the public async entry
   point for in-loop use (requires an `AsyncJevClient`; the async session
@@ -83,7 +84,7 @@ never be committed, printed, or read by tests.
   must be >= 0; `calibration_pairs()` accumulates `(declared confidence,
   gate-accepted)` pairs when the gate is a `ConfidenceGate` — a
   self-consistency proxy for `daf_jev.calibration`.
-- **Models** — `client.models(*, timeout=None, request_headers=None) ->
+- **Models** (`daf_jev.models`) — `client.models(*, timeout=None, request_headers=None) ->
   list[ModelCard]` (same per-call params as `ask`, retried per policy);
   `pick_model(cards, *, contains=None, prefer="latest")`.
 - **Calibration** (`daf_jev.calibration`, pure): `bucket_index(confidence,
@@ -139,14 +140,44 @@ never be committed, printed, or read by tests.
   render the same walkthrough as GIFs (PillowWriter; `pillow` in the
   `figures` extra); the runner's `--animate` flag writes
   `posterior_animation.gif` + `network_animation.gif`.
+  Keyword knobs: `to_mermaid` takes `direction` / `description_limit`;
+  `plot_network` / `plot_posterior_trajectory` take `dpi` / `figsize`
+  (the trajectory plotter also `labels`); `animate_network` /
+  `animate_posterior` take `fps` / `dpi` (the posterior animation also
+  `labels`); defaults unchanged.
+
+- **Questions** (`daf_jev.questions`) — `question_from_mapping(value, *,
+  context="question")` builds a `NoulQuestion` / `ChoiceQuestion` /
+  `ScoreQuestion` from a native `{type, instructions, criteria}` mapping
+  with strict validation; the CLI (`evaluate --questions-file`) and the
+  MCP server (`jev_ask` / `jev_evaluate`) route native mappings through it.
+- **Docs snapshot** (`daf_jev.docs_verify`) —
+  `verify_manifest(manifest_path)` re-hashes every page of the TypeSafe
+  docs-snapshot manifest (flags `missing` / `drifted` / `added`); routed
+  through `daf-jev docs-verify` and MCP `jev_docs_verify`.
+- **Figures** (`daf_jev.figures`, `figures` extra) — `generate_all()`
+  writes the 7 registry-named PNGs + `figure_registry.json` into the
+  figures directory; data-driven figures read the newest
+  `output/benchmarks/*.json` and raise `FileNotFoundError` (naming the
+  missing JSON) rather than fabricating data.
+- **Manuscript variables** (`daf_jev.manuscript_variables`) —
+  `generate_variables` / `save_variables` derive the 49 `{{TOKEN}}`
+  manuscript variables from pyproject, the docs MANIFEST, test counts,
+  benchmark JSONs, and `manuscript/config.yaml` knobs; zero hardcoded
+  results (strict default; `--allow-draft` for drafts).
+- **CLI + MCP server** (`daf_jev.cli`, `daf_jev.mcp_server`) — the
+  `daf-jev` console script (stdlib argparse, JSON to stdout, exit 0/1/2;
+  see the CLI section below) and the FastMCP server (`build_server` /
+  `main`, stdio only, JSON-safe tools, optional `mcp` extra).
 - **Config** — package-root re-exports `load_settings`, `resolve_retry`,
   `resolve_timeout`; the API-key/base-URL resolvers live in
   `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
-decider, provider dispatch, Asia Bayes net); each skips cleanly without
-a key.
+decider, decider resilience, async evaluation, calibration walkthrough,
+retry policies, provider dispatch, Asia Bayes net); each skips cleanly
+without a key.
 
 ## Jev to RxInfer.jl pipeline (quick reference)
 
@@ -211,7 +242,8 @@ Output is JSON; exit codes 0 ok / 1 runtime / 2 usage.
 
 ## Providers
 
-One wire contract (`POST /v1/systemone`), six registered providers;
+One wire contract (`POST /v1/systemone`), six registered providers in
+`daf_jev.providers`;
 `daf-jev providers` prints the registry as JSON (keyless):
 
 | key | backend | default base URL | default model | client key env |
