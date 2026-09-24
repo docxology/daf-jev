@@ -34,6 +34,7 @@ __all__ = [
     "BayesNet",
     "Edge",
     "Variable",
+    "decompose_single_parent",
 ]
 
 GRAPH_SPEC_FORMAT = "dafjev.bayesnet/1"
@@ -728,6 +729,152 @@ class BayesNet:
                 "the posterior is undefined"
             )
         return tuple(value / total for value in unnormalized)
+
+
+def decompose_single_parent(net: BayesNet) -> BayesNet:
+    """Return a copy of ``net`` in which every original variable has at most
+    one parent.
+
+    Each multi-parent CPT ``P(X | B1, ..., Bk)`` (``k >= 2``) is replaced
+    by a deterministic chain of auxiliary variables: ``A_1`` is
+    conditioned on ``(B1,)``, each ``A_i`` (``i >= 2``) on
+    ``(A_{i-1}, B_i)``, and ``X`` on ``(A_k,)``; the original ``B_i ->
+    X`` edges are removed. ``A_i``'s states enumerate every index tuple
+    of the first ``i`` parents' states as ``",".join(str(index))``
+    strings (``"0"``, ``"0,0"``, ``"0,1"``, ...) in
+    :func:`itertools.product` order, and every auxiliary CPT row is an
+    exact point mass, so ``X``'s rewritten CPT carries the original row
+    probabilities re-indexed by the joint parent state. Auxiliary keys
+    are ``f"{X}__aux{i}"`` (``_2``, ``_3``, ... appended until a name is
+    free). Original variables keep their declaration order and states;
+    auxiliaries are appended in creation order, multi-parent children
+    processed in :meth:`topological_order` order.
+
+    The joint distribution over the ORIGINAL variables is preserved
+    exactly: the auxiliaries are deterministic, so summing them out
+    recovers the original factorization — posteriors and queries over
+    original variables (including under evidence on any original
+    variable) are unchanged, and every original variable ends with at
+    most one parent. Auxiliaries ``A_i`` with ``i >= 2`` intentionally
+    carry TWO deterministic parents: folding the accumulated joint state
+    with the next parent stream is the minimal joint-preserving merge —
+    a strictly single-parent net cannot merge ``k >= 2`` stochastic
+    streams. Auxiliary marginals are deterministic bookkeeping, NOT
+    elicited beliefs. The transform is NOT a fixed point: re-applying
+    it decomposes the auxiliary chains — harmless, pointless,
+    documented.
+
+    Motivation: the RxInfer 5.5.x multi-parent ``DiscreteTransition``
+    stall in the GNN rxinfer_bridge pipeline — single-parent nets run
+    end-to-end with exact posteriors on RxInfer 5.5.0/5.5.2, while
+    multi-parent ``DiscreteTransition`` nodes stall VMP (an upstream
+    ReactiveMP limitation; see the AGENTS.md cross-repo pipeline and
+    the ARCHITECTURE.md Verified gap matrix). Feeding the returned net
+    to such a bridge sidesteps the stall; a bridge can alternatively
+    lower the degenerate deterministic auxiliary CPTs outside the
+    graphical model.
+
+    Raises ``TypeError`` for a non-:class:`BayesNet` argument. Runs
+    :meth:`validate` first (``ValueError`` names the offender — fail
+    closed) and validates the returned net; cyclic input propagates
+    ``ValueError`` from :meth:`topological_order` (:meth:`validate`
+    does not check acyclicity). A net with no multi-parent nodes
+    returns an equivalent copy (fresh ``cpts`` dict, same
+    variables/edges tuples); the input is never mutated.
+    """
+    if not isinstance(net, BayesNet):
+        raise TypeError(f"net must be a BayesNet, got {type(net).__name__}")
+    net.validate()
+    order = net.topological_order()
+    variables: list[Variable] = list(net.variables)
+    edges: list[Edge] = list(net.edges)
+    cpts: dict[str, CPT] = dict(net.cpts)
+    taken: set[str] = {var.key for var in net.variables}
+    for key in order:
+        parents = net.parents_of(key)
+        if len(parents) < 2:
+            continue
+        states_of = {parent: net.variable(parent).states for parent in parents}
+        original_table: dict[tuple[str, ...], tuple[float, ...]] = dict(
+            net.cpts[key].table
+        )
+        aux_keys: list[str] = []
+        aux_states: list[tuple[str, ...]] = []
+        for index in range(1, len(parents) + 1):
+            base = f"{key}__aux{index}"
+            aux_key = base
+            suffix = 2
+            while aux_key in taken:
+                aux_key = f"{base}_{suffix}"
+                suffix += 1
+            taken.add(aux_key)
+            aux_keys.append(aux_key)
+            scope = parents[:index]
+            states = tuple(
+                ",".join(str(position) for position in indices)
+                for indices in itertools.product(
+                    *(range(len(states_of[name])) for name in scope)
+                )
+            )
+            aux_states.append(states)
+            description = (
+                f"deterministic joint state of ({', '.join(scope)}) for {key}"
+            )
+            variables.append(Variable(aux_key, description, states))
+        first = parents[0]
+        rows: list[tuple[tuple[str, ...], tuple[float, ...]]] = []
+        for position, state in enumerate(states_of[first]):
+            rows.append(
+                (
+                    (state,),
+                    tuple(
+                        1.0 if other == position else 0.0
+                        for other in range(len(aux_states[0]))
+                    ),
+                )
+            )
+        cpts[aux_keys[0]] = CPT(aux_keys[0], (first,), tuple(rows))
+        for index in range(2, len(parents) + 1):
+            previous, parent = aux_keys[index - 2], parents[index - 1]
+            previous_states = aux_states[index - 2]
+            current_states = aux_states[index - 1]
+            rows = []
+            for prefix in previous_states:
+                for spot, label in enumerate(states_of[parent]):
+                    target = f"{prefix},{spot}"
+                    probabilities = tuple(
+                        1.0 if candidate == target else 0.0
+                        for candidate in current_states
+                    )
+                    rows.append(((prefix, label), probabilities))
+            cpts[aux_keys[index - 1]] = CPT(
+                aux_keys[index - 1], (previous, parent), tuple(rows)
+            )
+        last = aux_keys[-1]
+        rows = []
+        for indices in itertools.product(
+            *(range(len(states_of[name])) for name in parents)
+        ):
+            assignment = tuple(
+                states_of[name][position]
+                for name, position in zip(parents, indices, strict=True)
+            )
+            joint = ",".join(str(position) for position in indices)
+            rows.append(((joint,), original_table[assignment]))
+        cpts[key] = CPT(key, (last,), tuple(rows))
+        removed = {(parent, key) for parent in parents}
+        edges = [
+            edge for edge in edges if (edge.parent, edge.child) not in removed
+        ]
+        chain: list[Edge] = [Edge(first, aux_keys[0])]
+        for index in range(2, len(parents) + 1):
+            chain.append(Edge(aux_keys[index - 2], aux_keys[index - 1]))
+            chain.append(Edge(parents[index - 1], aux_keys[index - 1]))
+        chain.append(Edge(last, key))
+        edges.extend(chain)
+    result = BayesNet(tuple(variables), tuple(edges), cpts)
+    result.validate()
+    return result
 
 
 def _factor_reduce(factor: _Factor, evidence: Mapping[str, str]) -> _Factor:
