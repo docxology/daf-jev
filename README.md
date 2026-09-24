@@ -786,7 +786,7 @@ The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
 ## Tests and benchmarks
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra figures   # figures extra ships matplotlib/pillow — graphical animation tests importorskip silently without it
 uv run pytest tests/unit --cov=src          # unit tests — counts live in output/data/manuscript_variables.json (refresh: uv run python scripts/z_generate_manuscript_variables.py); coverage gate >= 90%
 JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
 ```
