@@ -19,7 +19,7 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 - **Manuscript variables.** All dynamic values reach the prose as double-brace token placeholders, computed by `src/daf_jev/manuscript_variables.py::generate_variables(project_root)` and written to `output/data/manuscript_variables.json` by the thin orchestrator `scripts/z_generate_manuscript_variables.py`, which then renders substituted copies of every section into `output/manuscript/`. Running in strict mode fails if analysis outputs are missing; the `--allow-draft` flag substitutes draft sentinels instead of failing, for early-stage renders only.
 
-- **Documentation snapshot.** The bundled snapshot of the TypeSafe documentation comprises 108 pages (1014.8 KiB) under `docs/reference/`, scraped on 2026-09-16 and identified as snapshot b79c9cd6008489f1. The manifest records a content hash per page plus the snapshot identifier; drift is detectable at any time with:
+- **Documentation snapshot.** The bundled snapshot of the TypeSafe documentation comprises 111 pages (1.1 MiB) under `docs/reference/`, scraped on 2026-09-24 and identified as snapshot 708902db9820d9d8. The manifest records a content hash per page plus the snapshot identifier; drift is detectable at any time with:
 
   ```bash
   uv run daf-jev docs-verify                 # re-hash the tree, exit non-zero on drift
@@ -28,7 +28,7 @@ Every artifact behind this manuscript — figures, tables, token values, and the
 
 ## Test suite and coverage
 
-The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 30 test files — 703 unit tests and 2 live tests — collected with:
+The test suite follows the no-mock convention: unit tests drive the real transport against a real local HTTP server fixture, and live tests hit the real API only when a key is present in the environment (they skip with a notice otherwise). The suite comprises 30 test files — 704 unit tests and 2 live tests — collected with:
 
 ```bash
 uv run pytest tests/unit --cov=src     # unit suite under the coverage gate
@@ -39,4 +39,4 @@ Measured coverage over the package source stands at 93.88, enforced by the cover
 
 ## Provenance chain
 
-The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.4, and the rendered edition is version 0.6.0 of this manuscript, generated at 2026-09-24T21:29:57Z.
+The certification chain is: benchmark scripts write dated JSON payloads → figure generators read those payloads and render `output/figures/*.png` → the variable generator reads the same payloads plus `manuscript/config.yaml`, `pyproject.toml`, the test suite, and the docs manifest to compute the token mapping → the injection step substitutes tokens into `output/manuscript/*.md` → the renderer consumes the substituted copies. No numeric fact in this paper has a hand-maintained copy; the environment of record is `macOS-26.6.2-arm64-arm-64bit-Mach-O` under 3.14.4, and the rendered edition is version 0.6.0 of this manuscript, generated at 2026-09-24T22:58:13Z.
