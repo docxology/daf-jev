@@ -55,7 +55,6 @@ _NODE_FACE = "#EAF2FA"
 _TEXT_COLOR = "#222222"
 _ARROW_CURVATURE = 0.08
 _GROUP_WIDTH = 0.8
-_DEFAULT_DPI = 110
 
 
 def _pyplot() -> Any:
@@ -148,6 +147,8 @@ def _layered_layout(
     Returns the positions plus the layout's width and height in data
     units.
     """
+    if not net.variables:
+        raise ValueError("cannot animate an empty Bayes net: no variables")
     level: dict[str, int] = {}
     for key in net.topological_order():
         parents = net.parents_of(key)
@@ -292,6 +293,7 @@ def animate_network(
     path: str | Path,
     *,
     fps: float = 1,
+    dpi: int = 110,
 ) -> Path:
     """Write a GIF of the DAG with node fills set to ``P(true)`` per
     evidence step and return the path.
@@ -305,14 +307,18 @@ def animate_network(
     (``priors`` when the first step is empty). One ``net.posterior`` per
     step, computed before any figure exists. Same lazy-import and
     fail-closed-before-figure rules as :func:`animate_posterior` (no
-    query keys or labels here): empty steps, unknown/zero-probability
-    evidence, or non-positive fps raise ValueError and write no file.
+    query keys or labels here): an empty net (no variables), empty
+    steps, unknown/zero-probability evidence, or non-positive fps/dpi
+    raise ValueError and write no file.
     Deterministic: identical inputs give byte-identical GIFs.
     """
     steps_list: list[Mapping[str, str]] = _checked_steps(
         evidence_steps, "evidence_steps", "evidence mapping"
     )
     _checked_positive(fps, "fps")
+    _checked_positive(dpi, "dpi")
+    if not net.variables:
+        raise ValueError("cannot animate an empty Bayes net: no variables")
     posteriors = [net.posterior(dict(step)) for step in steps_list]
     positions, width, height = _layered_layout(net)
 
@@ -374,6 +380,6 @@ def animate_network(
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    _save_gif(fig, _update, target, frames=len(steps_list), fps=fps, dpi=_DEFAULT_DPI)
+    _save_gif(fig, _update, target, frames=len(steps_list), fps=fps, dpi=dpi)
     plt.close(fig)
     return target

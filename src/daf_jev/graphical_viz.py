@@ -23,6 +23,7 @@ output's parent directory when missing); no global state.
 
 from __future__ import annotations
 
+import math
 import textwrap
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -41,6 +42,7 @@ __all__ = ["plot_network", "plot_posterior_trajectory", "to_mermaid"]
 # stripped from the label text so nothing but the ``<br/>`` separators can
 # interact with mermaid's HTML labels.
 _MERMAID_DESCRIPTION_LIMIT = 40
+_MERMAID_DIRECTIONS = ("TD", "TB", "BT", "RL", "LR")
 _UNSAFE_LABEL_CHARS = str.maketrans("", "", '<>"')
 
 # Shared plot style (mirrors src/daf_jev/figures.py).
@@ -61,6 +63,22 @@ _FIGURES_EXTRA_HINT = (
 )
 
 
+def _checked_dpi(dpi: int) -> None:
+    """Fail closed on non-positive dpi before any figure is drawn."""
+    if dpi <= 0:
+        raise ValueError(f"dpi must be > 0, got {dpi!r}")
+
+
+def _checked_figsize(figsize: tuple[float, float] | None) -> None:
+    """Fail closed on a malformed figsize; ``None`` keeps the default size."""
+    if figsize is None:
+        return
+    if len(figsize) != 2:
+        raise ValueError("figsize must be a (width, height) pair")
+    if not all(math.isfinite(value) and value > 0 for value in figsize):
+        raise ValueError("figsize values must be finite and > 0")
+
+
 def _node_id(key: str) -> str:
     """Mermaid node id: the key with [<>"] stripped (never truncated)."""
     return key.translate(_UNSAFE_LABEL_CHARS)
@@ -78,7 +96,12 @@ def _truncate(text: str, limit: int) -> str:
     return flat[:limit].rstrip() + "…"
 
 
-def to_mermaid(net: BayesNet) -> str:
+def to_mermaid(
+    net: BayesNet,
+    *,
+    direction: str = "TD",
+    description_limit: int = _MERMAID_DESCRIPTION_LIMIT,
+) -> str:
     """Render ``net`` as a mermaid ``graph TD`` source string.
 
     One node per variable — ``key["key<br/>short description"]`` with the
@@ -87,11 +110,22 @@ def to_mermaid(net: BayesNet) -> str:
     interacts with mermaid's HTML labels — and one ``parent --> child``
     line per edge. Node and edge order follow ``net.variables`` /
     ``net.edges`` (deterministic: identical input gives identical output).
+    Keyword-only options: ``direction`` is the mermaid flow direction
+    (one of ``TD``, ``TB``, ``BT``, ``RL``, ``LR``; default ``TD``) and
+    ``description_limit`` bounds each node description (default 40);
+    both fail closed before any line is built.
     """
-    lines = ["graph TD"]
+    if direction not in _MERMAID_DIRECTIONS:
+        allowed = ", ".join(repr(value) for value in _MERMAID_DIRECTIONS)
+        raise ValueError(f"direction must be one of {allowed}, got {direction!r}")
+    if description_limit < 1:
+        raise ValueError(f"description_limit must be >= 1, got {description_limit!r}")
+    lines = [f"graph {direction}"]
     for var in net.variables:
         key = _node_id(var.key)
-        description = _truncate(var.description.translate(_UNSAFE_LABEL_CHARS), _MERMAID_DESCRIPTION_LIMIT)
+        description = _truncate(
+            var.description.translate(_UNSAFE_LABEL_CHARS), description_limit
+        )
         lines.append(f'    {key}["{key}<br/>{description}"]')
     for edge in net.edges:
         lines.append(f"    {_node_id(edge.parent)} --> {_node_id(edge.child)}")
@@ -128,7 +162,13 @@ def _node_label(var: Variable) -> str:
     return "\n".join([var.key, *wrapped])
 
 
-def plot_network(net: BayesNet, path: str | Path) -> Path:
+def plot_network(
+    net: BayesNet,
+    path: str | Path,
+    *,
+    dpi: int = _DPI,
+    figsize: tuple[float, float] | None = None,
+) -> Path:
     """Write a layered PNG of ``net``'s DAG and return the path.
 
     Layout is deterministic: topological generations (longest-path levels
@@ -139,8 +179,16 @@ def plot_network(net: BayesNet, path: str | Path) -> Path:
     description truncated to two lines. No title is drawn (the caller
     adds one). matplotlib imports lazily — ImportError names the
     ``figures`` extra — and the output's parent directory is created when
-    missing.
+    missing. Keyword-only options: ``dpi`` sets the saved figure's pixel
+    density and ``figsize`` overrides the computed figure size in inches
+    verbatim (``None`` keeps the layered default). Fails closed before
+    any file is written: an empty net, a non-positive ``dpi``, or a
+    malformed ``figsize`` raise ``ValueError``.
     """
+    if not net.variables:
+        raise ValueError("cannot plot an empty Bayes net: no variables")
+    _checked_dpi(dpi)
+    _checked_figsize(figsize)
     plt = _pyplot()
     from matplotlib.patches import FancyArrowPatch
 
@@ -169,7 +217,10 @@ def plot_network(net: BayesNet, path: str | Path) -> Path:
         max(len(members) for members in generations.values()) - 1
     ) * _NODE_SPACING_X
     height = (len(rows) - 1) * _NODE_SPACING_Y
-    fig, ax = plt.subplots(figsize=(max(6.0, width + 3.0), max(3.5, height + 2.5)))
+    fig_size = figsize if figsize is not None else (
+        max(6.0, width + 3.0), max(3.5, height + 2.5)
+    )
+    fig, ax = plt.subplots(figsize=fig_size)
 
     for edge in net.edges:  # arrows first: node boxes paint over the ends
         x0, y0 = positions[edge.parent]
@@ -211,7 +262,7 @@ def plot_network(net: BayesNet, path: str | Path) -> Path:
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(target, dpi=_DPI, bbox_inches="tight")
+    fig.savefig(target, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     return target
 
@@ -223,6 +274,8 @@ def plot_posterior_trajectory(
     path: str | Path,
     *,
     labels: Sequence[str] | None = None,
+    dpi: int = _DPI,
+    figsize: tuple[float, float] | None = None,
 ) -> Path:
     """Write one grouped bar chart of the posterior trajectory to ``path``.
 
@@ -236,7 +289,9 @@ def plot_posterior_trajectory(
     colors follow the default matplotlib cycle. Deterministic. Fail
     closed before any figure is drawn: empty ``steps`` or ``query_keys``,
     a label-count mismatch, unknown query keys (``KeyError`` naming the
-    key), or invalid evidence (``ValueError`` from ``posterior``).
+    key), invalid evidence (``ValueError`` from ``posterior``), or a
+    non-positive ``dpi`` / a malformed ``figsize``. ``figsize=None``
+    keeps the ``(7.5, 4.2)`` default size.
     """
     steps_list = list(steps)
     keys = list(query_keys)
@@ -248,6 +303,8 @@ def plot_posterior_trajectory(
         raise ValueError(
             f"labels has {len(labels)} entries for {len(steps_list)} steps"
         )
+    _checked_dpi(dpi)
+    _checked_figsize(figsize)
     step_labels = (
         [str(label) for label in labels]
         if labels is not None
@@ -262,7 +319,8 @@ def plot_posterior_trajectory(
     ]
 
     plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(7.5, 4.2))
+    fig_size = figsize if figsize is not None else (7.5, 4.2)
+    fig, ax = plt.subplots(figsize=fig_size)
     group_width = 0.8
     bar_width = group_width / len(keys)
     for index, key in enumerate(keys):
@@ -281,6 +339,6 @@ def plot_posterior_trajectory(
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(target, dpi=_DPI, bbox_inches="tight")
+    fig.savefig(target, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     return target

@@ -396,14 +396,20 @@ wire path is silently coerced.
   unrecognized llms.txt lines are skipped with a stderr warning.
 - `scripts/generate_figures.py` — thin orchestrator over `figures.py` (needs
   the `figures` extra): renders the registry (or `--only NAME`, exit 2 on an
-  unknown name) and ALWAYS writes `figure_registry.json` — `--only` runs
-  included — because template validation requires it; exit 1 on unexpected
-  error (missing benchmark data names the file), 0 on success.
+  unknown name), ALWAYS writes `figure_registry.json` — `--only` runs
+  included — because template validation requires it, and always writes the
+  sibling `architecture.mmd` (byte-deterministic mermaid source emitted by
+  the pure `figures.architecture_mermaid()`; deliberately NOT a registry
+  entry); exit 1 on unexpected error (missing benchmark data names the
+  file), 0 on success.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`: writes `output/data/manuscript_variables.json`
   and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
-  exits 1 with a `FileNotFoundError` naming the missing analysis output rather
-  than fabricating values; `--allow-draft` emits `N/A` sentinels instead.
+  exits 1 with a `FileNotFoundError` naming the missing analysis output —
+  manuscript config, docs snapshot manifest, benchmark JSONs, or
+  `output/figures/figure_registry.json` (the `FIGURES` token derives from
+  that registry, never a raw PNG glob) — rather than fabricating values;
+  `--allow-draft` emits `N/A` sentinels instead.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
   `graphical_elicitation` (+ `graphical_viz` for the rendered artifacts):
   CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
@@ -455,11 +461,12 @@ wire path is silently coerced.
   take any object with `.ask(state, questions)`. Full contract in the
   Graphical models section below.
 - `graphical_viz.py` — rendering over the public `BayesNet` API:
-  `to_mermaid` (zero-dependency mermaid `graph TD` source), `plot_network`
-  (deterministic layered PNG; matplotlib imported inside the function),
-  and `plot_posterior_trajectory` (grouped P(true) bars over cumulative
-  evidence steps). Full contract in the Visualization part of the
-  Graphical models section below.
+  `to_mermaid` (zero-dependency mermaid source; `direction="TD"` and
+  `description_limit=40` kwargs), `plot_network` (deterministic layered
+  PNG; matplotlib imported inside the function; `dpi=200`/`figsize=None`
+  kwargs), and `plot_posterior_trajectory` (grouped P(true) bars over
+  cumulative evidence steps; `dpi`/`figsize` kwargs). Full contract in the
+  Visualization part of the Graphical models section below.
 
 ## Provider dispatch
 
@@ -699,28 +706,39 @@ Visualization (`src/daf_jev/graphical_viz.py` — pure over the public
 `BayesNet` API; the only I/O is the file write the caller asks for, plus
 creating the output's parent directory when missing):
 
-- `to_mermaid(net: BayesNet) -> str` — zero-dependency mermaid `graph TD`
-  source: one node per variable (`key["key<br/>description"]`, the
-  description truncated to ~40 chars at a word boundary and `[<>"]`
-  stripped from the label text), one `parent --> child` line per edge;
-  deterministic node/edge order = `BayesNet.variables` / `.edges` order.
-- `plot_network(net: BayesNet, path: str | Path) -> Path` — matplotlib PNG
+- `to_mermaid(net: BayesNet, *, direction: str = "TD",
+  description_limit: int = 40) -> str` — zero-dependency mermaid source
+  with header `graph {direction}`: one node per variable
+  (`key["key<br/>description"]`, the description truncated to
+  `description_limit` chars at a word boundary and `[<>"]` stripped from
+  the label text), one `parent --> child` line per edge; deterministic
+  node/edge order = `BayesNet.variables` / `.edges` order. Fail closed:
+  `direction` must be one of TD/TB/BT/RL/LR and `description_limit` >= 1
+  (`ValueError` otherwise).
+- `plot_network(net: BayesNet, path: str | Path, *, dpi: int = 200,
+  figsize: tuple[float, float] | None = None) -> Path` — matplotlib PNG
   (import inside the function; the ImportError names the `figures` extra:
   `uv sync --extra figures`). Layered layout: topological generations
   top-to-bottom, deterministic coordinates within a generation by
   variable index; FancyArrowPatch parent->child arcs with slight
   curvature; node boxes labeled key (+ description truncated to two
-  lines); no title by default (the caller adds one).
+  lines); no title by default (the caller adds one). An empty net raises
+  `ValueError` before any figure; `dpi` must be > 0 and `figsize`, when
+  given, a (width, height) pair of positive finite numbers — both
+  validated fail-closed (`figsize=None` keeps the computed default size).
 - `plot_posterior_trajectory(net: BayesNet, query_keys: Sequence[str],
   steps: Sequence[Mapping[str, str]], path: str | Path, *,
-  labels: Sequence[str] | None = None) -> Path` — one grouped bar chart:
-  x = step index (labels, default the index as a string), one bar per
-  query variable showing P(state=true), where "true" is the LAST state of
-  the variable's states tuple (binary convention) and values come from
-  `net.posterior(evidence)` per step; legend = query keys; default
-  matplotlib color cycle. Fail closed before any figure is drawn: empty
+  labels: Sequence[str] | None = None, dpi: int = 200,
+  figsize: tuple[float, float] | None = None) -> Path` — one grouped bar
+  chart: x = step index (labels, default the index as a string), one bar
+  per query variable showing P(state=true), where "true" is the LAST
+  state of the variable's states tuple (binary convention) and values
+  come from `net.posterior(evidence)` per step; legend = query keys;
+  default matplotlib color cycle; `figsize=None` keeps the fixed default
+  size. Fail closed before any figure is drawn: empty
   `steps`/`query_keys`, a label-count mismatch, unknown query keys
-  (`KeyError` naming the key), invalid evidence (`ValueError`).
+  (`KeyError` naming the key), invalid evidence (`ValueError`), a
+  non-positive `dpi`, or a malformed `figsize`.
 
 Experiment runner (`scripts/bayes_experiment.py` — thin orchestrator; ALL
 logic lives in src):

@@ -6,7 +6,7 @@ Reads project metadata and analysis outputs:
 - ``manuscript/config.yaml``            — paper metadata and experiment params
 - ``docs/reference/MANIFEST.json``      — docs snapshot stats
 - ``output/benchmarks/{batching,patterns}_*.json`` — benchmark results
-- ``output/figures/*.png``              — rendered figure registry
+- ``output/figures/figure_registry.json`` — figure registry
 - ``pytest --collect-only``             — per-directory test counts
 - ``.coverage`` (coverage python API)   — coverage percent
 
@@ -45,6 +45,9 @@ __all__ = ["generate_variables", "save_variables"]
 _SRC_PACKAGE = Path("src") / "daf_jev"
 _BENCH_DIR = Path("output") / "benchmarks"
 _FIGURES_DIR = Path("output") / "figures"
+# Mirrors daf_jev.figures.FIGURE_REGISTRY_FILENAME; NOT imported because
+# figures.py pulls matplotlib in at module import.
+_FIGURE_REGISTRY = _FIGURES_DIR / "figure_registry.json"
 _MANIFEST_PATH = Path("docs") / "reference" / "MANIFEST.json"
 _CONFIG_PATH = Path("manuscript") / "config.yaml"
 _COVERAGE_PATH = Path(".coverage")
@@ -131,6 +134,20 @@ def _load_manifest(project_root: Path, *, strict: bool) -> dict[str, Any]:
     ):
         return {}
     with manifest_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_figure_registry(project_root: Path, *, strict: bool) -> dict[str, Any]:
+    registry_path = project_root / _FIGURE_REGISTRY
+    if not _require(
+        registry_path.is_file(),
+        "figure registry",
+        registry_path,
+        "Run scripts/generate_figures.py first.",
+        strict=strict,
+    ):
+        return {}
+    with registry_path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -269,8 +286,8 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
             ``manuscript/``, ``output/``, ``src/daf_jev``, ``tests/``).
         require_analysis_outputs: When True (pipeline mode), missing
             analysis outputs (manuscript config, docs manifest, benchmark
-            JSONs) raise :class:`FileNotFoundError`. When False (draft
-            mode, ``--allow-draft``), those become ``"N/A"``. Test counts
+            JSONs, figure registry) raise :class:`FileNotFoundError`. When
+            False (draft mode, ``--allow-draft``), those become ``"N/A"``. Test counts
             and coverage degrade to ``"N/A"`` on unavailability in both
             modes.
 
@@ -394,10 +411,14 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["PLATFORM"] = platform.platform()
     variables["PYTHON_VERSION"] = platform.python_version()
 
-    # ---- Figure registry (output/figures/*.png) ----
-    figures_dir = project_root / _FIGURES_DIR
-    figures = sorted(p.name for p in figures_dir.glob("*.png")) if figures_dir.is_dir() else []
-    variables["FIGURES"] = ", ".join(figures)
+    # ---- Figure registry (output/figures/figure_registry.json) ----
+    registry = _load_figure_registry(project_root, strict=strict)
+    filenames = []
+    for label, entry in registry.items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("filename"), str):
+            raise ValueError(f"figure registry entry {label!r} has no filename string")
+        filenames.append(entry["filename"])
+    variables["FIGURES"] = ", ".join(sorted(filenames)) if registry else _NA
 
     return variables
 
