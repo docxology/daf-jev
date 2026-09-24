@@ -49,7 +49,7 @@ you add is a spec that says in plain words what each argument means. By the end 
 ## Setup
 
 ```bash theme={null}
-pip install ipython polars matplotlib numpy "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install ipython polars matplotlib numpy 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 Set `TYPESAFE_API_KEY`. Two modules sit beside this file. `trader.py` holds the ten

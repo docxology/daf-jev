@@ -4,7 +4,7 @@
 
 # Guardrails for LLMs
 
-> Screen every message going into and out of an LLM app with one TypeSafe request, describing possible hazards ('is this a jailbreak attempt?') and scoring severity ('how much harm would complying do?'). Threshold the probabilities it hands back and you decide whether to pass, review, block, or route a message to support.
+> Screen every message going into and out of an LLM app with one TypeSafe request, thresholding hazard probabilities and severity to pass, review, block, or route.
 
 Labs teach most LLMs to refuse a set of unsafe requests, but each lab draws that line
 somewhere else, and each new version of a model moves it again. You probably want it
@@ -25,7 +25,7 @@ gets blocked, or routes to support.
 Run this TypeSafe check both on LLM inputs, and on LLM outputs, because even
 ordinary-looking prompts can lead to harmful generated replies.
 
-```mermaid theme={null}
+```mermaid actions={true} theme={null}
   %%{init: {"flowchart": {"rankSpacing": 55, "wrappingWidth": 320}}}%%
 flowchart LR
     PIN["a user message<br/><i>on the way in</i>"] --> G
@@ -53,7 +53,7 @@ edit it in two places: the dict of hazard questions, and the two named routing p
 ## Setup
 
 ```bash theme={null}
-pip install ipython "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install ipython 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 then set `TYPESAFE_API_KEY`. Every API call is cached in `json_cache.json`, which ships
@@ -211,8 +211,7 @@ BATTERIES = {"input": INPUT_BATTERY, "output": OUTPUT_BATTERY}
 ## Turn the assessment into a decision
 
 TypeSafe supplies the assessment; your application owns the decision. Each `Noul`
-question is
-compared against two thresholds:
+question is compared against two thresholds:
 
 * at or above the **action threshold**, the hazard triggers its configured action;
 * at or above the lower **review threshold**, the message goes to a human;
@@ -461,4 +460,4 @@ playground_link = make_playground_link(PROMPTS["dan"], INPUT_BATTERY, models=[TY
 display(Markdown(f"🔗 [Open the prompt + guardrail questions in the TypeSafe playground]({playground_link})"))
 ```
 
-<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIAEgJb5QAWAhigOIAKaAdPgJoQz5UBOC+A5hBJJ++FBHwAHXimRgxEgEZ8AIgEEAcvgDuFEpXwBnFFSRhD+AGYRu+ADrgJpgJ4o9I-EgjaHLdRoAaLgs3PiQqRCMYfn4EY0MgqFN8SC4kV3dRL20WNAoEZ3xqADc+RW4IAGtkK14+CEsxfLFnSX0qABtyCCRLYTj8Bvw1AEk0+VSvFCKqUoUuRRIwMsLQ-G4YDoHDBGnrW1C4FgAxG3wsCMktoP9yZNkOrsjdGhSaPlN5FBJIkmmSQx+TR3JBcDqGCTSXZyeZUKBQOIhZrCWTcJC7IJQnaofDCfZwGgkHpNV7UCxTfDKGqlbgkPoIMBBT4pJzpNzCURuV42Ej8YSdcjUOiMEGeCDTSAsNQWW5edGDRrODi2XiGSQ9HYWQwUDgdeR4mxwfCRLnTJWcJJIADkEokEMQ7I8yiSMB2+FulvsjjSGQ5Yp8IBYAGkEAhJPgYOG1nDpkNblQLNoEI9gvhzSCWCNjmmOFxeJTeFRKn7KDwYwhbGNtCQU1szbnKtlKYVDFRnH6HABlEyFYSCstQVEAQgcTLMOc42t18igNl4g4ntnKCCLCv73HL3CYdiQO4A6vlQWME5UJ1x8ABHGBxb7E0yGJO2BOU8UUd3A5kMND4DokaqU5NvFwHcdy-AgAG08jCQ0BQAYSFL91jidUkB2ABdECkH8CCoJ0Nt3y0bRpyQtUejAND8APV4ASaPgwHecYxB+BAAH4QCCEBpAgOBJBQQwMGwPBCGABwACsqBrZciwcAgRJAFBWgQGSvS8TZRy9YRjA2QciVQ5SHBUCABnZCxEEMVtYjEbhVgkWJpmjcyARMHFxFxfgvF4IIIBpWlli8lUEFKAU-gsTSUG029UP8+YKi2ABaK58OfZJRh0P43y8dZNjiFj1IcKBaVREgqGUuTwuvfSQBGezaWMpRWgTCwziwdU3QcwwnNMFArVC1Dyp0jVBlsVtLF2QoNi2QE8pASxOh2SrqtxCxkhsMB+WspCrxvElplVSQEEHJEPkc4wup6sVuAJLpFA4MweBIOJtxAABfZ6ggcahLssTYAH1eC24xSocBT9sq1SOmmsKIt0wxKsM4y9FMxEqEsk8rDOfIOnDF0Oo8SQKGcDqki6T6jVc-aICuBBov2Ipk3DKTiw8NYOiobRcvYr0Cr+CtiqB+SNiUoSHEWnYEEqZaTuchE0rcKQCaJgVSaG3FHgQfgBRjEhij+Zwnvema5qFggRdtAYKTF09MfDas5eVs4ay2DWui1nWFKe16DcQNbiZ+qgwB1hF+ZB42VN1SG+uhjU4aMpEaLMizjtPWmqBSYr3IgDqEnPNUDrpfQUg2URIET6LU-ClcUEQHFligAFdKCZQlXHWJ0Q3EmVw6OWDUuwkeg5g3uaKkqhLKwWFumE8juCLPnPsiQCX-VP9u4CFwieBl2i6Wv656fWvVm8FQ9N4IJfR2wpkyY1N+J6Keg6Qpadbislc77vehgyKPber0dg6Swfqk2DopMG4dOYOChjAAaelhYgHhnHJG5kUZ8EMNEWIxhaJSArGvIwcg-R-GNPhZQ3RUJLF5h4UmfpDh-1KIYAeXNCq8xHrJYG49YGLXcHxLg0xUH6CWAKNwHB+AUC4WcZIKJkDz1wf-OKpN94OEPvNdhPCdTaHJHaXkoI1jYmWLYCRZgQgSGVtQ5MtDv4Gx2DSXWwDQawMMLOXg00h5MOUuBBwGgjE8DgAQFa3A1rhGskEEafB-rXgwWcXgVw9bTQALI1jAAQcQUD8jLVwaQ74cxxBtCgJSGA0xZw8Qfn6SA5sJCFm3hEZB8iQCdl5hwQwBAClRL9MgKgihJpIQFNoCoIhIB+jOHyWhEZUJUFGlg1ePRNYB30AgaptSaQIEadxZpHgcbbDqa6eWhMt4zEuirHYtJ6mqydkrLxT00IG0gdA2GsCiDeGNMk3ZRpZybHkKqTY-xGjtU6jiJpv4GSyzfCZa+SDYgc1epzEAVA2gADVsG6SEiAYoABGSFf8DqyDADEiAyxwRCXAiAUSgU4rIqYMigATCANCz0gA" target="_blank" rel="noreferrer" className="text-primary">Open the prompt + guardrail questions in the TypeSafe playground →</a>
+<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIAEgJb5QAWAhigOIAKaAdPgJoQz5UBOC+A5hBJJ++FBHwAHXimRgxEgEZ8AIgEEAcvgDuFEpXwBnFFSRhD+AGYRu+ADrgJpgJ4o9I-EgjaHLdRoAaLgs3PiQqRCMYfn4EY0MgqFN8SC4kV3dRL20WNAoEZ3xqADc+RW4IAGtkK14+CEsxfLFnSX0qABtyCCRLYTj8Bvw1AEk0+VSvFCKqUoUuRRIwMsLQ-G4YDoHDBGnrW1C4FgAxG3wsCMktoP9yZNkOrsjdGhSaPlN5FBJIkmmSQx+TR3JBcDqGCTSXZyeZUKBQOIhZrCWTcJC7IJQnaofDCfZwGgkHpNV7UCxTfDKGqlbgkPoIMBBT4pJzpNzCURuV42Ej8YSdcjUOiMEGeCDTSAsNQWW5edGDRrODi2XiGSQ9HYWQwUDgdeR4mxwfCRLnTJWcJJIADkEokEMQ7I8yiSMB2+FulvsjjSGQ5Yp8IBYAGkEAhJPgYOG1nDpkNblQLNoEI9gvhzSCWCNjmmOFxeJTeFRKn7KDwYwhbGNtCQU1szbnKtlKYVDFRnH6HABlEyFYSCstQVEAQgcTLMOc42t18igNl4g4ntnKCCLCv73HL3CYdiQO4A6vlQWME5UJ1x8ABHGBxb7E0yGJO2BOU8UUd3A5kMND4DokaqU5NvFwHcdy-AgAG08jCQ0BQAYSFL91jidUkB2ABdECkH8CCoJ0Nt3y0bRpyQtUejAND8APV4ASaPgwHecYxB+BAAH4QCCEBpAgOBJBQQwMGwPBCGABwACsqBrZciwcAgRJAFBWgQGSvS8TZRy9YRjA2QciVQ5SHBUCABnZCxEEMVtYjEbhVgkWJpmjcyARMHFxFxfgvF4IIIBpWlli8lUEFKAU-gsTSUG029UP8+YKi2ABaK58OfZJRh0P43y8dZNjiFj1IcKBaVREgqGUuTwuvfSQBGezaWMpRWgTCwziwdU3QcwwnNMFArVC1Dyp0jVBlsVtLF2QoNi2QE8pASxOh2SrqtxCxkhsMB+WspCrxvElplVSQEEHJEPkc4wup6sVuAJLpFA4MweBIOJtxAABfZ6ggcahLssTYAH1eC24xSocBT9sq1SOmmsKIt0wxKsM4y9FMxEqEsk8rDOfIOnDF0Oo8SQKGcDqki6T6jVc-aICuBBov2Ipk3DKTiw8NYOiobRcvYr0Cr+CtiqB+SNiUoSHEWnYEEqZaTuchE0rcKQCaJgVSaG3FHgQfgBRjEhij+Zwnvema5qFggRdtAYKTF09MfDas5eVs4ay2DWui1nWFKe16DcQNbiZ+qgwB1hF+ZB42VN1SG+uhjU4aMpEaLMizjtPWmqBSYr3IgDqEnPNUDrpfQUg2URIET6LU-ClcUEQHFligAFdKCZQlXHWJ0Q3EmVw6OWDUuwkeg5g3uaKkqhLKwWFumE8juCLPnPsiQCX-VP9u4CFwieBl2i6Wv656fWvVm8FQ9N4IJfR2wpkyY1N+J6Keg6Qpadbislc77vehgyKPber0dg6Swfqk2DopMG4dOYOChjAAaelhYgHhnHJG5kUZ8EMNEWIxhaJSArGvIwcg-R-GNPhZQ3RUJLF5h4UmfpDh-1KIYAeXNCq8xHrJYG49YGLXcHxLg0xUH6CWAKNwHB+AUC4WcZIKJkDz1wf-OKpN94OEPvNdhPCdTaHJHaXkoI1jYmWLYCRZgQgSGVtQ5MtDv4Gx2DSXWwDQawMMLOXgEctJQMirDWBRBvDGigW+ZWs5NjyFVJsf4jR2qdRxLOHiv4GSyzfCZa+SDYj0Pyow2kzD8DgQcBoIxPA4AEBWtwNa4RrJBBGnwf614MFnF4FcPW00ACyNYwAEHEN4gYqdsQdW+HMcQbQoCUhgNMCJNS-SQHNhIQs28IjIPkSATsvMOCGAIEMh+fpkBUEUJNJCAptAVBEJAP0Zw+S0IjKhKgo0sGrx6JrAO+gEAzLmTSBASzuLDI8DjbY8zXTy0JlvGYl0VY7FpAs1WTslY5KemhV6nMQBUDaAANWwbpISIBigAEZoV-wOrIMAdSIDLHBEJcCIBRKBTiqipgqKABMIBIVAA" target="_blank" rel="noreferrer" className="text-primary">Open the prompt + guardrail questions in the TypeSafe playground →</a>

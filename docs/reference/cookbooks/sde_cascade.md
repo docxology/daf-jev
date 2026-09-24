@@ -10,12 +10,14 @@
   * big reasoning models extract structured data well, but are slow and expensive
   * small models are cheap, but make mistakes
   * a *cascade* gets most of the quality at a fraction of the cost
-  * the models we use, and their price (\$ per 1M tokens, input / output; model ids + prices
-    as of 2026-07, see README):
-    * rung 0 (mini): `gpt-5.4-mini` at \$0.75 / \$4.50
-    * rung 1 (reasoning): `gpt-5.5` at \$5.00 / \$30.00 (roughly 7x the mini)
-    * verifier: TypeSafe `jev-1.12` at \$0.042 / \$0.00 (flat, far cheaper than a rung-1
-      call)
+  * the models we use, and their price (\$ per 1M tokens, input / output; standard rates
+    checked September 15, 2026):
+    * rung 0 (mini): [`gpt-5.4-mini`](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
+      at \$0.75 / \$4.50
+    * rung 1 (reasoning): [`gpt-5.5`](https://developers.openai.com/api/docs/models/gpt-5.5)
+      at \$5.00 / \$30.00 (roughly 7x the mini)
+    * verifier: TypeSafe `jev-1.12` at \$0.042 / \$0.00 (output tokens are free;
+      [published Jev pricing](https://typesafe.ai/blog/introducing-system-one-models-and-jev))
 * Algorithm
   1. **Extract** with a cheap/small model.
   2. **Verify** with **TypeSafe** primitives: a per-field yes/no ("Noul question")
@@ -41,7 +43,7 @@
   index):
 
 ```bash theme={null}
-pip install openai datasets jsonschema ipython "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install openai datasets jsonschema ipython 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 * then set `OPENAI_API_KEY` and `TYPESAFE_API_KEY` in your environment
@@ -616,6 +618,8 @@ field-level diff (mini -> final):
     `any_flag` gate over the per-field heads, run over 100 scrapegraphai prompts
   * each item's cheap-rung extraction is scored by TypeSafe; the gate threshold ("cut") is
     swept 0→1, and every resulting config is plotted in (cost, quality) space
+  * the chart is a historical snapshot; its costs have not been recalculated at the
+    current Jev rate listed above
 
 <img src="https://mintcdn.com/ts-docs/2NirYCl-v96cw05F/cookbooks/sde_cascade/pareto_100prompts.png?fit=max&auto=format&n=2NirYCl-v96cw05F&q=85&s=ca6731507e07b501a6627616ba0b767a" alt="internal results: cost/quality frontier over 100 prompts" width="1299" height="655" data-path="cookbooks/sde_cascade/pareto_100prompts.png" />
 

@@ -8,6 +8,8 @@
 
 <a id="typesafe-python-sdk" />
 
+Browse the [Python SDK source on GitHub](https://github.com/typesafe-ai/typesafe-sdk-python).
+
 Asynchronous and synchronous Python clients for the [TypeSafe](https://typesafe.ai) API. Learn how to use TypeSafe [here](https://docs.typesafe.ai/).
 
 <h2 id="quickstart">
@@ -34,7 +36,7 @@ Asynchronous and synchronous Python clients for the [TypeSafe](https://typesafe.
 
    <Tabs>
      <Tab title="Async">
-       With [AsyncTypeSafeClient](/sdk/python/api/clients/async/client):
+       With [AsyncTypeSafeClient](/sdk/python/api/clients/async):
 
        ```python theme={null}
        from typesafe_sdk import AsyncTypeSafeClient, Choice, Noul, Score
@@ -64,7 +66,7 @@ Asynchronous and synchronous Python clients for the [TypeSafe](https://typesafe.
      </Tab>
 
      <Tab title="Sync">
-       With [TypeSafeClient](/sdk/python/api/clients/sync/client):
+       With [TypeSafeClient](/sdk/python/api/clients/sync):
 
        ```python theme={null}
        from typesafe_sdk import Choice, Noul, Score, TypeSafeClient

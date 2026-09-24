@@ -10,7 +10,7 @@
 
 Each request evaluates one state against one or more questions. All questions see the same state and are evaluated independently. You can mix [Choice](/primitives/choice), [Score](/primitives/score), and [Noul](/primitives/noul) questions in one request.
 
-## State can be as simple as a string
+## State can be a simple string or a structured JSON value
 
 The simplest state is a plain string:
 
@@ -27,6 +27,10 @@ State can also be a JSON object or array containing related context, examples, a
 | Array  | A sequence of messages or records                   | `["Hi", "My customer number is TS1337.", "My card was charged twice."]` |
 
 Use an object for most requests so each part of the state has a descriptive name and its relationships remain clear. A string is suitable when the use case is simple and requires only one piece of text.
+
+<Note>
+  Jev accepts text only. State must be a string, JSON object, or array of text values. Images, audio, and video are not supported (yet). Jev's primary training language is English; other languages, including CJK scripts, are accepted but currently have lower accuracy — see [Models](/models#language-support).
+</Note>
 
 ```json title="A support conversation as state" theme={null}
 {

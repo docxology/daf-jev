@@ -257,7 +257,7 @@ Every question has an ID, a `type`, and `instructions`. Choice and Score questio
 
 * ID. The key you pick, such as `refund_requested`. It identifies the answer in the response.
 * `type`. One of `choice`, `score`, or `noul`.
-* `instructions`. The question you are asking about the state. This is where your evaluation logic goes. Write it as a clear, specific question, or as a statement for the model to judge.
+* `instructions`. The question you are asking about the state. This is where your evaluation logic goes. Write it as a clear, specific question, or as a statement for the model to judge. A string is enough for most questions. It can also be an object or an array, which puts the question in one field and the data it refers to in others; see [Use structure in the questions](/concepts/how-to-build-with-system-one#use-structure-in-the-questions).
 * `criteria`. The possible answers: a map of options for a Choice question, an ordered list of levels for a Score, and an optional description of yes and no for a Noul. Each question type's page covers its shape.
 
 This question asks whether a customer requested a refund:
@@ -284,7 +284,7 @@ Pick the type that matches the shape of the answer you need.
 
 * **Score** fits when the answer falls on a spectrum and you can describe what each point on that spectrum means: bug severity, customer frustration, skill level. The levels are yours to define, and the model returns a position along them.
 
-* **Noul** fits a clean yes/no question where the probability itself is the useful signal: does this message report a bug, is the customer requesting a refund, does the resume mention distributed systems.
+* **Noul** fits a clean yes/no question where the probability itself is the useful signal: does this message contain personally identifiable information, is the customer requesting a refund, does the resume mention distributed systems.
 
 <Note>
   Use Noul for a yes/no judgment and Score to measure a position on a spectrum. "Is this candidate strong in Python?" needs a clear definition of "strong". A Noul value of 0.5 means the model gives yes and no equal probability. It does not mean the candidate has a medium skill level. An unclear definition makes that probability hard to interpret.
@@ -440,8 +440,6 @@ See [client SDKs](/sdk) for installation and usage in your language.
 ### Ask speculative questions
 
 Ask every question your code might need, including ones whose answer only matters for some inputs, and let the code decide which answers to use. If a ticket turns out not to be a bug report, ignore the severity answer. We call this the [Speculative fan-out](/patterns/fan-out) pattern. The [Parallel questions cookbook](/cookbooks/parallel_questions) shows how batching 13 questions into one call is 11.5x cheaper and 9.6x faster than 13 separate calls, with no change in the answers.
-
-The number of questions in one request is limited only by the request's token budget, which the state and the questions share. The budget is around 32,000 tokens, roughly 150,000 characters of English text.
 
 <Tip>
   Coding agents fall into the one question per call habit more than people do. The [TypeSafe agent skill](/agent-skill#installation) tells your agent to put many questions in each call, including ones that only matter for some inputs.

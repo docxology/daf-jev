@@ -23,8 +23,8 @@ The conditions:
 * The same two non-reasoning models in True/False mode: one bare yes or no per question,
   mapped to 1.0 and 0.0.
 * Reasoning LLMs `gpt-5.5` and `claude-opus-4-8`, which have no temperature dial.
-* TypeSafe: one `system_one` call over the 14 `Noul`s, with a fresh `uid` field (a
-  throwaway unique value) on each call.
+* TypeSafe: one `system_one` call over the 14 `Noul` questions, with a fresh `uid` field
+  (a throwaway unique value) on each call.
 
 What to look for: the LLM answers move from run to run, at temperature `0` too, and on the
 judgment calls the models disagree with *themselves*. TypeSafe's mean per-question
@@ -38,7 +38,7 @@ while keeping the underlying probabilities visible.
 ## Setup
 
 ```bash theme={null}
-pip install anthropic openai matplotlib ipython "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install anthropic openai matplotlib ipython 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 then set `TYPESAFE_API_KEY`, `ANTHROPIC_API_KEY`, and `OPENAI_API_KEY`.
@@ -193,18 +193,18 @@ The non-reasoning models also run a True/False variant: they answer each questio
 bare yes or no, which we map to 1.0 and 0.0. This forces a hard decision and shows what
 these models do when they cannot leave any mass in the uncertain middle.
 
-The TypeSafe call is one `system_one` request over the same claim and the same 14
-`Noul`s. Each answer's `noul` is P(true).
+The TypeSafe call is one `system_one` request over the same claim and the same 14 `Noul`
+questions. Each answer's `noul` is P(true).
 
 Every query also gets a fresh `uid`, a throwaway unique value that changes each run while
 leaving the claim and rubric unchanged. It appears in the LLM prompt and as an extra field
 in the TypeSafe state. This setup cannot separate sensitivity to the irrelevant field
 from variation that would occur on identical requests.
 
-> **Note** - despite the "ONLY a JSON object" instruction, `claude-haiku-4-5` wraps nearly
-> every reply in a ` ```json ... ``` ` fence that strict `json.loads` rejects
-> (the other models return bare JSON). The helper peels the fence; a reply that still fails
-> to parse becomes a parse failure, counted but not scored.
+> **Note:** despite the "ONLY a JSON object" instruction, `claude-haiku-4-5` wraps nearly >
+> every reply in a ` ```json ... ``` ` fence that strict `json.loads` rejects > (the
+> other models return bare JSON). The helper peels the fence; a reply that still fails > to
+> parse becomes a parse failure, counted but not scored.
 
 Each helper returns the answer, an estimated cost, and the round-trip latency.
 
@@ -374,12 +374,12 @@ def ask_llm_rubric(
 | Reasoning Models     | `claude-opus-4-8`              |         —         |           ✓           |       —      |
 | TypeSafe             | `jev-latest` (`typesafe_noul`) |         —         |           ✓           |       —      |
 
-* Each ✓ marks one condition with 15 repeats; — means the combination is not tested.
-* The default column sends no temperature argument: non-reasoning models
-  use the API default, and reasoning models and TypeSafe run without a temperature setting.
+* A check mark is one condition, run 15 times. A dash is a combination that was not tested.
+* The default column sends no temperature argument: non-reasoning models use the API
+  default, and reasoning models and TypeSafe run without a temperature setting.
 * Yes/no answers map to `1.0` / `0.0`.
-* Temperature `0` is commonly suggested for repeatability, so we compare it with
-  the API default.
+* Temperature `0` is the usual advice for repeatability, so we compare it with the API
+  default.
 
 We draw `NUM_SAMPLES` = 15 repeats per condition. Each repeat has its own cache key and
 counts as a distinct draw, and the cache (`json_cache.json`) ships with the cookbook, so
@@ -521,8 +521,8 @@ How to read it:
 * Outer row group: the question.
 * Inner row: the condition.
 * Column: one full rubric call.
-* Cell color: red is a higher P(yes), green is lower. For the risk questions, red usually
-  means flagged.
+* Cell color: red is a higher P(yes), green is lower. For the risk questions, a red cell
+  is one the rubric flagged.
 
 `typesafe_noul` varies most on `covered` (`0.43` to `0.53`) and `exclusion` (`0.53` to
 `0.62`). Some LLM rows vary at temperature `0` too. Conditions disagree on judgment calls.
@@ -615,10 +615,10 @@ display(fig)
 
 <img src="https://mintcdn.com/ts-docs/BBcnWK7wRF0qekMh/cookbooks/consistency_noul_cookbook/consistency_noul_cookbook.executed.1.png?fit=max&auto=format&n=BBcnWK7wRF0qekMh&q=85&s=a50edf2fb3abafd64374936a630d57bc" alt="output" width="1616" height="5555" data-path="cookbooks/consistency_noul_cookbook/consistency_noul_cookbook.executed.1.png" />
 
-The clear factual checks hold steady across most conditions. The judgment-heavy ones are
-where the LLM rows move: `exclusion`, `rental_eligible`, `fraud_flag`, and `manual_review`
-shift across samples or disagree across models. TypeSafe's `covered` row crosses `0.5`;
-its other 13 questions stay on one side of that threshold throughout this run.
+The factual checks hold steady across most conditions. The judgment-heavy ones are where
+the LLM rows move: `exclusion`, `rental_eligible`, `fraud_flag`, and `manual_review` shift
+across samples or disagree across models. TypeSafe's `covered` row crosses `0.5`; its
+other 13 questions stay on one side of that threshold throughout this run.
 
 ## Allow an uncertain decision instead of forcing yes or no
 
@@ -629,10 +629,10 @@ though both express substantial uncertainty. The application can instead return:
 * `uncertain` from `0.30` through `0.70`, including both boundaries;
 * `yes` above `0.70`.
 
-Send uncertain cases to a human. This is application logic over the returned probability,
-not a new question or another API call. The band is illustrative, not a calibrated
-guarantee or optimized threshold. Set production boundaries using labeled examples
-and the cost of incorrect decisions and review.
+Uncertain cases go to a human. The escalation is application logic over the returned
+probability: no new question, no second API call. The band is illustrative; it is neither
+a calibrated guarantee nor an optimized threshold. Set production boundaries from labeled
+examples and from the cost of incorrect decisions and of review.
 
 The illustration below applies this band to the recorded TypeSafe probabilities.
 
@@ -677,9 +677,10 @@ display(fig_policy)
 
 <img src="https://mintcdn.com/ts-docs/BBcnWK7wRF0qekMh/cookbooks/consistency_noul_cookbook/consistency_noul_cookbook.executed.2.png?fit=max&auto=format&n=BBcnWK7wRF0qekMh&q=85&s=5f41dccb24038661ad751bb550f9dd19" alt="output" width="1932" height="883" data-path="cookbooks/consistency_noul_cookbook/consistency_noul_cookbook.executed.2.png" />
 
-A review band can absorb fluctuations around `0.5` without issuing opposite automatic
-actions. Values near its outer boundaries can still move between `uncertain` and yes or
-no. This does not make the model deterministic or prove automatic decisions are correct.
+A review band absorbs fluctuation around `0.5` without issuing opposite automatic
+actions. It has edges of its own, though. A value near either outer boundary can still
+move between `uncertain` and yes or no. The model is no more deterministic for it, and
+an automatic decision that clears the band is not shown to be correct.
 
 ## Open it in the TypeSafe playground
 

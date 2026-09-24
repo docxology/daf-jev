@@ -72,6 +72,59 @@
   </Tab>
 </Tabs>
 
+<h2 id="typed-system_one-responses">
+  Typed <code>system\_one</code> responses
+</h2>
+
+It is possible to provide a response model to `system_one` to make using the response more *type-safe*:
+
+```python theme={null}
+from typesafe_sdk import Noul, NoulAnswer, SystemOneResponse, TypeSafeClient
+
+
+class BillingResponse(SystemOneResponse):
+    billing: NoulAnswer
+
+
+with TypeSafeClient() as client:
+    result = client.system_one(
+        "I was charged twice.",
+        {"billing": Noul(instructions="Is this about billing?")},
+        response_model=BillingResponse,
+    )
+    assert 0 <= result.billing.noul <= 1
+    assert result.billing == result.nouls["billing"]
+    print(result.request_id)
+```
+
+<h3 id="custom-response-types">
+  Custom response types
+</h3>
+
+It is also possible to define a completely new response model without inheriting from `SystemOneResponse`:
+
+```python theme={null}
+from pydantic import BaseModel
+
+from typesafe_sdk import Noul, NoulAnswer, TypeSafeClient
+
+
+class BillingAnswers(BaseModel):
+    billing: NoulAnswer
+
+
+class BillingResponse(BaseModel):
+    answers: BillingAnswers
+
+
+result = TypeSafeClient().system_one(
+    "I was charged twice.",
+    {"billing": Noul(instructions="Is this about billing?")},
+    response_model=BillingResponse,
+)
+assert 0 <= result.answers.billing.noul <= 1
+```
+
 <h2 id="choosing-a-model">
   Choosing a model
 </h2>
@@ -90,13 +143,71 @@ Select the model when constructing a client:
 client = TypeSafeClient(model="jev")
 ```
 
-See the [Models resource reference](/sdk/python/api/clients/sync/models) for details.
+See the [Models resource reference](/sdk/python/api/clients/sync#models-resource) for details.
+
+<h2 id="configuring-the-base-url">
+  Configuring the base URL
+</h2>
+
+In order to use the SDK with a different API url, set `base_url` on the client or the `TYPESAFE_BASE_URL` environment variable.
+
+For example, connect through an AI gateway using its API key and model ID:
+
+<Tabs>
+  <Tab title="OpenRouter">
+    Use an OpenRouter API key and an [OpenRouter model ID](https://openrouter.ai/~typesafe/jev-latest/):
+
+    skip: next
+
+    ```python theme={null}
+    import os
+
+    from typesafe_sdk import Noul, TypeSafeClient
+
+    with TypeSafeClient(
+        api_key=os.environ["OPENROUTER_API_KEY"],
+        base_url="https://openrouter.ai/api",
+        model="~typesafe/jev-latest",
+    ) as client:
+        result = client.system_one(
+            "I was charged twice.",
+            {"billing": Noul(instructions="Is this about billing?")},
+        )
+        print(result.nouls["billing"].noul)
+    ```
+  </Tab>
+
+  <Tab title="Vercel AI Gateway">
+    [Vercel's TypeSafe-compatible API](https://vercel.com/docs/ai-gateway/sdks-and-apis/typesafe) can be used with the SDK:
+
+    skip: next
+
+    ```python theme={null}
+    import os
+
+    from typesafe_sdk import Noul, TypeSafeClient
+
+    with TypeSafeClient(
+        api_key=os.environ["AI_GATEWAY_API_KEY"],
+        base_url="https://ai-gateway.vercel.sh/typesafe",
+        model="typesafe-ai/jev",
+    ) as client:
+        result = client.system_one(
+            "I was charged twice.",
+            {"billing": Noul(instructions="Is this about billing?")},
+        )
+        print(result.nouls["billing"].noul)
+    ```
+  </Tab>
+</Tabs>
+
+This requires the alternative API to follow the [TypeSafe OpenAPI spec](https://api.typesafe.ai/docs/).
 
 <h2 id="retries">
   Retries
 </h2>
 
-Pass a custom [`RetryPolicy`](/sdk/python/api/retries) as `retry` on the client or per call.
+Pass a custom [`RetryPolicy`](/sdk/python/api/retries) as `retry` on the client or per call. Invalid API keys raise `TypeSafeError` during client creation, before any request or retry.
 
 <Tabs>
   <Tab title="Client">
@@ -164,6 +275,8 @@ The SDK reads and uses the following environment variables:
 
 See the [constants reference](/sdk/python/api/constants) for SDK defaults.
 
+API keys supplied through `api_key` or `TYPESAFE_API_KEY` have leading and trailing whitespace stripped, including newlines from key files. Empty keys, internal whitespace, control characters, and non-ASCII characters are rejected before sending a request. An explicitly empty key does not fall back to the environment.
+
 <h2 id="forward-compatibility">
   Forward compatibility
 </h2>
@@ -174,7 +287,9 @@ The SDK keeps working as the TypeSafe API evolves, so you can adopt new API feat
   Extra request fields
 </h3>
 
-Send request fields this SDK version predates with [`extra_body`](/sdk/python/api/clients/sync/client):
+Send additional API request fields with [`extra_body`](/sdk/python/api/clients/sync). The `beam_width` field below is illustrative; only send fields supported by the API.
+
+skip: next
 
 ```python theme={null}
 from typesafe_sdk import Noul, TypeSafeClient
@@ -191,8 +306,6 @@ with TypeSafeClient() as client:
   Raw question dictionaries
 </h3>
 
-Pass a question as a plain dictionary to include fields this SDK version does not model yet:
-
 ```python theme={null}
 from typesafe_sdk import TypeSafeClient
 
@@ -203,6 +316,12 @@ with TypeSafeClient() as client:
     )
 ```
 
+<Tip>
+  **Tip**
+
+  Unknown fields are a forward-compatibility escape hatch. Ignore their type-checking errors and prefer upgrading the SDK instead.
+</Tip>
+
 <h3 id="unknown-answer-kinds">
   Unknown answer kinds
 </h3>
@@ -210,6 +329,12 @@ with TypeSafeClient() as client:
 The SDK logs a warning and skips unrecognized answer kinds. Use `raw_http_response` to inspect the complete API response, including those answers:
 
 ```python theme={null}
+from typesafe_sdk import Noul, TypeSafeClient
+
+result = TypeSafeClient().system_one(
+    "I was charged twice.",
+    {"billing": Noul(instructions="Is this about billing?")},
+)
 raw_answers = result.raw_http_response.json()["answers"]
 ```
 

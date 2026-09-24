@@ -25,7 +25,7 @@ The top-level shape of every request. Each entry in the `questions` map is a typ
 </ParamField>
 
 <ParamField body="model" type="string" required>
-  The model that handles the request. Use `"jev-latest"`, TypeSafe's flagship model.
+  The model that handles the request. Use `"jev-latest"`, TypeSafe's flagship model. See [Models](/models) for the available models and aliases.
 </ParamField>
 
 <ParamField body="questions" type="map<string, Question>" required>
@@ -55,6 +55,21 @@ The top-level shape of every request. Each entry in the `questions` map is a typ
 
 A `Question` is one of three types, set by its `type` field. All three share `type` and `instructions`; each adds its own `criteria`.
 
+The `instructions` property can be a string, an object, or an array. You can break up a long question that has extra context, or data it needs to reference, into a structured object. Put the question in one field and the data in the others, and refer to the data fields by name in backticks, the same way you point a question at a nested `state` value:
+
+```json theme={null}
+"instructions": {
+  "potential_duplicate": {
+    "name": "John Smith",
+    "location": "Oakland, California",
+    "last_employer": "Google"
+  },
+  "question": "Is the resume for the same person as `potential_duplicate`?"
+}
+```
+
+See [Use structure in the questions](/concepts/how-to-build-with-system-one#use-structure-in-the-questions) to learn more.
+
 ### Noul
 
 A yes/no question. Returns the probability the answer is yes.
@@ -62,18 +77,18 @@ A yes/no question. Returns the probability the answer is yes.
 <ParamField body="type" type="&#x22;noul&#x22;" required />
 
 <ParamField body="instructions" type="string | object | array" required>
-  The yes/no question to evaluate.
+  The yes/no question to evaluate. An object can hold the question in one field and data it refers to in others; see [Use structure in the questions](/concepts/how-to-build-with-system-one#use-structure-in-the-questions).
 </ParamField>
 
 <ParamField body="criteria" type="object">
   Optional descriptions of what a yes and a no mean.
 
   <Expandable title="properties">
-    <ParamField body="true" type="string">
+    <ParamField body="true" type="string | object | array">
       What a yes (value near 1) means.
     </ParamField>
 
-    <ParamField body="false" type="string">
+    <ParamField body="false" type="string | object | array">
       What a no (value near 0) means.
     </ParamField>
   </Expandable>
@@ -103,14 +118,14 @@ Picks one option from a set you define. Returns the chosen option and the full p
 <ParamField body="type" type="&#x22;choice&#x22;" required />
 
 <ParamField body="instructions" type="string | object | array" required>
-  What the model should decide.
+  What the model should decide. An object can hold the question in one field and data it refers to in others; see [Structured instructions and criteria](/primitives/choice#structured-instructions-and-criteria).
 </ParamField>
 
-<ParamField body="criteria" type="map<string, string | null>" required>
-  A map of option to rubric description; use null when an option needs no extra detail.
+<ParamField body="criteria" type="map<string, string | object | array | null>" required>
+  A map of option to rubric description; use null when an option needs no extra detail. You can have a maximum of 255 options per Choice.
 
   <Expandable title="map entries">
-    <ParamField body="‹option›" type="string | null">
+    <ParamField body="‹option›" type="string | object | array | null">
       A key you choose. A description of this option.
     </ParamField>
   </Expandable>
@@ -141,11 +156,11 @@ Rates the state along a rubric you define. Returns a probability-weighted value 
 <ParamField body="type" type="&#x22;score&#x22;" required />
 
 <ParamField body="instructions" type="string | object | array" required>
-  What the model should rate.
+  What the model should rate. An object can hold the question in one field and data it refers to in others; see [Use structure in the questions](/concepts/how-to-build-with-system-one#use-structure-in-the-questions).
 </ParamField>
 
-<ParamField body="criteria" type="array" required>
-  An ordered array of level descriptions. You must include at least two levels.
+<ParamField body="criteria" type="array<string | object | array>" required>
+  An ordered array of level descriptions. A Score should have at least two levels; the API accepts up to 10.
 </ParamField>
 
 ```json Example request focus={5-9} theme={null}
@@ -192,14 +207,14 @@ One answer per question, returned under the same ids you provided.
 
 ```json Example response theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "is_urgent": {
       "type": "noul",
-      "noul": 0.92
+      "noul": 0.95
     }
   },
-  "usage": { "input_tokens": 312, "output_tokens": 48 }
+  "usage": { "input_tokens": 296, "output_tokens": 20 }
 }
 ```
 
@@ -217,14 +232,14 @@ Every answer carries a `type` matching its question. Choice and Score answers al
 
 ```json Example response focus={4-7} theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "is_urgent": {
       "type": "noul",
-      "noul": 0.92
+      "noul": 0.95
     }
   },
-  "usage": { "input_tokens": 312, "output_tokens": 48 }
+  "usage": { "input_tokens": 307, "output_tokens": 20 }
 }
 ```
 
@@ -252,16 +267,16 @@ Every answer carries a `type` matching its question. Choice and Score answers al
 
 ```json Example response focus={4-9} theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "department": {
       "type": "choice",
-      "choice": "technical",
-      "probabilities": { "billing": 0.08, "technical": 0.85, "sales": 0.07 },
-      "confidence": 0.82
+      "choice": "billing",
+      "probabilities": { "billing": 0.88, "technical": 0.12, "sales": 0.0 },
+      "confidence": 0.81
     }
   },
-  "usage": { "input_tokens": 312, "output_tokens": 48 }
+  "usage": { "input_tokens": 318, "output_tokens": 34 }
 }
 ```
 
@@ -293,17 +308,17 @@ Every answer carries a `type` matching its question. Choice and Score answers al
 
 ```json Example response focus={4-10} theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "frustration": {
       "type": "score",
-      "score": 1.6,
+      "score": 1.05,
       "legend": { "0": "Calm", "1": "Frustrated", "2": "Very angry" },
-      "probabilities": { "0": 0.05, "1": 0.3, "2": 0.65 },
-      "confidence": 0.78
+      "probabilities": { "0": 0.0, "1": 0.95, "2": 0.05 },
+      "confidence": 0.92
     }
   },
-  "usage": { "input_tokens": 312, "output_tokens": 48 }
+  "usage": { "input_tokens": 304, "output_tokens": 18 }
 }
 ```
 

@@ -272,7 +272,7 @@ questions: {
     type: 'choice',
     instructions: 'Which team should handle this?',
     criteria: {
-      returns: 'Exchanges, refunds, wrong or damaged items',
+      returns: 'Exchanges, wrong or damaged items',
       shipping: 'Delivery status, delays, lost packages',
       billing: 'Charges, invoices, payment problems',
     },
@@ -295,7 +295,7 @@ with TypeSafeClient() as client:
             "department": Choice(
                 instructions="Which team should handle this?",
                 criteria={
-                    "returns": "Exchanges, refunds, wrong or damaged items",
+                    "returns": "Exchanges, wrong or damaged items",
                     "shipping": "Delivery status, delays, lost packages",
                     "billing": "Charges, invoices, payment problems",
                 },
@@ -320,7 +320,7 @@ The response has one entry in `answers` per question, under the ids from the req
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "department": {
       "type": "choice",
@@ -334,7 +334,7 @@ The response has one entry in `answers` per question, under the ids from the req
     }
   },
   "usage": {
-    "input_tokens": 330,
+    "input_tokens": 328,
     "output_tokens": 34
   }
 }
@@ -365,14 +365,14 @@ The request below asks five Choice questions about a ticket that is more ambiguo
 <TypesafeExample
   display="request"
   example={{
-state: 'Shoes arrived two weeks late and in the wrong size. Also I see two charges on my card. What are you going to do about this?',
+state: 'Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?',
 selectedModels: ['jev-latest'],
 questions: {
   department: {
     type: 'choice',
     instructions: 'Which team should handle this?',
     criteria: {
-      returns: 'Exchanges, refunds, wrong or damaged items',
+      returns: 'Exchanges, wrong or damaged items',
       shipping: 'Delivery status, delays, lost packages',
       billing: 'Charges, invoices, payment problems',
     },
@@ -428,16 +428,16 @@ The TypeSafe response:
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "department": {
       "type": "choice",
       "choice": "returns",
-      "confidence": 0.39,
+      "confidence": 0.42,
       "probabilities": {
-        "shipping": 0.02,
-        "billing": 0.38,
-        "returns": 0.6
+        "shipping": 0.04,
+        "billing": 0.35,
+        "returns": 0.61
       }
     },
     "return_reason": {
@@ -445,49 +445,49 @@ The TypeSafe response:
       "choice": "wrong_size",
       "confidence": 1.0,
       "probabilities": {
-        "wrong_size": 1.0,
-        "wrong_item": 0.0,
         "other": 0.0,
+        "wrong_size": 1.0,
         "changed_mind": 0.0,
-        "damaged": 0.0
+        "damaged": 0.0,
+        "wrong_item": 0.0
       }
     },
     "shipping_issue": {
       "type": "choice",
       "choice": "delayed",
-      "confidence": 0.53,
+      "confidence": 0.67,
       "probabilities": {
-        "delayed": 0.63,
-        "other": 0.37,
-        "damaged_in_transit": 0.0,
+        "wrong_address": 0.0,
+        "other": 0.26,
         "not_delivered": 0.0,
-        "wrong_address": 0.0
+        "damaged_in_transit": 0.0,
+        "delayed": 0.74
       }
     },
     "requested_resolution": {
       "type": "choice",
-      "choice": "exchange",
-      "confidence": 0.16,
+      "choice": "refund",
+      "confidence": 0.2,
       "probabilities": {
-        "information": 0.1,
-        "exchange": 0.37,
-        "replacement": 0.24,
-        "refund": 0.29
+        "replacement": 0.34,
+        "refund": 0.4,
+        "information": 0.02,
+        "exchange": 0.24
       }
     },
     "tone": {
       "type": "choice",
       "choice": "frustrated",
-      "confidence": 0.88,
+      "confidence": 0.76,
       "probabilities": {
-        "angry": 0.08,
-        "frustrated": 0.92,
+        "frustrated": 0.84,
+        "angry": 0.16,
         "calm": 0.0
       }
     }
   },
   "usage": {
-    "input_tokens": 588,
+    "input_tokens": 589,
     "output_tokens": 212
   }
 }
@@ -495,11 +495,11 @@ The TypeSafe response:
 
 Each question is answered on its own against the ticket:
 
-* The `department` answer is `returns` with a 0.60 probability, but `billing` has 0.38 probability because of the double charge. This lowers the confidence to 0.39. The top option is clear enough to act on, but the second option is not noise.
+* The `department` answer is `returns` with a 0.61 probability, but `billing` has 0.35 because of the double charge. The ticket belongs to two teams, and the split confidence of 0.42 reflects that.
 * The `return_reason` is `wrong_size` with a confidence of 1.0, which is expected because it says this clearly in the ticket.
 * The `shipping_issue` answer is split between `delayed` and `other`. It's a speculative question and `department` didn't come back as shipping, so it can be ignored by the code, as shown in the example code snippet below.
-* The `requested_resolution` confidence is 0.16 because of the flat probability distribution of the answers. This is because the customer didn't say what they want.
-* The `tone` answer is `frustrated` with a probability of 0.92 and a confidence of 0.88.
+* The `requested_resolution` answer leans to `refund` at 0.40, with `replacement` and `exchange` sharing most of the rest, and the confidence is 0.20. The double charge suggests money back, the wrong size suggests a swap, and the customer never says which they want.
+* The `tone` answer is `frustrated` with a probability of 0.84 and a confidence of 0.76.
 
 The example code below reads the answers it needs, ignores the rest, and treats a low-confidence answer as a reason to ask rather than act:
 
@@ -510,7 +510,7 @@ TRIAGE_QUESTIONS = {
     "department": Choice(
         instructions="Which team should handle this?",
         criteria={
-            "returns": "Exchanges, refunds, wrong or damaged items",
+            "returns": "Exchanges, wrong or damaged items",
             "shipping": "Delivery status, delays, lost packages",
             "billing": "Charges, invoices, payment problems",
         },
@@ -590,7 +590,7 @@ def triage(ticket: str) -> None:
         flag_for_senior_agent(ticket)
 ```
 
-For the ticket above, this assigns the ticket to the returns team with issue `wrong_size`, sends the billing team a copy, and asks the customer what they want. The code does not use the `shipping_issue` answer.
+For the ticket above, this assigns the ticket to the returns team with issue `wrong_size`, sends the billing team a copy because its 0.35 share is over the 0.25 threshold, and asks the customer what they want because the resolution confidence of 0.20 is under 0.5. The code does not use the `shipping_issue` answer.
 
 One request, five answers, and the routing logic is ordinary `if` statements. If you later need to know the customer's language, or which product the ticket is about, add another Choice question to `TRIAGE_QUESTIONS`; the request count stays at one.
 
@@ -641,7 +641,7 @@ The response is `return_status` at confidence 1.0:
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "return_topic": {
       "type": "choice",
