@@ -150,7 +150,7 @@ def test_a_rejects_unknown_format_string(tmp_path: Path) -> None:
     doc = _valid_a_document()
     doc["format"] = "dafjev.bayesnet-posteriors/2"
     with pytest.raises(
-        ValueError, match="unsupported format 'dafjev.bayesnet-posteriors/2'"
+        ValueError, match=r"unsupported format 'dafjev\.bayesnet-posteriors/2'"
     ):
         load_posteriors(_write_json(tmp_path, "fmt.json", doc))
 
@@ -194,7 +194,7 @@ def test_a_row_sum_drift_both_sides(tmp_path: Path) -> None:
     assert row_sum_deviations(sidecar) == {"V": 9.000000000813912e-07}
 
     bad_row = {"a": 0.25, "b": 0.25, "c": 0.25, "d": 0.2500015}
-    with pytest.raises(ValueError, match="row for variable 'V' sums to 1.0000015"):
+    with pytest.raises(ValueError, match=r"row for variable 'V' sums to 1\.0000015"):
         load_posteriors(
             _write_json(
                 tmp_path, "bad_drift.json",
@@ -220,7 +220,7 @@ def test_a_one_hot_violations(tmp_path: Path) -> None:
             _write_json(tmp_path, "oh98.json", _evidence_doc({"t": 0.98, "f": 0.02}))
         )
     # observed state absent from the row: defaults to 0.0 (:290)
-    with pytest.raises(ValueError, match="observed state 't' carries 0.0"):
+    with pytest.raises(ValueError, match=r"observed state 't' carries 0\.0"):
         load_posteriors(_write_json(tmp_path, "ohmiss.json", _evidence_doc({"f": 1.0})))
     # evidence variable has no posteriors row at all (:283-289)
     doc = {
@@ -231,7 +231,7 @@ def test_a_one_hot_violations(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="evidence variable 'ghost' has no posteriors row"):
         load_posteriors(_write_json(tmp_path, "ohnovar.json", doc))
     # another state carries 1.5e-06 > tolerance 1e-06 (:299)
-    with pytest.raises(ValueError, match="state 'f' carries 1.5e-06 > tolerance"):
+    with pytest.raises(ValueError, match=r"state 'f' carries 1\.5e-06 > tolerance"):
         load_posteriors(
             _write_json(
                 tmp_path, "ohother.json",
@@ -258,7 +258,7 @@ def test_a_rejects_non_finite_probability(tmp_path: Path) -> None:
 
 def test_a_rejects_negative_probability(tmp_path: Path) -> None:
     """Case 9: negative probabilities are rejected, naming var and state."""
-    with pytest.raises(ValueError, match="state 't' must be >= 0, got -0.1"):
+    with pytest.raises(ValueError, match=r"state 't' must be >= 0, got -0\.1"):
         load_posteriors(
             _write_json(tmp_path, "neg.json", _evidence_doc({"t": -0.1, "f": 1.1}))
         )
