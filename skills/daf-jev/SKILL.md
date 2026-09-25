@@ -145,6 +145,22 @@ never be committed, printed, or read by tests.
   (the trajectory plotter also `labels`); `animate_network` /
   `animate_posterior` take `fps` / `dpi` (the posterior animation also
   `labels`); defaults unchanged.
+- **Posteriors ingest** (`daf_jev.bayesnet_posteriors`) — fail-closed
+  reader for GNN-emitted posterior sidecars:
+  `load_posteriors(path, graphspec=None) -> PosteriorsSidecar` accepts
+  both sibling variants — `dafjev.bayesnet-posteriors/1`
+  (`{format, evidence, posteriors}`; raw Float64 rows under the flat
+  per-row budget `|sum(row) - 1| <= 1e-6`, one-hot evidence rule) and
+  the GNN-internal `gnn.marginals/1` (`{format, marginals,
+  source_model}`; 6-digit-rounded rows with the length-widened row-sum
+  budget) — optionally cross-checked against a `dafjev.bayesnet/1`
+  GraphSpec. `pair_for_calibration(sidecar, assignments) ->
+  CalibrationPairing` pairs Jev assignments against the sidecar as the
+  calibration target (`(confidence, correct)` pairs — confidence is the
+  exact posterior support for Jev's chosen state, correct is the
+  modal-state match — plus per-variable soft multiclass Brier scores);
+  `row_sum_deviations(sidecar)` reports per-variable `|sum(row) - 1|`.
+  Surfaced as `daf-jev posteriors-load` and MCP `jev_posteriors_load`.
 
 - **Questions** (`daf_jev.questions`) — `question_from_mapping(value, *,
   context="question")` builds a `NoulQuestion` / `ChoiceQuestion` /
@@ -204,9 +220,12 @@ across both repos).
    marginals; the committed 8-node Asia spec stalls at multi-parent
    `DiscreteTransition` (upstream gap). `--out FILE` writes a
    `dafjev.bayesnet-posteriors/1` sidecar.
-5. Feed back — posteriors re-enter daf-jev (calibration, evidence
-   queries). Gap: single-parent nets exact end-to-end on RxInfer 5.5.0 /
-   5.5.2; multi-parent `DiscreteTransition` stalls in RxInfer 5.5.x VMP
+5. Feed back — posteriors re-enter daf-jev through
+   `daf_jev.bayesnet_posteriors` (`load_posteriors` +
+   `pair_for_calibration`; also `daf-jev posteriors-load` and MCP
+   `jev_posteriors_load`) — calibration, evidence queries. Gap:
+   single-parent nets exact end-to-end on RxInfer 5.5.0 / 5.5.2;
+   multi-parent `DiscreteTransition` stalls in RxInfer 5.5.x VMP
    (upstream limitation).
 
 Deep links (resolve from the repo checkout):
@@ -217,7 +236,8 @@ Deep links (resolve from the repo checkout):
 - [`graphical.py`](../../src/daf_jev/graphical.py) ·
   [`graphical_elicitation.py`](../../src/daf_jev/graphical_elicitation.py) ·
   [`graphical_viz.py`](../../src/daf_jev/graphical_viz.py) ·
-  [`graphical_animation.py`](../../src/daf_jev/graphical_animation.py)
+  [`graphical_animation.py`](../../src/daf_jev/graphical_animation.py) ·
+  [`bayesnet_posteriors.py`](../../src/daf_jev/bayesnet_posteriors.py)
 - [`scripts/bayes_experiment.py`](../../scripts/bayes_experiment.py) ·
   [receipts.json](../../output/experiments/asia/receipts.json) (live run)
 
@@ -233,6 +253,9 @@ daf-jev evaluate --questions-file PATH --states-file PATH
 daf-jev docs-verify [--manifest PATH]        # exit 1 on snapshot drift
 daf-jev serve [--transport stdio]            # MCP server (stdio default)
 daf-jev providers                           # registry listing (keyless, exit 0)
+daf-jev posteriors-load FILE [--graphspec FILE]
+                                           # validate a posterior sidecar
+                                           # (keyless; exit 1 on invalid)
 # global --provider KEY precedes any subcommand: daf-jev --provider kev models
 ```
 
@@ -289,6 +312,9 @@ JSON-safe dicts):
 - `jev_composite_score` — composite score from a probability dict.
 - `jev_confidence_gate` / `jev_tiered_gate` — one- and two-threshold routing.
 - `jev_docs_verify` — check the docs snapshot manifest for drift.
+- `jev_posteriors_load` — load/validate a posterior sidecar
+  (`dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`); no API call,
+  optional GraphSpec cross-check.
 - Resource `jev://docs/snapshot` — `{page_count, snapshot_id, scraped_at,
   index_sha256}` from `docs/reference/MANIFEST.json`.
 

@@ -25,6 +25,12 @@ from daf_jev._types import (
     answer_from_wire,
     parse_response,
 )
+from daf_jev.bayesnet_posteriors import (
+    CalibrationPairing,
+    PosteriorsSidecar,
+    load_posteriors,
+    pair_for_calibration,
+)
 from daf_jev.client import (
     AsyncJevClient,
     JevClient,
@@ -81,6 +87,7 @@ __all__ = [
     "AsyncJevClient",
     "BayesNet",
     "Budget",
+    "CalibrationPairing",
     "ChoiceAnswer",
     "ChoiceQuestion",
     "CircuitBreaker",
@@ -99,6 +106,7 @@ __all__ = [
     "NoulAnswer",
     "NoulQuestion",
     "OverloadedError",
+    "PosteriorsSidecar",
     "ProviderSpec",
     "Question",
     "QuestionSet",
@@ -123,12 +131,14 @@ __all__ = [
     "elicit_cpts",
     "get_provider",
     "list_providers",
+    "load_posteriors",
     "load_settings",
     "max_streak",
     "noul",
     "noul_choice_delta",
     "open_async_client",
     "open_client",
+    "pair_for_calibration",
     "parse_response",
     "pick_model",
     "position_slope",
