@@ -361,6 +361,14 @@ wire path is silently coerced.
     CWD); prints `{manifest, pages, missing, drifted, added, ok}` where
     `added` lists extra `.md` files the manifest does not list; exit 1 when
     `ok` is False.
+  - `daf-jev posteriors-load FILE [--graphspec FILE]` — loads and
+    validates a `dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`
+    sidecar (same loader as the MCP `jev_posteriors_load` tool);
+    `--graphspec` cross-checks variables/states against a
+    `dafjev.bayesnet/1` document. Prints `{ok, format, evidence_count,
+    variable_count, min_row_sum_deviation, max_row_sum_deviation}`; a
+    failed validation exits 1 with `{"error": "ValueError", ...}`.
+    Keyless — no API call.
   - `daf-jev serve [--transport stdio]` — runs the MCP server (stdio only);
     a missing `mcp` extra prints a `uv sync --extra mcp` hint (exit 1).
   - `daf-jev providers` — prints the provider registry as a JSON array to
@@ -370,23 +378,30 @@ wire path is silently coerced.
     Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (58 names incl. `__version__`): the original 41-name list plus five
-  intentional additions — `ModelCard`, `Answer`, `JSONContent`,
-  `answer_from_wire`, `parse_response` — plus the six provider-dispatch
-  additions — `ProviderSpec`, `register_provider`, `get_provider`,
-  `list_providers`, `open_client`, `open_async_client` — plus the six
-  graphical-model additions — `Variable`, `Edge`, `CPT`, `BayesNet`,
-  `elicit_cpts`, `propose_structure` — i.e.:
-  `JevClient, AsyncJevClient, NoulQuestion, ChoiceQuestion, ScoreQuestion, Question,
-  Answer, JSONContent, NoulAnswer, ChoiceAnswer, ScoreAnswer, Usage, SystemOneResponse,
-  ModelCard, RetryPolicy, TypeSafeError, RateLimitError, OverloadedError, APITimeoutError,
-  APIConnectionError, noul, choice, score, QuestionSet, composite_score, confidence_gate,
-  route, Settings, load_settings, resolve_retry, resolve_timeout, pick_model,
-  Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
-  CircuitOpenError, CircuitState, Budget, ConfidenceGate, DecisionEvent,
-  Decider, answer_from_wire, parse_response, ProviderSpec, register_provider,
-  get_provider, list_providers, open_client, open_async_client, Variable,
-  Edge, CPT, BayesNet, elicit_cpts, propose_structure, __version__`.
+  (75 names incl. `__version__`): the wire/client/compose/evaluate/decider/
+  provider-dispatch core plus the jaggedness fixtures and statistics
+  (`COIN`, `COIN_NOUL`, `D6`, `JaggednessFixture`, `chi2_sf`, `max_streak`,
+  `noul`, `noul_choice_delta`, `position_slope`, `run_battery`, `runs_test_z`,
+  `uniform_chi2`, `uniform_deviation`), the graphical-model additions
+  (`Variable`, `Edge`, `CPT`, `BayesNet`, `elicit_cpts`, `propose_structure`,
+  `decompose_single_parent`), and the posteriors-ingest additions
+  (`CalibrationPairing`, `PosteriorsSidecar`, `load_posteriors`,
+  `pair_for_calibration`) — i.e.:
+  `COIN, COIN_NOUL, CPT, D6, APIConnectionError, APITimeoutError, Answer,
+  AsyncJevClient, BayesNet, Budget, CalibrationPairing, ChoiceAnswer,
+  ChoiceQuestion, CircuitBreaker, CircuitOpenError, CircuitState,
+  ConfidenceGate, Decider, DecisionEvent, Edge, EvaluationRecord, Evaluator,
+  JSONContent, JaggednessFixture, JevClient, ModelCard, NoulAnswer,
+  NoulQuestion, OverloadedError, PosteriorsSidecar, ProviderSpec, Question,
+  QuestionSet, RateLimitError, RetryPolicy, ScoreAnswer, ScoreQuestion,
+  Settings, SystemOneResponse, TypeSafeError, Usage, UsageLedger,
+  UsageSnapshot, Variable, __version__, answer_from_wire, chi2_sf, choice,
+  composite_score, confidence_gate, decompose_single_parent, elicit_cpts,
+  get_provider, list_providers, load_posteriors, load_settings, max_streak,
+  noul, noul_choice_delta, open_async_client, open_client,
+  pair_for_calibration, parse_response, pick_model, position_slope,
+  propose_structure, register_provider, resolve_retry, resolve_timeout,
+  route, run_battery, runs_test_z, score, uniform_chi2, uniform_deviation`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
@@ -480,7 +495,7 @@ wire path is silently coerced.
   `DEFAULT_MANIFEST` is anchored to the repo root this module is installed
   in, not the process CWD.
 - `mcp_server.py` — FastMCP server (`build_server()`,
-  `main(transport="stdio")`): 7 tools — `jev_ask` (state widened to
+  `main(transport="stdio")`): 8 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
   `question_from_mapping`), `jev_evaluate` (async: `AsyncJevClient` +
   `Evaluator.evaluate_async()` on the serving loop; empty `states` →
@@ -488,12 +503,19 @@ wire path is silently coerced.
   `jev_models` (async; `pick` is a Literal schema; `contains=""` = no
   filter), `jev_composite_score` (finite/non-negative probability validation
   via `composite_score`), `jev_confidence_gate`, `jev_tiered_gate`,
-  `jev_docs_verify` (error shape `{"error", "message", "ok": False}`) — plus
+  `jev_docs_verify` (error shape `{"error", "message", "ok": False}`),
+  `jev_posteriors_load` (async sidecar ingest: `path` plus optional
+  `graphspec_path` cross-checked against a `dafjev.bayesnet/1` document;
+  same loader as the CLI `posteriors-load` command; makes no API call —
+  the only tool that needs no provider/key; error shape
+  `{error, message, ok: False}`) — plus
   the `jev://docs/snapshot` resource via `docs_verify` (CWD-independent).
   Every return is JSON-safe (`dataclasses.asdict`); stdio transport only;
   `mcp` imports at module level (optional extra — never from core modules);
-  client/compose/evaluate import lazily inside the tools.
-  Every tool additionally accepts an optional string `provider` argument
+  client/compose/evaluate import lazily inside the tools; the posteriors
+  helpers import at module level (pure stdlib, no client).
+  Every tool except `jev_posteriors_load` (sidecar ingest, no API call)
+  additionally accepts an optional string `provider` argument
   (default `"jev"`; validated via `get_provider` — unknown providers return
   a JSON-safe error result listing the available keys, no traceback); MCP
   stays stdio-only. Details in the Provider dispatch section.
@@ -526,6 +548,13 @@ wire path is silently coerced.
   validation precedes any figure; deterministic byte-identical output.
   Full contract in the Animation part of the Graphical models section
   below.
+- `bayesnet_posteriors.py` — posteriors/marginals sidecar ingest (pure
+  stdlib; the only I/O is reading the sidecar and optional GraphSpec JSON
+  documents — no client, no matplotlib). Accepts both
+  `dafjev.bayesnet-posteriors/1` (variant A) and `gnn.marginals/1`
+  (variant B) documents fail-closed and pairs Jev assignments against
+  sidecar rows for calibration. Full contract in the Posteriors sidecar
+  ingest section below.
 
 Shared figures theme: `figures.py` owns the single visual identity — the
 named `COLOR_*` / `FONT_*` / `SIZE_*` constants, `DPI`, `ARROW_STYLE` /
@@ -550,7 +579,10 @@ fills, and the arrow curvature / mutation-scale geometry constants. Bar
 series in `plot_posterior_trajectory` and `animate_posterior` follow the
 `_style()` prop_cycle order (cycling per query-variable series); registry
 PNGs never route through the viz modules — every `generate_<name>()`
-draws inside `figures.py`.
+draws inside `figures.py`. The posteriors-ingest module
+`bayesnet_posteriors.py` is likewise outside the theme: pure stdlib with
+no figure surface — it never imports `figures`, matplotlib, or the viz
+modules.
 
 ## Provider dispatch
 
@@ -664,7 +696,8 @@ CLI + MCP (`cli.py` / `mcp_server.py`):
   flows into client construction (`open_client` / `open_async_client`).
   The keyless error JSON for `--provider kev models` mentions
   `KEV_API_KEY`.
-- `mcp_server.py`: every tool gains optional string arg `provider`
+- `mcp_server.py`: every tool except `jev_posteriors_load` gains optional
+  string arg `provider`
   (default "jev"), validated via `get_provider`; unknown provider => error
   result listing available keys (JSON-safe, no traceback). MCP stays
   stdio-only.
@@ -1005,7 +1038,11 @@ julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
 The Julia script prints marginal posteriors in topological order;
 `--evidence xray=true` clamps GraphSpec evidence, and `--out` writes
 a `dafjev.bayesnet-posteriors/1` sidecar (evidence + marginals) that
-re-feeds daf-jev for calibration / re-asking — the downstream seam.
+re-feeds daf-jev for calibration / re-asking — the downstream seam:
+`load_posteriors` ingests and validates it (CLI `daf-jev posteriors-load`,
+MCP `jev_posteriors_load`), and `pair_for_calibration` pairs Jev
+assignments against the sidecar rows (Posteriors sidecar ingest section
+below).
 
 Artifacts (step 1; `--out-dir`, default `output/experiments/asia`):
 
@@ -1028,6 +1065,77 @@ posteriors on RxInfer 5.5.0 and 5.5.2; the full Asia net (multi-parent
 `DiscreteTransition` nodes) stalls variational message passing — an
 upstream ReactiveMP limitation, reproduced independently of the
 bridge.
+
+## Posteriors sidecar ingest (src/daf_jev/bayesnet_posteriors.py)
+
+Pure-stdlib ingest of posterior/marginals sidecar documents — the
+downstream seam of the cross-repo pipeline above (the Julia `--out`
+sidecar re-enters daf-jev here). No client, no numpy; the only I/O is
+reading the sidecar and optional GraphSpec JSON documents.
+Line receipts against current source: formats/tolerances
+`src/daf_jev/bayesnet_posteriors.py:60-65`, dataclasses `:68-95`,
+`load_posteriors` `:119-155`, `row_sum_deviations` `:399-404`,
+`pair_for_calibration` `:407-521`; CLI `src/daf_jev/cli.py:494-510`
+(handler) and `:680-695` (parser); MCP `src/daf_jev/mcp_server.py:382-410`
+(tool) and `:450` (registration). Pinned by
+`tests/unit/test_bayesnet_posteriors.py`.
+
+- Formats: `FORMAT_POSTERIORS = "dafjev.bayesnet-posteriors/1"` (variant
+  A: exactly `{format, evidence, posteriors}`) and `FORMAT_MARGINALS =
+  "gnn.marginals/1"` (variant B: exactly `{format, marginals,
+  source_model}`) — the top-level key sets are enforced (`ValueError`
+  otherwise).
+- Tolerances: `ROW_SUM_TOLERANCE = 1e-6` (variant A flat per-row
+  budget), `ROUNDED_STATE_BUDGET = 5e-7` (variant B per-state budget —
+  a row's budget is `1e-6 + len(row) * 5e-7`, length-widened for
+  6-digit rounding), `ONE_HOT_TOLERANCE = 1e-6` (evidence rule),
+  `ASSIGNMENT_ROW_SUM_TOLERANCE = 1e-6` (assignment distributions in
+  `pair_for_calibration`).
+- `PosteriorsSidecar` — frozen dataclass: `format: str`,
+  `posteriors: Mapping[str, Mapping[str, float]]` (var -> state -> p;
+  "posteriors" rows for variant A, "marginals" rows for variant B),
+  `evidence: Mapping[str, str] | None` (variant A only),
+  `source_model: str | None` (variant B only). Insertion order is
+  preserved everywhere (plain dicts).
+- `CalibrationPairing` — frozen dataclass: `brier_scores:
+  Mapping[str, float]` (var -> soft multiclass Brier score of the
+  assignment against the sidecar row, summed over the union of both
+  key sets), `pairs: tuple[tuple[float, bool], ...]` —
+  `(confidence, correct)` tuples in the same order and length,
+  matching the `daf_jev.calibration` pair convention.
+- `load_posteriors(path: str | Path, graphspec: str | Path | None =
+  None) -> PosteriorsSidecar` — fail-closed parse and validation:
+  invalid JSON, unknown/missing/non-string `format`, unexpected or
+  missing top-level keys, non-mapping rows, bool/non-numeric/
+  NaN/infinite/negative probabilities, a row-sum budget breach, and the
+  variant-A one-hot evidence rule (observed state carries >=
+  `1 - ONE_HOT_TOLERANCE`; every other state in the row carries <=
+  `ONE_HOT_TOLERANCE`) all raise `ValueError` naming the offending
+  var/state/key/path; missing files raise `FileNotFoundError`
+  naturally. When `graphspec` is given, every sidecar variable and
+  state is cross-checked against that `dafjev.bayesnet/1` document —
+  sidecar -> spec direction only (extra spec detail is ignored); a
+  GraphSpec whose `format` is not exactly `dafjev.bayesnet/1`, or that
+  does not define a sidecar variable or state, is rejected.
+- `row_sum_deviations(sidecar) -> dict[str, float]` — per-variable
+  absolute row-sum deviation `|sum(row) - 1|`, in the insertion order
+  of `sidecar.posteriors`.
+- `pair_for_calibration(sidecar, assignments: Mapping[str, str |
+  Mapping[str, float]]) -> CalibrationPairing` — pairs Jev assignments
+  against the sidecar as the calibration target: per assigned variable,
+  `confidence` is the exact posterior support for the chosen state and
+  `correct` whether the chosen state matches the sidecar's modal state
+  (ties break to the first maximum in insertion order on both sides);
+  distribution assignments reduce to their argmax for the pair while
+  the full distribution feeds only the Brier term. Partial pairing is
+  by design (sidecar variables without an assignment are skipped). Like
+  `bench_calibration.py`, this is a self-consistency proxy against the
+  sidecar — NOT ground-truth calibration.
+- CLI/MCP surface (the same loader both ways): `daf-jev posteriors-load
+  FILE [--graphspec FILE]` and MCP `jev_posteriors_load(path,
+  graphspec_path=None)` both return `{ok, format, evidence_count,
+  variable_count, min_row_sum_deviation, max_row_sum_deviation}` and
+  need no API key — no client is constructed.
 
 ## Tests (tests/) — template "no-mock" convention
 

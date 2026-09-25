@@ -75,7 +75,10 @@ registry (`providers.py`), and the graphical-models stack
 (`graphical.py` — incl. `decompose_single_parent`, the joint-preserving,
 single-parent-scoped mitigation for the RxInfer 5.5.x multi-parent stall;
 `graphical_elicitation.py`, `graphical_viz.py`,
-`scripts/bayes_experiment.py`) — plus the post-wave-A hardening semantics
+`scripts/bayes_experiment.py`; posterior-sidecar ingest via
+`bayesnet_posteriors.py` — `load_posteriors` / `pair_for_calibration`
+over the `dafjev.bayesnet-posteriors/1` / `gnn.marginals/1` sibling
+formats) — plus the post-wave-A hardening semantics
 (client timeout/error mapping, strict wire parsing, compose validation,
 decider taxonomy). The manuscript-pipeline module internals (`figures.py`,
 `manuscript_variables.py`) are now documented in the contract too

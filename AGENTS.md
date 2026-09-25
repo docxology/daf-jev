@@ -86,16 +86,20 @@ restate them here; there is no `../AGENTS.md` in this location.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
-    (`--transport stdio` — the only choice), `providers` (registry listing;
+    (`--transport stdio` — the only choice), `posteriors-load` (FILE +
+    optional `--graphspec`; validates a `dafjev.bayesnet-posteriors/1` or
+    `gnn.marginals/1` sidecar, keyless), `providers` (registry listing;
     global `--provider` flag); JSON to stdout, exit 0/1/2.
   - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
     `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
-    `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify` + the
-    `jev://docs/snapshot` resource; stdio transport only; `jev_evaluate` /
-    `jev_models` are async; `jev_composite_score` validates finite
-    non-negative probabilities (`ValueError`); imports `mcp` at module
-    import (optional `mcp` extra — never import from core modules); every
-    tool takes an optional `provider` argument (default `jev`).
+    `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`,
+    `jev_posteriors_load` + the `jev://docs/snapshot` resource; stdio
+    transport only; `jev_evaluate` / `jev_models` / `jev_posteriors_load`
+    are async; `jev_composite_score` validates finite non-negative
+    probabilities (`ValueError`); imports `mcp` at module import
+    (optional `mcp` extra — never import from core modules); every tool
+    but `jev_posteriors_load` (sidecar ingest, no API call) takes an
+    optional `provider` argument (default `jev`).
   - `questions.py` — shared native question-mapping builder (no I/O):
     `question_from_mapping(value, *, context="question")` builds
     `NoulQuestion` / `ChoiceQuestion` / `ScoreQuestion` from a
@@ -157,13 +161,27 @@ restate them here; there is no `../AGENTS.md` in this location.
     GIF via PillowWriter; lazy matplotlib import with the
     figures-extra hint; fail-closed validation before any figure
     (`figures` extra).
+  - `bayesnet_posteriors.py` — fail-closed ingest of GNN-emitted
+    posterior sidecars: `load_posteriors(path, graphspec=None) ->
+    PosteriorsSidecar` over the two sibling variants
+    (`dafjev.bayesnet-posteriors/1` `{format, evidence, posteriors}` —
+    raw Float64 rows, flat `1e-6` per-row row-sum budget, one-hot
+    evidence rule; `gnn.marginals/1` `{format, marginals, source_model}`
+    — 6-digit-rounded rows with the length-widened budget), optionally
+    cross-checked against a `dafjev.bayesnet/1` GraphSpec;
+    `pair_for_calibration(sidecar, assignments) -> CalibrationPairing`
+    (calibration target pairing: `(confidence, correct)` pairs matching
+    the `daf_jev.calibration` convention + per-variable soft multiclass
+    Brier scores); `row_sum_deviations(sidecar)`. Exported at package
+    root; surfaced as `daf-jev posteriors-load` and MCP
+    `jev_posteriors_load`.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
   manuscript_variables, calibration, and mcp_server modules, plus
   test_graphical.py, test_graphical_elicitation.py,
-  test_graphical_viz.py, test_graphical_methods.py, and
-  test_graphical_animation.py),
+  test_graphical_viz.py, test_graphical_methods.py,
+  test_graphical_animation.py, and test_bayesnet_posteriors.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
@@ -275,8 +293,11 @@ emitter/parser in [`src/daf_jev/graphical.py`](src/daf_jev/graphical.py) and
    gap below); single-parent specs print exact marginals end-to-end.
    `--out FILE` writes a `dafjev.bayesnet-posteriors/1` sidecar for
    re-asking Jev.
-5. **Feed back** — posteriors re-enter daf-jev (calibration, evidence
-   queries, trajectory re-walk).
+5. **Feed back** — posteriors re-enter daf-jev through
+   [`src/daf_jev/bayesnet_posteriors.py`](src/daf_jev/bayesnet_posteriors.py)
+   (`load_posteriors` + `pair_for_calibration`; surfaced as
+   `daf-jev posteriors-load` and MCP `jev_posteriors_load`) —
+   calibration, evidence queries, trajectory re-walk.
 
 Known gap: single-parent nets run end-to-end with exact posteriors on
 both RxInfer 5.5.0 and 5.5.2; multi-parent `DiscreteTransition` nodes
