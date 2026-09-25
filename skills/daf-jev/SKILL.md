@@ -36,18 +36,19 @@ never be committed, printed, or read by tests.
 
 ## Python API (`import daf_jev`)
 
-- **Builders** — `noul(instructions, *, true_desc=None, false_desc=None)`,
+- **Builders** (`daf_jev.primitives`) —
+  `noul(instructions, *, true_desc=None, false_desc=None)`,
   `choice(instructions, options: Mapping[str, str | None])`,
   `score(instructions, levels: Sequence[str])` (>= 2 levels);
   `QuestionSet()` with `.add(id, q)`, `.merge(other)`, `.to_wire()`.
-- **Clients** — `JevClient(api_key=None, *, base_url=None, model=None, ...)`
+- **Clients** (`daf_jev.client`) — `JevClient(api_key=None, *, base_url=None, model=None, ...)`
   (`model=None` resolves `JEV_MODEL` / `TYPESAFE_DEFAULT_MODEL`, then
   `jev-latest`), `.ask(state, questions, *, model=None, timeout=None,
   request_headers=None) -> SystemOneResponse` (answers by id; cached views
   `.nouls` / `.choices` / `.scores`; `.usage`; `.request_id`).
   `AsyncJevClient` has the same surface, async. Errors form a
   `TypeSafeError` hierarchy; 429/529 retry per `RetryPolicy`.
-- **Evaluation** — `Evaluator(client, questions, *, concurrency=...)`
+- **Evaluation** (`daf_jev.evaluate`) — `Evaluator(client, questions, *, concurrency=...)`
   `.evaluate(states) -> list[EvaluationRecord]`, `.summary()` for
   aggregates; `await .evaluate_async(items)` is the public async entry
   point for in-loop use (requires an `AsyncJevClient`; the async session
@@ -83,13 +84,25 @@ never be committed, printed, or read by tests.
   must be >= 0; `calibration_pairs()` accumulates `(declared confidence,
   gate-accepted)` pairs when the gate is a `ConfidenceGate` — a
   self-consistency proxy for `daf_jev.calibration`.
-- **Models** — `client.models(*, timeout=None, request_headers=None) ->
+- **Models** (`daf_jev.models`) — `client.models(*, timeout=None, request_headers=None) ->
   list[ModelCard]` (same per-call params as `ask`, retried per policy);
   `pick_model(cards, *, contains=None, prefer="latest")`.
 - **Calibration** (`daf_jev.calibration`, pure): `bucket_index(confidence,
   n_buckets=10)`, `reliability_table(pairs, *, n_buckets=10)`,
   `expected_calibration_error(pairs, *, n_buckets=10)`,
   `brier_score(pairs)` — pairs are `(confidence, correct: bool)` tuples.
+- **Jaggedness** (`daf_jev.jaggedness`, pure stdlib) — how far repeated
+  answers to stochastic prompts (coin flips, die rolls; built-in `COIN` /
+  `COIN_NOUL` / `D6` fixtures) stray from the stated uniform distribution:
+  `uniform_chi2` (chi-square + df + p), `uniform_deviation` (max |Δp| +
+  total variation), `runs_test_z` / `max_streak` (serial structure),
+  `position_slope` (order-rotation position bias), `noul_choice_delta`
+  (the same coin asked as noul vs choice). `run_battery(client, fixtures,
+  *, repeats=50, concurrent=32, timeout=None)` drives any duck-typed
+  `ask` client; degeneracy (one label on every identical ask) is a
+  reported finding, not an error. Live battery:
+  `benchmarks/bench_jaggedness.py` (per-provider SKIP without its key;
+  see `benchmarks/README.md`).
 - **Graphical models** (`daf_jev.graphical` +
   `daf_jev.graphical_elicitation`) — Jev as a factor source for discrete
   Bayes nets: `Variable(key, description, states)`, `Edge(parent,
@@ -127,14 +140,60 @@ never be committed, printed, or read by tests.
   render the same walkthrough as GIFs (PillowWriter; `pillow` in the
   `figures` extra); the runner's `--animate` flag writes
   `posterior_animation.gif` + `network_animation.gif`.
+  Keyword knobs: `to_mermaid` takes `direction` / `description_limit`;
+  `plot_network` / `plot_posterior_trajectory` take `dpi` / `figsize`
+  (the trajectory plotter also `labels`); `animate_network` /
+  `animate_posterior` take `fps` / `dpi` (the posterior animation also
+  `labels`); defaults unchanged.
+- **Posteriors ingest** (`daf_jev.bayesnet_posteriors`) — fail-closed
+  reader for GNN-emitted posterior sidecars:
+  `load_posteriors(path, graphspec=None) -> PosteriorsSidecar` accepts
+  both sibling variants — `dafjev.bayesnet-posteriors/1`
+  (`{format, evidence, posteriors}`; raw Float64 rows under the flat
+  per-row budget `|sum(row) - 1| <= 1e-6`, one-hot evidence rule) and
+  the GNN-internal `gnn.marginals/1` (`{format, marginals,
+  source_model}`; 6-digit-rounded rows with the length-widened row-sum
+  budget) — optionally cross-checked against a `dafjev.bayesnet/1`
+  GraphSpec. `pair_for_calibration(sidecar, assignments) ->
+  CalibrationPairing` pairs Jev assignments against the sidecar as the
+  calibration target (`(confidence, correct)` pairs — confidence is the
+  exact posterior support for Jev's chosen state, correct is the
+  modal-state match — plus per-variable soft multiclass Brier scores);
+  `row_sum_deviations(sidecar)` reports per-variable `|sum(row) - 1|`.
+  Surfaced as `daf-jev posteriors-load` and MCP `jev_posteriors_load`.
+
+- **Questions** (`daf_jev.questions`) — `question_from_mapping(value, *,
+  context="question")` builds a `NoulQuestion` / `ChoiceQuestion` /
+  `ScoreQuestion` from a native `{type, instructions, criteria}` mapping
+  with strict validation; the CLI (`evaluate --questions-file`) and the
+  MCP server (`jev_ask` / `jev_evaluate`) route native mappings through it.
+- **Docs snapshot** (`daf_jev.docs_verify`) —
+  `verify_manifest(manifest_path)` re-hashes every page of the TypeSafe
+  docs-snapshot manifest (flags `missing` / `drifted` / `added`); routed
+  through `daf-jev docs-verify` and MCP `jev_docs_verify`.
+- **Figures** (`daf_jev.figures`, `figures` extra) — `generate_all()`
+  writes the 7 registry-named PNGs + `figure_registry.json` into the
+  figures directory; data-driven figures read the newest
+  `output/benchmarks/*.json` and raise `FileNotFoundError` (naming the
+  missing JSON) rather than fabricating data.
+- **Manuscript variables** (`daf_jev.manuscript_variables`) —
+  `generate_variables` / `save_variables` derive the 49 `{{TOKEN}}`
+  manuscript variables from pyproject, the docs MANIFEST, test counts,
+  benchmark JSONs, and `manuscript/config.yaml` knobs; zero hardcoded
+  results (strict default; `--allow-draft` for drafts).
+- **CLI + MCP server** (`daf_jev.cli`, `daf_jev.mcp_server`) — the
+  `daf-jev` console script (stdlib argparse, JSON to stdout, exit 0/1/2;
+  see the CLI section below) and the FastMCP server (`build_server` /
+  `main`, stdio only, JSON-safe tools, optional `mcp` extra).
 - **Config** — package-root re-exports `load_settings`, `resolve_retry`,
   `resolve_timeout`; the API-key/base-URL resolvers live in
   `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
-decider, provider dispatch, Asia Bayes net); each skips cleanly without
-a key.
+decider, decider resilience, async evaluation, calibration walkthrough,
+retry policies, provider dispatch, Asia Bayes net); each skips cleanly
+without a key.
 
 ## Jev to RxInfer.jl pipeline (quick reference)
 
@@ -161,9 +220,12 @@ across both repos).
    marginals; the committed 8-node Asia spec stalls at multi-parent
    `DiscreteTransition` (upstream gap). `--out FILE` writes a
    `dafjev.bayesnet-posteriors/1` sidecar.
-5. Feed back — posteriors re-enter daf-jev (calibration, evidence
-   queries). Gap: single-parent nets exact end-to-end on RxInfer 5.5.0 /
-   5.5.2; multi-parent `DiscreteTransition` stalls in RxInfer 5.5.x VMP
+5. Feed back — posteriors re-enter daf-jev through
+   `daf_jev.bayesnet_posteriors` (`load_posteriors` +
+   `pair_for_calibration`; also `daf-jev posteriors-load` and MCP
+   `jev_posteriors_load`) — calibration, evidence queries. Gap:
+   single-parent nets exact end-to-end on RxInfer 5.5.0 / 5.5.2;
+   multi-parent `DiscreteTransition` stalls in RxInfer 5.5.x VMP
    (upstream limitation).
 
 Deep links (resolve from the repo checkout):
@@ -174,7 +236,8 @@ Deep links (resolve from the repo checkout):
 - [`graphical.py`](../../src/daf_jev/graphical.py) ·
   [`graphical_elicitation.py`](../../src/daf_jev/graphical_elicitation.py) ·
   [`graphical_viz.py`](../../src/daf_jev/graphical_viz.py) ·
-  [`graphical_animation.py`](../../src/daf_jev/graphical_animation.py)
+  [`graphical_animation.py`](../../src/daf_jev/graphical_animation.py) ·
+  [`bayesnet_posteriors.py`](../../src/daf_jev/bayesnet_posteriors.py)
 - [`scripts/bayes_experiment.py`](../../scripts/bayes_experiment.py) ·
   [receipts.json](../../output/experiments/asia/receipts.json) (live run)
 
@@ -190,6 +253,9 @@ daf-jev evaluate --questions-file PATH --states-file PATH
 daf-jev docs-verify [--manifest PATH]        # exit 1 on snapshot drift
 daf-jev serve [--transport stdio]            # MCP server (stdio default)
 daf-jev providers                           # registry listing (keyless, exit 0)
+daf-jev posteriors-load FILE [--graphspec FILE]
+                                           # validate a posterior sidecar
+                                           # (keyless; exit 1 on invalid)
 # global --provider KEY precedes any subcommand: daf-jev --provider kev models
 ```
 
@@ -199,7 +265,8 @@ Output is JSON; exit codes 0 ok / 1 runtime / 2 usage.
 
 ## Providers
 
-One wire contract (`POST /v1/systemone`), six registered providers;
+One wire contract (`POST /v1/systemone`), six registered providers in
+`daf_jev.providers`;
 `daf-jev providers` prints the registry as JSON (keyless):
 
 | key | backend | default base URL | default model | client key env |
@@ -245,6 +312,9 @@ JSON-safe dicts):
 - `jev_composite_score` — composite score from a probability dict.
 - `jev_confidence_gate` / `jev_tiered_gate` — one- and two-threshold routing.
 - `jev_docs_verify` — check the docs snapshot manifest for drift.
+- `jev_posteriors_load` — load/validate a posterior sidecar
+  (`dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`); no API call,
+  optional GraphSpec cross-check.
 - Resource `jev://docs/snapshot` — `{page_count, snapshot_id, scraped_at,
   index_sha256}` from `docs/reference/MANIFEST.json`.
 

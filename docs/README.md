@@ -37,14 +37,15 @@ Documentation for daf-jev.
 
 `CITATION.cff` (CFF 1.2.0 citation metadata) and `.zenodo.json` (Zenodo
 deposit metadata) live at the repo root. Releases are archived as version
-deposits on the stable concept DOI `10.5281/zenodo.22816187` (v0.4.1:
-<https://zenodo.org/records/22884676>; v0.4.0:
-<https://zenodo.org/records/22884305>; v0.3.0:
-<https://zenodo.org/records/22817425>), with the public repository at
-<https://github.com/docxology/daf-jev>.
-Releases v0.4.2, v0.5.0, and v0.6.0 are tagged on GitHub; Zenodo version
-deposits for them are pending (platform incident) — the concept DOI stays
-stable and resolves to the latest published version.
+deposits on the stable concept DOI `10.5281/zenodo.22816187`, which always
+resolves to the latest published version (API-verified 2026-09-24): v0.3.0
+(<https://zenodo.org/records/22817425>), v0.4.0
+(<https://zenodo.org/records/22884305>), v0.4.1
+(<https://zenodo.org/records/22884676>, published 2026-09-21), v0.4.2
+(<https://zenodo.org/records/22921823>, 2026-09-22), v0.5.0
+(<https://zenodo.org/records/22921963>, 2026-09-22), and v0.6.0
+(<https://zenodo.org/records/22921974>, 2026-09-23, latest), with the
+public repository at <https://github.com/docxology/daf-jev>.
 
 ## ARCHITECTURE.md — the contract
 
@@ -60,19 +61,30 @@ conventions. All workers must match its signatures exactly; on
 contradiction, report the delta — do not silently deviate.
 
 Gap note: the contract now also covers the newer modules — `evaluate.py`,
-`calibration.py`, `questions.py`, `docs_verify.py`, `mcp_server.py`, the
+`calibration.py`, `jaggedness.py` (model-jaggedness statistics and the
+`run_battery` battery driver over stochastic prompts), `questions.py`,
+`docs_verify.py`, `mcp_server.py`, the
 decision-loop trio (`ledger.py`, `resilience.py`, `decider.py`), and the
 figure/variables scripts (`scripts/generate_figures.py`,
-`scripts/z_generate_manuscript_variables.py`), the provider-dispatch
+`scripts/z_generate_manuscript_variables.py`), the live-API benchmark
+battery (`benchmarks/` — `bench_jaggedness.py` measures uniformity
+deviation, choice degeneracy, runs/streak, order rotation, concurrent
+wobble, and the noul-vs-choice delta; see `benchmarks/README.md`), the
+provider-dispatch
 registry (`providers.py`), and the graphical-models stack
-(`graphical.py`, `graphical_elicitation.py`, `graphical_viz.py`,
-`scripts/bayes_experiment.py`) — plus the post-wave-A hardening semantics
+(`graphical.py` — incl. `decompose_single_parent`, the joint-preserving,
+single-parent-scoped mitigation for the RxInfer 5.5.x multi-parent stall;
+`graphical_elicitation.py`, `graphical_viz.py`,
+`scripts/bayes_experiment.py`; posterior-sidecar ingest via
+`bayesnet_posteriors.py` — `load_posteriors` / `pair_for_calibration`
+over the `dafjev.bayesnet-posteriors/1` / `gnn.marginals/1` sibling
+formats) — plus the post-wave-A hardening semantics
 (client timeout/error mapping, strict wire parsing, compose validation,
-decider taxonomy). The remaining gap is the manuscript-pipeline module
-internals (`figures.py`, `manuscript_variables.py`), covered by the
-contract only through their script entry points; the root `AGENTS.md`
-module map stays the detailed on-disk truth for those, and the contract
-should be extended rather than contradicted. The Graphical models section
+decider taxonomy). The manuscript-pipeline module internals (`figures.py`,
+`manuscript_variables.py`) are now documented in the contract too
+(module-signature sections); the root `AGENTS.md` module map stays the
+quick on-disk map for those, and the contract should be extended rather
+than contradicted. The Graphical models section
 now carries the [end-to-end pipeline](ARCHITECTURE.md#end-to-end-pipeline) —
 the signature-exact two-repo command sequence and the five experiment
 artifacts.
@@ -146,9 +158,10 @@ code.
 
 ## examples/ — runnable walkthroughs
 
-`examples/` holds eight runnable scripts (quickstart, triage router,
+`examples/` holds twelve runnable scripts (quickstart, triage router,
 composite scoring, corpus evaluation, gated fallback, decider loop,
-providers example, Asia Bayes — see `examples/README.md`); each
+decider resilience, async evaluation, calibration walkthrough, retry
+policies, providers example, Asia Bayes — see `examples/README.md`); each
 prints `SKIP: JEV_API_KEY not set` and exits 0 when no API key resolves.
 
 ## calibration

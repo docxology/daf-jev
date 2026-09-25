@@ -140,8 +140,8 @@ def main() -> None:
         f" {', '.join(spec.key for spec in list_providers())}"
     )
 
-    # The injected transport removes the key requirement entirely; the ask
-    # below never leaves this process.
+    # The injected transport removes the network requirement — the key
+    # gate above still applies; the ask below never leaves this process.
     with open_client(
         "kev",
         api_key=kev_settings.api_key,

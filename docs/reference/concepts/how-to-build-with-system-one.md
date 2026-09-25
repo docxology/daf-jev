@@ -664,9 +664,49 @@ Because every output is constrained to the supplied options, the model returns a
   </Step>
 
   <Step title="Use structure in the questions">
-    Keep atomic questions short. When instructions or criteria need several kinds of guidance, use objects or arrays with named fields instead of flattening everything into a dense prose string. This makes the decision boundary easier to scan, review, and tune.
+    Keep questions short. `instructions` and `criteria` are usually strings, and for a short, unambiguous question a string is all you need. They can also be objects or arrays. Put the question in one field and the data that guides the question in the others.
 
-    For a Choice, describe what belongs in each option, what belongs in a neighboring option instead, and a few representative examples. Use the same field names across options so the model can compare them directly.
+    Structure helps in these situations:
+
+    * The question needs context or examples. A long sentence of background information or a list of example inputs belongs in named fields next to the question, where your code can add to them or swap them without rewriting the question.
+    * Part of the question comes from your code. When a value comes from a database, put it in its own field instead of splicing it into a string template.
+    * Several questions have similar instructions. A request takes one state and can include multiple questions. Adding supplementary data can help make questions distinct.
+
+    <Accordion title="Example: reference a record from your code">
+      This Noul compares a resume in the state against a record from a candidate database. The record goes into `potential_duplicate` as it is, and the question refers to it by name.
+
+      <TypesafeExample
+        title="questions"
+        display="questions"
+        example={{
+      state: {
+        resume: {
+          name: 'John Smith',
+          location: 'Oakland, CA',
+          summary: 'Backend engineer with eight years of Python and Go experience.',
+          experience: [
+            { employer: 'Google', title: 'Senior Backend Engineer', years: '2021-2025' },
+            { employer: 'Microsoft', title: 'Software Engineer', years: '2017-2021' },
+          ],
+        },
+      },
+      selectedModels: ['jev-latest'],
+      questions: {
+        same_as_record_18: {
+          type: 'noul',
+          instructions: {
+            potential_duplicate: { name: 'John Smith', location: 'Oakland, California', last_employer: 'Google' },
+            question: 'Is the resume for the same person as `potential_duplicate`?',
+          },
+        },
+      },
+    }}
+      />
+    </Accordion>
+
+    The "potential\_duplicate" data sourced from code can change over time. The "question" references it using backticks.
+
+    The descriptions inside `criteria` can be objects too. For a Choice, each option's description can be an object that says what the option covers, what belongs to a different option, and a few examples. Use the same field names across options so the model can compare them directly.
 
     <Accordion title="Example: define contrastive Choice criteria">
       <TypesafeExample
@@ -707,7 +747,15 @@ Because every output is constrained to the supplied options, the model returns a
       />
     </Accordion>
 
-    A short, unambiguous question or criterion can remain a string. Add structure when it separates guidance that would otherwise blur together. For the full set of places structure is accepted, and worked examples for instructions, Choice options, Score levels, and Noul criteria, see [Advanced: structure](/primitives/advanced).
+    Each question type's page has a worked example:
+
+    * [Noul](/primitives/noul#structured-instructions) compares one resume against several candidate records, one question per record, with the questions built in code.
+    * [Choice](/primitives/choice#structured-instructions-and-criteria) describes two easily confused options with what each covers, what it's not for, and examples.
+    * [Score](/primitives/score#structured-level-descriptions) gives each level a description and example situations.
+
+    The [structured-data-extraction cascade cookbook](/cookbooks/sde_cascade) shows the shared-wording case, asking the same battery of questions about every field of an extracted record.
+
+    A short, unambiguous question or criterion can remain a string. Add structure when it separates guidance that would otherwise blur together. For the full set of places structure is accepted, see [Advanced: structure](/primitives/advanced).
   </Step>
 
   <Step title="Ask a lot of questions">

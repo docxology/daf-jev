@@ -2,57 +2,69 @@
   "source": "TypeSafe / Jev documentation",
   "base_url": "https://docs.typesafe.ai",
   "index_url": "https://docs.typesafe.ai/llms.txt",
-  "scraped_at_utc": "2026-09-16T21:19:06Z",
-  "index_sha256": "74567f6c0bd5cba9502603d80d915999d489fef42ec0066fd006fc36bb082c57",
-  "page_count": 108,
+  "scraped_at_utc": "2026-09-24T22:55:05Z",
+  "index_sha256": "3bad966207794ce900ebc81759fd48185cd2d1f287df13a08ae4d601e96450fd",
+  "page_count": 111,
   "pages": {
     "introduction.md": {
       "title": "Introduction",
       "url": "https://docs.typesafe.ai/introduction.md",
-      "sha256": "85c0e910b668b27d5eb61c1e923ae34e03f31fe0b02d69278430b17f6bc3fcb8",
-      "bytes": 3594
+      "sha256": "73eb533b5397d508e1cf606c88d5111f0e70bb8dd1d4841c45502c50d520e072",
+      "bytes": 4317
     },
     "introduction/quickstart.md": {
       "title": "Quick start",
       "url": "https://docs.typesafe.ai/introduction/quickstart.md",
-      "sha256": "98b193e910e79fa40daa8e50e6a2d1eeb2aa632291280d94a20e0ab3f3842ff2",
-      "bytes": 7054
+      "sha256": "c30183944985b269c49939140272f9eec885895df346f19d76cf9b04e18073d2",
+      "bytes": 7053
+    },
+    "introduction/coding-agents.md": {
+      "title": "Jev with coding agents",
+      "url": "https://docs.typesafe.ai/introduction/coding-agents.md",
+      "sha256": "e61ec46260302e87e21ca65fe2a1d67ae6c2741a4a586645ace5dd7d9f501175",
+      "bytes": 5150
+    },
+    "concepts/use-case-map.md": {
+      "title": "Example use cases",
+      "url": "https://docs.typesafe.ai/concepts/use-case-map.md",
+      "sha256": "9d193b6379d17a3ac2f236eda9f15136e32b360e78a66bef03ce59605edfac2d",
+      "bytes": 11707
     },
     "concepts/system-one.md": {
       "title": "System One",
       "url": "https://docs.typesafe.ai/concepts/system-one.md",
-      "sha256": "523bd154b3cdf457f272ee5cbebbb154972b7e796a2ad787354e92d47284af0f",
-      "bytes": 3817
+      "sha256": "e072211498bc1b6ed22d14aae2c2716903f4a8112e908cc45c35af65d3b84895",
+      "bytes": 4061
     },
     "concepts/state.md": {
       "title": "State",
       "url": "https://docs.typesafe.ai/concepts/state.md",
-      "sha256": "6345456a8fbdc143042e63e2fbf843e3d305171382ec226d2e4060c20c2eca72",
-      "bytes": 3525
+      "sha256": "6871d59470c6af330b10be302a7382ab4c175ee8994886ad48df2fe6bb315462",
+      "bytes": 3874
     },
     "primitives.md": {
       "title": "Primitives (Questions)",
       "url": "https://docs.typesafe.ai/primitives.md",
-      "sha256": "6cbe8960e23863cf2a1c8c6892d2fa4a0c0b42c9a4f034b6cec0727f2ec8c728",
-      "bytes": 24727
+      "sha256": "130d9136a2f01497e72920a6e8d96073056d86d838ca13b8a505e4adb87651f6",
+      "bytes": 24810
     },
     "primitives/choice.md": {
       "title": "Choice",
       "url": "https://docs.typesafe.ai/primitives/choice.md",
-      "sha256": "5ba42269e9a07ac5b1220ee6b6c69f060f57b6a7ff619cfedcb916acfb6c92c5",
-      "bytes": 26662
+      "sha256": "4c55085131f8f2d7ae1faefdec52b1c7b379d40657d701cd2c786021cfe9dac9",
+      "bytes": 26794
     },
     "primitives/score.md": {
       "title": "Score",
       "url": "https://docs.typesafe.ai/primitives/score.md",
-      "sha256": "653ca2a688bf6613bf4c1621046a22c66e672a90cf40992c1fe218a8e96768c4",
-      "bytes": 31889
+      "sha256": "5afe0db1d2d108c3bf35f73f5fddbfcd2b9ade2d3c6f553af8a02b2bfd005ae9",
+      "bytes": 43992
     },
     "primitives/noul.md": {
       "title": "Noul",
       "url": "https://docs.typesafe.ai/primitives/noul.md",
-      "sha256": "402a2f30ca71b53227058a5df3fb3e0a10063588a31b883f924d6660815c6916",
-      "bytes": 13083
+      "sha256": "aa7bff0d04bd42614e0e851a9ad4917ccc6287c882bc5dece7689b085ef789e6",
+      "bytes": 27363
     },
     "primitives/advanced.md": {
       "title": "Advanced: structure",
@@ -60,29 +72,23 @@
       "sha256": "73eeedee0c3ff68e5964c914ba006e4f59522fa8222e43bd960418febd13ea7f",
       "bytes": 19060
     },
+    "confidence.md": {
+      "title": "Confidence",
+      "url": "https://docs.typesafe.ai/confidence.md",
+      "sha256": "97dafe98b77979906a2ad456013dd85a70dcecd109d0644b096817d910997ea5",
+      "bytes": 11396
+    },
+    "concepts/how-to-build-with-system-one.md": {
+      "title": "How to build with TypeSafe",
+      "url": "https://docs.typesafe.ai/concepts/how-to-build-with-system-one.md",
+      "sha256": "d9f4d34c1349bf5acb55c99d6a1651eacfc481ad8d1f78ccb8776769da729a49",
+      "bytes": 40921
+    },
     "introduction/machine-learning-primer.md": {
       "title": "AI primer",
       "url": "https://docs.typesafe.ai/introduction/machine-learning-primer.md",
       "sha256": "45e6a22bc175f2ce1c404271dd26559179a6f6a83bde2dfcdbd963dbc1649551",
       "bytes": 6580
-    },
-    "confidence.md": {
-      "title": "Confidence",
-      "url": "https://docs.typesafe.ai/confidence.md",
-      "sha256": "c553ccda01913b9962e33b9f3948afeb7496482ab8bfe5352ff0e451f97514ef",
-      "bytes": 4892
-    },
-    "concepts/how-to-build-with-system-one.md": {
-      "title": "How to build with TypeSafe",
-      "url": "https://docs.typesafe.ai/concepts/how-to-build-with-system-one.md",
-      "sha256": "4f4dca16ba79da8a8f371814f53afa17666be7922f3c9b704eaddc16c7722663",
-      "bytes": 38344
-    },
-    "concepts/use-case-map.md": {
-      "title": "Example use cases",
-      "url": "https://docs.typesafe.ai/concepts/use-case-map.md",
-      "sha256": "9d193b6379d17a3ac2f236eda9f15136e32b360e78a66bef03ce59605edfac2d",
-      "bytes": 11707
     },
     "patterns.md": {
       "title": "Patterns",
@@ -93,26 +99,140 @@
     "patterns/fan-out.md": {
       "title": "Speculative fan-out",
       "url": "https://docs.typesafe.ai/patterns/fan-out.md",
-      "sha256": "f1f0789b2c2e7badbf645614892b38f43f3a956906c20430ce7d5b22242ec621",
-      "bytes": 12862
+      "sha256": "8d7a251ea6b735cb4994c1e0a95166cc0b3febce7d18189c3aa5e1673f182c91",
+      "bytes": 13967
     },
     "patterns/confidence-routing.md": {
       "title": "Confidence-gated routing",
       "url": "https://docs.typesafe.ai/patterns/confidence-routing.md",
-      "sha256": "5f1f8e0af76cb291d1583d8791f543a911f4ebebe1077ccd85e0178f2211b566",
-      "bytes": 11299
+      "sha256": "7a4de8d39a24c5d6b7e74b1b170fbbe101ca69419af39bac6da4e0c1f678b7bf",
+      "bytes": 12168
     },
     "patterns/composite-scoring.md": {
       "title": "Composite scoring",
       "url": "https://docs.typesafe.ai/patterns/composite-scoring.md",
-      "sha256": "b8cc7828beb5e7f585f2bdd00717bdef2394347a30ea12920ceb0c2080b9cef5",
-      "bytes": 12416
+      "sha256": "538f42d614fbf29cbfa0aa9fee1859651083a0b67c4b31a21d2710f3fe84d9f5",
+      "bytes": 13545
     },
     "patterns/intent-routing.md": {
       "title": "Intent routing",
       "url": "https://docs.typesafe.ai/patterns/intent-routing.md",
-      "sha256": "90a753c541af934522384f28e553bc9d8c1ad36fbacaf0cef68d0d44b7bcb5a1",
-      "bytes": 12197
+      "sha256": "84b670d502b3f41165a901495688dc7bd586ff3082854f5432a7a4962d697cfb",
+      "bytes": 13444
+    },
+    "cookbooks.md": {
+      "title": "Cookbooks",
+      "url": "https://docs.typesafe.ai/cookbooks.md",
+      "sha256": "bbf49df970d14d18d6b58d0852c0ae416329c004aa88fc39777b32e5172b5ac3",
+      "bytes": 8929
+    },
+    "cookbooks/consistency_noul_cookbook.md": {
+      "title": "Self-consistency: nouls",
+      "url": "https://docs.typesafe.ai/cookbooks/consistency_noul_cookbook.md",
+      "sha256": "cee9cb98c52cfbf588e0dda5defd0ba0c0d78e1162df7f20ba7bed1ece9935ff",
+      "bytes": 32392
+    },
+    "cookbooks/consistency_choice_cookbook.md": {
+      "title": "Self-consistency: choices",
+      "url": "https://docs.typesafe.ai/cookbooks/consistency_choice_cookbook.md",
+      "sha256": "e0444c2c4e9c9440595692eaa2806157d43080adc525f94fe5c204b2d7bafe36",
+      "bytes": 49891
+    },
+    "cookbooks/parallel_questions.md": {
+      "title": "Parallel questions",
+      "url": "https://docs.typesafe.ai/cookbooks/parallel_questions.md",
+      "sha256": "53dfe4516fd67b9bfc5abc9a50a6f4db6426b5b2951d41cd91e2fec45aded2fe",
+      "bytes": 48484
+    },
+    "cookbooks/rerank_typesafe.md": {
+      "title": "Re-ranking",
+      "url": "https://docs.typesafe.ai/cookbooks/rerank_typesafe.md",
+      "sha256": "5397e56dcdcff36dcba9f2200c0c494baed957eada0364db96075053af7eaa5c",
+      "bytes": 26067
+    },
+    "cookbooks/semantic_find.md": {
+      "title": "Line-by-line search",
+      "url": "https://docs.typesafe.ai/cookbooks/semantic_find.md",
+      "sha256": "7e30135ddc6758bc00806f3d58784a80466d77655c29a815ce10b396c356de74",
+      "bytes": 37844
+    },
+    "cookbooks/autoformat.md": {
+      "title": "Structure recovery",
+      "url": "https://docs.typesafe.ai/cookbooks/autoformat.md",
+      "sha256": "c23355f56ea56518792f8432ed2b4ca11771e01ff430922d8db2c27864ab34ac",
+      "bytes": 40882
+    },
+    "cookbooks/function_calling.md": {
+      "title": "Function calling",
+      "url": "https://docs.typesafe.ai/cookbooks/function_calling.md",
+      "sha256": "d6301a7e0e6ed229e2c54deed160c1007a902885232c05fc30f0781fb6d40535",
+      "bytes": 18860
+    },
+    "cookbooks/skill_suggestion.md": {
+      "title": "Skill suggestion",
+      "url": "https://docs.typesafe.ai/cookbooks/skill_suggestion.md",
+      "sha256": "97109e23a38ffeeda0a7533cb0abebe3a9a2203c1c63adcfce9b703fd249eb8e",
+      "bytes": 39773
+    },
+    "cookbooks/entity_alignment.md": {
+      "title": "Knowledge graph entity alignment",
+      "url": "https://docs.typesafe.ai/cookbooks/entity_alignment.md",
+      "sha256": "efa473b53ff4a2c353a8320ed6b89729b2d72f4fdf860e9c12fe0fb2500c58cc",
+      "bytes": 16563
+    },
+    "cookbooks/classifying_rag_passages.md": {
+      "title": "Classifying RAG passages",
+      "url": "https://docs.typesafe.ai/cookbooks/classifying_rag_passages.md",
+      "sha256": "fbe9208da48e2bdada3c671a02e5dc55954660b2e283a85f0f2df1b596c090e3",
+      "bytes": 32392
+    },
+    "cookbooks/citation_check.md": {
+      "title": "Double-checking citations",
+      "url": "https://docs.typesafe.ai/cookbooks/citation_check.md",
+      "sha256": "2497e2c62a4c5fb2d1aca1c4031fb7bd39948d27b13f18e1db07d8c5777cd529",
+      "bytes": 15254
+    },
+    "cookbooks/llm_guardrails.md": {
+      "title": "Guardrails for LLMs",
+      "url": "https://docs.typesafe.ai/cookbooks/llm_guardrails.md",
+      "sha256": "fb5935988e2c470ee0979b40e648d641b97604802093a1a6bf56d64dedd3e0d0",
+      "bytes": 22500
+    },
+    "cookbooks/sde_cascade.md": {
+      "title": "SDE cascade",
+      "url": "https://docs.typesafe.ai/cookbooks/sde_cascade.md",
+      "sha256": "03675753d74f2a08c746afe04c4f4283b55e5c6931d58a6ca9c6268b954a1a2f",
+      "bytes": 32667
+    },
+    "cookbooks/date_extraction_cookbook.md": {
+      "title": "Date extraction",
+      "url": "https://docs.typesafe.ai/cookbooks/date_extraction_cookbook.md",
+      "sha256": "c216cb3d293a07eadb64464b2f9b1d2a8e1670efc309cbfb6acd92724f386300",
+      "bytes": 19844
+    },
+    "cookbooks/pre_parsed_value_extraction_cookbook.md": {
+      "title": "Pre-parsed value extraction",
+      "url": "https://docs.typesafe.ai/cookbooks/pre_parsed_value_extraction_cookbook.md",
+      "sha256": "c9ebb87b822ba958664b28b4e214e322dd62540c0964ea317d54da531a0fa6bd",
+      "bytes": 12542
+    },
+    "cookbooks/hierarchical_classification.md": {
+      "title": "Hierarchical classification",
+      "url": "https://docs.typesafe.ai/cookbooks/hierarchical_classification.md",
+      "sha256": "5525161d2b5597a29bd315a58aa817fe00e6bc2470cb31ece0530dbb8221dbfe",
+      "bytes": 36445
+    },
+    "cookbooks/autoresearch_feature_discovery.md": {
+      "title": "Autoresearch feature discovery",
+      "url": "https://docs.typesafe.ai/cookbooks/autoresearch_feature_discovery.md",
+      "sha256": "00ee0cfff9cfd670ee87656fe38ce5f3588ac2f56cb0181b156c02a657a7f03b",
+      "bytes": 71497
+    },
+    "cookbooks/classification_using_confidence.md": {
+      "title": "Classification using confidence",
+      "url": "https://docs.typesafe.ai/cookbooks/classification_using_confidence.md",
+      "sha256": "20afd8e6c651de25c5a0fbfec2fde98a202f181066b2a5b391f1ffcb7ed5e377",
+      "bytes": 30705
     },
     "demos.md": {
       "title": "Demos",
@@ -126,6 +246,36 @@
       "sha256": "155c0af9a4ae31d2e283ee77147bc3a0bbaba45e15568a2382c29cc75f0adde4",
       "bytes": 3825
     },
+    "models.md": {
+      "title": "Models",
+      "url": "https://docs.typesafe.ai/models.md",
+      "sha256": "9d20bb3c90a0147532d0b20ddc4c64579391be7842e965543b27bad684eeb4d6",
+      "bytes": 7245
+    },
+    "api.md": {
+      "title": "API reference",
+      "url": "https://docs.typesafe.ai/api.md",
+      "sha256": "7ea1c82d9d16bd06e3d38885a5292548293f91e6d1ade4682c27398ced51a9e5",
+      "bytes": 11772
+    },
+    "agent-skill.md": {
+      "title": "Agent skill",
+      "url": "https://docs.typesafe.ai/agent-skill.md",
+      "sha256": "5ed8f74a133760523a67674f0feaac6ac88d9f1d242574ce3c9c4965f6e037c4",
+      "bytes": 5798
+    },
+    "legal.md": {
+      "title": "Legal",
+      "url": "https://docs.typesafe.ai/legal.md",
+      "sha256": "2d4a97a13e7b06b469bcd2c2fdcbf8b6c3aa0e56949eac67e8897ba5633aed7d",
+      "bytes": 1055
+    },
+    "model-jaggedness/jev-1.13.md": {
+      "title": "Jev 1.13 jaggedness",
+      "url": "https://docs.typesafe.ai/model-jaggedness/jev-1.13.md",
+      "sha256": "e69329bd32e91ac08f0bd2681ceb4aacc34923b9190e29c15c8f75d8e22950e2",
+      "bytes": 11588
+    },
     "sdk.md": {
       "title": "Client SDKs",
       "url": "https://docs.typesafe.ai/sdk.md",
@@ -135,62 +285,50 @@
     "sdk/python.md": {
       "title": "TypeSafe Python SDK",
       "url": "https://docs.typesafe.ai/sdk/python.md",
-      "sha256": "81cada0bf991f40520c62aab20ab09e0bb728d4ada77a9e301c658d320192bc2",
-      "bytes": 3243
+      "sha256": "40d5c6a5fb9b6a8f68ec9f14343837bc0ea5a7fe09a3bfb9a07f52418e41f1a3",
+      "bytes": 3324
     },
     "sdk/python/usage.md": {
       "title": "Usage",
       "url": "https://docs.typesafe.ai/sdk/python/usage.md",
-      "sha256": "412fe6bcf2a83307612f8b13164c3cec9ddbd4ddb2827f79847d9ca55994406b",
-      "bytes": 6434
+      "sha256": "9a7d1d4e52face5ccc889418b1b67c2442d41e64951b8ae480169d6542f222f4",
+      "bytes": 10189
     },
     "sdk/python/changelog.md": {
       "title": "Changelog",
       "url": "https://docs.typesafe.ai/sdk/python/changelog.md",
-      "sha256": "cbb370bc86395d157fbc15e47ae3c1469e66eb1135c03ccc6dd191a80622701b",
-      "bytes": 1074
+      "sha256": "47c90969dd76a83271c82650e0f4cfcea86db8ca0d9820ee8334eecc388162c5",
+      "bytes": 1828
     },
     "sdk/python/api.md": {
       "title": "API reference",
       "url": "https://docs.typesafe.ai/sdk/python/api.md",
-      "sha256": "4a5fb3fa0423d18e1a08d6b5fdc473bd6cc352fcc9b8ac4519880b6b849b496f",
-      "bytes": 752
+      "sha256": "fd58d0024e6269c295ed83e0397c0e19477d0f7a8b2b666dde496a1c6524bcaa",
+      "bytes": 623
     },
-    "sdk/python/api/clients/async/client.md": {
+    "sdk/python/api/clients/async.md": {
       "title": "Asynchronous client",
-      "url": "https://docs.typesafe.ai/sdk/python/api/clients/async/client.md",
-      "sha256": "ce2a6e698ddf71e798e4273942380ac952d059a8517bd369e5c8ac3444510204",
-      "bytes": 18241
+      "url": "https://docs.typesafe.ai/sdk/python/api/clients/async.md",
+      "sha256": "f45f04e87431ce9e21cdb90e074066a23ab962b3c870d316f9092682923d7fa2",
+      "bytes": 32575
     },
-    "sdk/python/api/clients/async/models.md": {
-      "title": "Models resource",
-      "url": "https://docs.typesafe.ai/sdk/python/api/clients/async/models.md",
-      "sha256": "3dd43a42b561a67bc8ffbf3934ba997b4d7660dac439fa89f9493b7c1d514de3",
-      "bytes": 5671
-    },
-    "sdk/python/api/clients/sync/client.md": {
+    "sdk/python/api/clients/sync.md": {
       "title": "Synchronous client",
-      "url": "https://docs.typesafe.ai/sdk/python/api/clients/sync/client.md",
-      "sha256": "42d673f1b877169fb763dd0984c4e432106c5140fff76f81160a06d892540631",
-      "bytes": 17730
-    },
-    "sdk/python/api/clients/sync/models.md": {
-      "title": "Models resource",
-      "url": "https://docs.typesafe.ai/sdk/python/api/clients/sync/models.md",
-      "sha256": "802668cdfc0c3fc94ed18f7db06f85ae078de53ceda6425807703d0aa8547e9f",
-      "bytes": 5578
+      "url": "https://docs.typesafe.ai/sdk/python/api/clients/sync.md",
+      "sha256": "55a144c0161e9b22dc3cf1b2134f9c64ae28348ead2ef4a269e39fbe4757d8f6",
+      "bytes": 31967
     },
     "sdk/python/api/types/questions.md": {
       "title": "Questions",
       "url": "https://docs.typesafe.ai/sdk/python/api/types/questions.md",
-      "sha256": "d2661ced7793f25ed9e4e3e52a8a59de65d006514337338ae40955f8f4d8bb0e",
-      "bytes": 19006
+      "sha256": "cbad949affff140bc00a090b37748c52f1239ec0e98f308012eceb562fdaaa0a",
+      "bytes": 30016
     },
     "sdk/python/api/types/responses.md": {
       "title": "Answers and responses",
       "url": "https://docs.typesafe.ai/sdk/python/api/types/responses.md",
-      "sha256": "68dbf169fdcc20e669479c050d7b6696db7aba76a82e19de1387c2f8d27f47b8",
-      "bytes": 17624
+      "sha256": "7b0167d010dc165b6584939a550c8ec35d31c003f0e8095638a46a037b6f6f8a",
+      "bytes": 38625
     },
     "sdk/python/api/retries.md": {
       "title": "Retries",
@@ -201,8 +339,8 @@
     "sdk/python/api/types/common.md": {
       "title": "Common types",
       "url": "https://docs.typesafe.ai/sdk/python/api/types/common.md",
-      "sha256": "bd7331a324bfd4578abe7f202edc13b0fba4fce24ec5492ce3c18429fb7f13ff",
-      "bytes": 4878
+      "sha256": "bda3f01322aa1a0fdff3d5603278330dc3396fc377eabd21eb4336cce365c241",
+      "bytes": 2942
     },
     "sdk/python/api/exceptions.md": {
       "title": "Exceptions",
@@ -533,127 +671,7 @@
       "url": "https://docs.typesafe.ai/sdk/javascript/api/functions/score.md",
       "sha256": "2f7bd6acff7da9a8fa6e88a8f9cc0b9b7040df039f6d5072a3187729ff155783",
       "bytes": 772
-    },
-    "api.md": {
-      "title": "API reference",
-      "url": "https://docs.typesafe.ai/api.md",
-      "sha256": "5b9aee330404378bfe9520924fadb447d14b840f082fc8b9511e340ed7baa4c8",
-      "bytes": 10262
-    },
-    "agent-skill.md": {
-      "title": "Agent skill",
-      "url": "https://docs.typesafe.ai/agent-skill.md",
-      "sha256": "5ed8f74a133760523a67674f0feaac6ac88d9f1d242574ce3c9c4965f6e037c4",
-      "bytes": 5798
-    },
-    "cookbooks/consistency_noul_cookbook.md": {
-      "title": "Self-consistency: nouls",
-      "url": "https://docs.typesafe.ai/cookbooks/consistency_noul_cookbook.md",
-      "sha256": "f94525c3476948c6cd82320e3ed76545135c694213eb94598fe0bf17edd6325f",
-      "bytes": 32323
-    },
-    "cookbooks/consistency_choice_cookbook.md": {
-      "title": "Self-consistency: choices",
-      "url": "https://docs.typesafe.ai/cookbooks/consistency_choice_cookbook.md",
-      "sha256": "2a021206eb2da40a2063bec440d7eb2b07b6e2496ab00a545e8dd39c415825be",
-      "bytes": 49918
-    },
-    "cookbooks/parallel_questions.md": {
-      "title": "Parallel questions",
-      "url": "https://docs.typesafe.ai/cookbooks/parallel_questions.md",
-      "sha256": "50538322d7b8b7d632a4f465f2f7eb23b3a746152ea5dc70ec445beb2e686438",
-      "bytes": 48567
-    },
-    "cookbooks/rerank_typesafe.md": {
-      "title": "Re-ranking",
-      "url": "https://docs.typesafe.ai/cookbooks/rerank_typesafe.md",
-      "sha256": "62c535f53ac5e2ab436867dcfc0058e554f76fe3e598ccca8e11e52be5a89f69",
-      "bytes": 26170
-    },
-    "cookbooks/semantic_find.md": {
-      "title": "Line-by-line search",
-      "url": "https://docs.typesafe.ai/cookbooks/semantic_find.md",
-      "sha256": "004a7963348afb34db3d02baef5df3a6b4a18339e9e195834dae1121f673496a",
-      "bytes": 37889
-    },
-    "cookbooks/autoformat.md": {
-      "title": "Structure recovery",
-      "url": "https://docs.typesafe.ai/cookbooks/autoformat.md",
-      "sha256": "e0be526400d0afc5d865c8db5ab46b89bc9d8e1a9f7f3df22f7e0d0a15919297",
-      "bytes": 41005
-    },
-    "cookbooks/function_calling.md": {
-      "title": "Function calling",
-      "url": "https://docs.typesafe.ai/cookbooks/function_calling.md",
-      "sha256": "5447823489575a93adc3943627461fa8b904e5692bfed3395caa21a50458fe40",
-      "bytes": 18910
-    },
-    "cookbooks/skill_suggestion.md": {
-      "title": "Skill suggestion",
-      "url": "https://docs.typesafe.ai/cookbooks/skill_suggestion.md",
-      "sha256": "241dfd6e674dd900a4914ba5d0a3ed803eab94ce76c46249e1fbf6557aa059d1",
-      "bytes": 40065
-    },
-    "cookbooks/entity_alignment.md": {
-      "title": "Knowledge graph entity alignment",
-      "url": "https://docs.typesafe.ai/cookbooks/entity_alignment.md",
-      "sha256": "4e0565c8c0c1ffccd29937b30512183f439076a7e6715115d722014012c768e0",
-      "bytes": 16814
-    },
-    "cookbooks/classifying_rag_passages.md": {
-      "title": "Classifying RAG passages",
-      "url": "https://docs.typesafe.ai/cookbooks/classifying_rag_passages.md",
-      "sha256": "d309b903471529d86de2d05aeebb43e2656c4935e122cf41bb95c3a559bef498",
-      "bytes": 32448
-    },
-    "cookbooks/citation_check.md": {
-      "title": "Double-checking citations",
-      "url": "https://docs.typesafe.ai/cookbooks/citation_check.md",
-      "sha256": "18f3f5c64f60807392b2d5e3f9a7b6d454e7a379c212025dcb1356b54aaa0635",
-      "bytes": 15681
-    },
-    "cookbooks/llm_guardrails.md": {
-      "title": "Guardrails for LLMs",
-      "url": "https://docs.typesafe.ai/cookbooks/llm_guardrails.md",
-      "sha256": "b164c92a1850c585c8d00b1315038a8655feeae6c7b52b899b8d7ae94e658fb6",
-      "bytes": 22693
-    },
-    "cookbooks/sde_cascade.md": {
-      "title": "SDE cascade",
-      "url": "https://docs.typesafe.ai/cookbooks/sde_cascade.md",
-      "sha256": "7789188c1e366d5f1ba50da24ccdc7a29dc1692787c470c94b75699511029409",
-      "bytes": 32396
-    },
-    "cookbooks/date_extraction_cookbook.md": {
-      "title": "Date extraction",
-      "url": "https://docs.typesafe.ai/cookbooks/date_extraction_cookbook.md",
-      "sha256": "3fdf1a1cef1970feb4d2c1629c73f2ca00a487f47c7eff0b1dc303868d6ee630",
-      "bytes": 19899
-    },
-    "cookbooks/pre_parsed_value_extraction_cookbook.md": {
-      "title": "Pre-parsed value extraction",
-      "url": "https://docs.typesafe.ai/cookbooks/pre_parsed_value_extraction_cookbook.md",
-      "sha256": "5a2026433afc618ab1ed16994d8c07281399e527482006a92e7e343ddcd96a2d",
-      "bytes": 12589
-    },
-    "cookbooks/hierarchical_classification.md": {
-      "title": "Hierarchical classification",
-      "url": "https://docs.typesafe.ai/cookbooks/hierarchical_classification.md",
-      "sha256": "905ab680c9717740f06850b9f99b8f9e18c71f2c99bf6ba7b28de8e7dac6dbf1",
-      "bytes": 36470
-    },
-    "cookbooks/autoresearch_feature_discovery.md": {
-      "title": "Autoresearch feature discovery",
-      "url": "https://docs.typesafe.ai/cookbooks/autoresearch_feature_discovery.md",
-      "sha256": "0aab7e2e6f30687ad774a6a2f44230a4f5f1be14482c88055452753305178418",
-      "bytes": 71547
-    },
-    "cookbooks/classification_using_confidence.md": {
-      "title": "Classification using confidence",
-      "url": "https://docs.typesafe.ai/cookbooks/classification_using_confidence.md",
-      "sha256": "e422a24c229133d2c32b966d6dc063baa727b80b99e7b7d08ca311b3fa0bf169",
-      "bytes": 30731
     }
   },
-  "snapshot_id": "b79c9cd6008489f1"
+  "snapshot_id": "708902db9820d9d8"
 }

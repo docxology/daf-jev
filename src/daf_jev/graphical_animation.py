@@ -13,8 +13,9 @@ with ``matplotlib.animation.PillowWriter``:
   evidence added since the previous step).
 - :func:`animate_network` — the layered DAG layout of
   ``graphical_viz.plot_network`` (coordinate scheme replicated here
-  deterministically; the spacing/style constants mirror that module) with
-  each node's fill color set to ``P(true)`` (coolwarm, 0..1) at the
+  deterministically; colors, fonts, and arrows come from the shared
+  figures theme, lazily imported per call) with each node's fill color
+  set to ``P(true)`` (coolwarm, 0..1) at the
   frame's evidence step and the full evidence mapping as the frame title.
 
 matplotlib and Pillow import lazily INSIDE the call — without the
@@ -45,17 +46,18 @@ _ANIMATION_EXTRA_HINT = (
     "figures extra: uv sync --extra figures"
 )
 
-# Layout and style mirrors of src/daf_jev/graphical_viz.py (plot_network's
-# scheme); kept local so the two renderers stay decoupled at import time.
+# Layout mirrors of src/daf_jev/graphical_viz.py (plot_network's scheme).
+# Colors, fonts, and arrow style come from the shared figures theme
+# (src/daf_jev/figures.py), imported lazily inside the animators together
+# with matplotlib — never duplicated here, never at module import. Local
+# literals are documented exceptions: ``_NODE_FACE`` has no theme
+# counterpart in figures.py; the coolwarm posterior fills, the bar-grid
+# alpha, and the arrow curvature/mutation-scale geometry stay local too.
 _NODE_SPACING_X = 2.4
 _NODE_SPACING_Y = 2.0
-_EDGE_COLOR = "#444444"
-_NODE_EDGE = "#2E5E8C"
 _NODE_FACE = "#EAF2FA"
-_TEXT_COLOR = "#222222"
 _ARROW_CURVATURE = 0.08
 _GROUP_WIDTH = 0.8
-_DEFAULT_DPI = 110
 
 
 def _pyplot() -> Any:
@@ -148,6 +150,8 @@ def _layered_layout(
     Returns the positions plus the layout's width and height in data
     units.
     """
+    if not net.variables:
+        raise ValueError("cannot animate an empty Bayes net: no variables")
     level: dict[str, int] = {}
     for key in net.topological_order():
         parents = net.parents_of(key)
@@ -247,7 +251,22 @@ def animate_posterior(
     plt = _pyplot()
     _require_pillow()
 
-    fig, ax = plt.subplots(figsize=(7.5, 4.2))
+    from daf_jev.figures import (
+        COLOR_ACCENT,
+        COLOR_EXTERNAL,
+        COLOR_LAYER_MAIN,
+        COLOR_LAYER_SIDE,
+        FONT_ANNOTATE,
+        SIZE_CHART,
+    )
+
+    # D4: grouped bars follow the shared theme's _style() prop_cycle order
+    # (documented here; no new theme API added to figures.py).
+    series_colors = (
+        COLOR_LAYER_MAIN, COLOR_ACCENT, COLOR_LAYER_SIDE, COLOR_EXTERNAL
+    )
+
+    fig, ax = plt.subplots(figsize=SIZE_CHART)
     bar_width = _GROUP_WIDTH / len(keys)
     bars: list[tuple[list[Any], list[float]]] = []
     for index, key in enumerate(keys):
@@ -256,7 +275,11 @@ def animate_posterior(
             for step in range(len(steps_list))
         ]
         container = ax.bar(
-            centers, [0.0] * len(steps_list), width=bar_width * 0.9, label=key
+            centers,
+            [0.0] * len(steps_list),
+            width=bar_width * 0.9,
+            color=series_colors[index % len(series_colors)],
+            label=key,
         )
         bars.append((list(container), values[key]))
 
@@ -269,7 +292,10 @@ def animate_posterior(
     ax.set_xticks(list(range(len(steps_list))))
     if labels is not None:
         ax.set_xticklabels(
-            [str(label) for label in labels], rotation=20, ha="right", fontsize=9
+            [str(label) for label in labels],
+            rotation=20,
+            ha="right",
+            fontsize=FONT_ANNOTATE,
         )
     else:
         ax.set_xticklabels([str(index) for index in range(len(steps_list))])
@@ -292,6 +318,7 @@ def animate_network(
     path: str | Path,
     *,
     fps: float = 1,
+    dpi: int = 110,
 ) -> Path:
     """Write a GIF of the DAG with node fills set to ``P(true)`` per
     evidence step and return the path.
@@ -305,21 +332,35 @@ def animate_network(
     (``priors`` when the first step is empty). One ``net.posterior`` per
     step, computed before any figure exists. Same lazy-import and
     fail-closed-before-figure rules as :func:`animate_posterior` (no
-    query keys or labels here): empty steps, unknown/zero-probability
-    evidence, or non-positive fps raise ValueError and write no file.
+    query keys or labels here): an empty net (no variables), empty
+    steps, unknown/zero-probability evidence, or non-positive fps/dpi
+    raise ValueError and write no file.
     Deterministic: identical inputs give byte-identical GIFs.
     """
     steps_list: list[Mapping[str, str]] = _checked_steps(
         evidence_steps, "evidence_steps", "evidence mapping"
     )
     _checked_positive(fps, "fps")
+    _checked_positive(dpi, "dpi")
+    if not net.variables:
+        raise ValueError("cannot animate an empty Bayes net: no variables")
     posteriors = [net.posterior(dict(step)) for step in steps_list]
     positions, width, height = _layered_layout(net)
 
     plt = _pyplot()
     _require_pillow()
+
     from matplotlib import colormaps
     from matplotlib.patches import FancyArrowPatch
+
+    from daf_jev.figures import (
+        ARROW_LW,
+        ARROW_STYLE,
+        COLOR_EDGE,
+        COLOR_LAYER_MAIN,
+        COLOR_TEXT,
+        FONT_BOX,
+    )
 
     cmap = colormaps["coolwarm"]
     fig, ax = plt.subplots(figsize=(max(6.0, width + 3.0), max(3.5, height + 2.5)))
@@ -332,10 +373,10 @@ def animate_network(
                 (x0, y0),
                 (x1, y1),
                 connectionstyle=f"arc3,rad={_ARROW_CURVATURE}",
-                arrowstyle="-|>",
+                arrowstyle=ARROW_STYLE,
                 mutation_scale=14,
-                color=_EDGE_COLOR,
-                lw=1.4,
+                color=COLOR_EDGE,
+                lw=ARROW_LW,
                 zorder=1,
             )
         )
@@ -349,12 +390,12 @@ def animate_network(
             _node_label(var),
             ha="center",
             va="center",
-            fontsize=9,
-            color=_TEXT_COLOR,
+            fontsize=FONT_BOX,
+            color=COLOR_TEXT,
             bbox=dict(
                 boxstyle="round,pad=0.35",
                 facecolor=_NODE_FACE,
-                edgecolor=_NODE_EDGE,
+                edgecolor=COLOR_LAYER_MAIN,
             ),
             zorder=2,
         )
@@ -374,6 +415,6 @@ def animate_network(
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    _save_gif(fig, _update, target, frames=len(steps_list), fps=fps, dpi=_DEFAULT_DPI)
+    _save_gif(fig, _update, target, frames=len(steps_list), fps=fps, dpi=dpi)
     plt.close(fig)
     return target

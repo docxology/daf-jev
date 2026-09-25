@@ -36,9 +36,9 @@ from 5% with fast search alone.
 You have a pile of documents, and a query, a piece of text describing what you're looking
 for. Somewhere in the pile is the one document that answers it.
 
-Checking every document against the query one at a time works, but doesn't scale. Millions
-of documents means millions of comparisons per query. You can improve performance with a
-two-step approach:
+Checking every document against the query one at a time works, at one comparison per
+document: millions of documents means millions of comparisons per query. You can improve
+performance with a two-step approach:
 
 1. Cut the pile down to a short list of likely candidates, using a method fast enough to
    run on the whole pile.
@@ -55,7 +55,7 @@ top"
 />
 
 This cookbook tests that setup on a dataset of court opinions, in
-[Re-ranking on a real example](#re-ranking-on-a-real-example) below.
+[A re-ranking example](#a-re-ranking-example) below.
 
 ## What is fast search?
 
@@ -86,10 +86,9 @@ top"
   data-path="cookbooks/rerank_typesafe/rerank-diagram.png"
 />
 
-The score itself could come from a language model. Give it the query and one candidate
-together, and ask how well that candidate answers the query. Re-ranking can then find
-the best match on the shortlist even when the match does not use exactly the same words
-as the query.
+The score can come from a language model. Give it the query and one candidate together
+and ask how well the candidate answers the query. Re-ranking then finds the best match
+on the shortlist even when its wording differs from the query's.
 
 ## Re-ranking with TypeSafe
 
@@ -113,11 +112,10 @@ returns a number between 0 and 1, called a
 [noul](/primitives/noul). The noul is TypeSafe's estimate
 of how likely the answer is to be yes.
 
-The question's criteria define what counts as true and false. TypeSafe applies those
-criteria to every query-candidate pair and returns the noul directly. This gives the
-application the score it needs for sorting, without inventing a scoring scale for a
-general-purpose model. TypeSafe is built to perform this repeated scoring faster, cheaper,
-and more consistently.
+The question's criteria define what counts as true and false. TypeSafe applies them to
+every query-candidate pair and returns the noul directly. That noul is the score the
+application sorts on. No scoring scale has to be invented for a general-purpose model, and
+TypeSafe is built to do this repeated scoring faster, cheaper, and more consistently.
 
 In simplified pseudocode, one TypeSafe scoring call looks like this:
 
@@ -148,7 +146,7 @@ reranked = sorted(shortlist, key=lambda c: nouls[c], reverse=True)  # highest no
 The diagram below shows how one request per candidate produces the scores used to reorder
 the shortlist.
 
-```mermaid theme={null}
+```mermaid actions={true} theme={null}
 flowchart LR
     q["query excerpt<br/><i>one opinion passage,<br/>citation removed</i>"]
     sl["shortlist from fast search<br/><i>30 candidate passages</i>"]
@@ -193,7 +191,7 @@ The first step installs the packages this walkthrough depends on.
 * `matplotlib` draws the result charts.
 
 ```bash theme={null}
-pip install bm25s datasets matplotlib "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install bm25s datasets matplotlib 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 The next block sets up the TypeSafe client and the constants the rest of the walkthrough
@@ -208,7 +206,6 @@ import random
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import msgspec
 from cooksafe import JsonCache
 from IPython.display import display
 from typesafe_sdk import Noul, NoulCriteria, TypeSafeClient
@@ -441,7 +438,7 @@ def score_candidate(model: str, query: str, candidate: str, question_json: str) 
 # Each of the 40 queries has 30 candidates, so re-ranking every shortlist means 1,200 independent
 # calls — cheap enough to fire all at once with a thread pool instead of one after another.
 pair_list = [(q, c) for q in queries for c in candidates[q]]
-question_json = msgspec.json.encode(is_cited_source).decode()
+question_json = is_cited_source.model_dump_json(exclude_none=True)
 with ThreadPoolExecutor(max_workers=12) as pool:
     results = pool.map(
         lambda p: score_candidate(

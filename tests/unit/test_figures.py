@@ -18,6 +18,8 @@ pytest.importorskip("matplotlib")
 from daf_jev.figures import (
     FIGURE_FILENAMES,
     FIGURE_REGISTRY_FILENAME,
+    _latest_benchmark,
+    architecture_mermaid,
     generate_all,
     generate_architecture,
     generate_batching,
@@ -332,12 +334,80 @@ def test_missing_patterns_benchmark_raises_file_not_found(tmp_path: Path) -> Non
     assert str(root / "output" / "benchmarks") in str(excinfo.value)
 
 
+def test_latest_benchmark_prefers_newest_date_stamped_file(tmp_path: Path) -> None:
+    """Newest filename wins: the 20260916 stamp sorts after the 20260101 stamp."""
+    root = tmp_path / "mixed"
+    _write_benchmark(root, "batching", _batching_payload())  # batching_20260916.json
+    bench_dir = root / "output" / "benchmarks"
+    (bench_dir / "batching_20260101.json").write_text('{"older": true}', encoding="utf-8")
+
+    assert _latest_benchmark(root, "batching") == bench_dir / "batching_20260916.json"
+
+
+# ------------------------------------------- architecture_mermaid emitter ---
+
+
+def test_architecture_mermaid_is_byte_deterministic() -> None:
+    """Static tables + sorted emission: identical bytes on every call."""
+    assert architecture_mermaid() == architecture_mermaid()
+
+
+def test_architecture_mermaid_covers_the_drawn_diagram() -> None:
+    """graph TD header; 13 sorted nodes with real labels; 16 sorted edges, 4 dashed."""
+    text = architecture_mermaid()
+    lines = text.split("\n")
+
+    assert lines[0] == "graph TD"
+    assert not text.endswith("\n")  # no trailing newline; writers add it
+    node_lines = [line for line in lines if '["' in line]
+    edge_lines = [line for line in lines if " --> " in line or " -.-> " in line]
+    assert len(node_lines) == 13
+    assert len(edge_lines) == 16
+    assert sum(" -.-> " in line for line in edge_lines) == 4
+
+    node_ids = [line.split('["', 1)[0].strip() for line in node_lines]
+    assert node_ids == sorted(node_ids)  # nodes sorted by id
+    assert set(node_ids) == {
+        "api", "cli", "client", "compose", "config", "errors", "evaluate",
+        "http", "models", "primitives", "retry", "scripts", "types",
+    }
+    for label in (
+        "cli.py", "scripts/", "primitives.py", "compose.py", "client.py", "_http.py",
+        "_retry.py", "_errors.py", "TypeSafe Jev API", "models.py", "config.py",
+        "_types.py", "evaluate.py",
+    ):
+        assert label in text, label
+
+    pairs = []
+    for line in edge_lines:
+        body = line.strip()
+        sep = " -.-> " if " -.-> " in body else " --> "
+        src, dst = body.split(sep)
+        src, dst = src.strip(), dst.strip()
+        assert src in node_ids and dst in node_ids, line  # endpoints are declared nodes
+        pairs.append((src, dst))
+    assert pairs == sorted(pairs)  # edges sorted by (src_id, dst_id)
+
+
+def test_architecture_figure_is_byte_deterministic(fake_project: Path, tmp_path: Path) -> None:
+    """Pins the table-driven refactor: two renders produce identical PNG bytes."""
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    path_a = generate_architecture(first, project_root=fake_project)
+    path_b = generate_architecture(second, project_root=fake_project)
+
+    assert path_a == first / "architecture.png"
+    assert path_b == second / "architecture.png"
+    assert path_a.read_bytes() == path_b.read_bytes()
+
+
 # ----------------------------------------------------- figure_registry.json ---
 
 
 @pytest.fixture()
 def generated_project(fake_project: Path, tmp_path: Path) -> Path:
-    """Out directory holding the five PNGs and the registry written by generate_all."""
+    """Out directory holding the seven PNGs and the registry written by generate_all."""
     out_dir = tmp_path / "figures"
     generate_all(out_dir, project_root=fake_project)
     return out_dir

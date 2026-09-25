@@ -31,7 +31,7 @@ from cycler import cycler
 from matplotlib.patches import ConnectionPatch, FancyArrowPatch, FancyBboxPatch
 from matplotlib.ticker import MaxNLocator
 
-__all__ = ["generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+__all__ = ["architecture_mermaid", "generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
 
 
 # ---------------------------------------------------------------------------
@@ -218,58 +218,100 @@ def _load_benchmark(project_root: Path, prefix: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+# Static tables for Figure 1 — the single source for what
+# :func:`generate_architecture` draws and :func:`architecture_mermaid`
+# emits, so the PNG and the ``architecture.mmd`` sibling can never drift.
+# Nodes are (node_id, label, sublabel, role, x, y, w, h) with (x, y) the
+# lower-left corner; the role picks the facecolor from _ROLE_FACECOLORS
+# and marks side modules dashed. Edges are (src_id, dst_id, dashed,
+# start_xy, end_xy) in draw order.
+_ARCHITECTURE_NODES: tuple[tuple[str, str, str | None, str, float, float, float, float], ...] = (
+    # Layer 4 (top): entry points.
+    ("cli", "cli.py", "daf-jev command line", "main", 6, 86, 38, 11),
+    ("scripts", "scripts/", "benchmarks, docs snapshot", "main", 56, 86, 38, 11),
+    # Layer 3: composition surface.
+    ("primitives", "primitives.py", "noul / choice / score", "main", 6, 60, 38, 12),
+    ("compose", "compose.py", "routing + decision patterns", "main", 56, 60, 38, 12),
+    # Layer 2: transport.
+    ("client", "client.py", "JevClient", "main", 2, 34, 24, 12),
+    ("http", "_http.py", "transport", "main", 30, 34, 22, 12),
+    ("retry", "_retry.py", "retry policy", "main", 56, 34, 20, 12),
+    ("errors", "_errors.py", "typed errors", "main", 80, 34, 18, 12),
+    # Layer 1 (bottom): the external API.
+    ("api", "TypeSafe Jev API", "System One", "external", 20, 6, 60, 12),
+    # Side inputs (dashed).
+    ("models", "models.py", None, "side", 2, 12, 14, 10),
+    ("config", "config.py", None, "side", 84, 76, 14, 10),
+    ("types", "_types.py", None, "side", 84, 48, 14, 10),
+    ("evaluate", "evaluate.py", None, "side", 2, 48, 14, 10),
+)
+
+_ARCHITECTURE_EDGES: tuple[tuple[str, str, bool, tuple[float, float], tuple[float, float]], ...] = (
+    # Entry → composition.
+    ("cli", "primitives", False, (25, 86), (25, 73)),
+    ("scripts", "compose", False, (75, 86), (75, 73)),
+    # primitives ↔ compose flow.
+    ("primitives", "compose", False, (40, 66), (58, 66)),
+    ("compose", "primitives", False, (58, 66), (40, 66)),
+    # Composition → transport.
+    ("primitives", "client", False, (25, 60), (16, 47)),
+    ("compose", "http", False, (75, 60), (41, 47)),
+    ("compose", "retry", False, (66, 60), (66, 47)),
+    # The diagram genuinely draws two primitives → client arrows; keep both.
+    ("primitives", "client", False, (16, 60), (16, 47)),
+    # Transport → API.
+    ("client", "api", False, (14, 34), (40, 19)),
+    ("http", "api", False, (41, 34), (46, 19)),
+    ("retry", "api", False, (66, 34), (52, 19)),
+    ("errors", "api", False, (89, 34), (60, 19)),
+    # Side inputs (dashed arrows into their consumers).
+    ("evaluate", "client", True, (9, 48), (14, 46)),
+    ("config", "compose", True, (91, 76), (86, 72)),
+    ("types", "errors", True, (91, 48), (89, 47)),
+    ("models", "client", True, (9, 22), (14, 34)),
+)
+
+# Role → facecolor; side modules draw dashed (boxes and arrows).
+_ROLE_FACECOLORS = {
+    "main": COLOR_LAYER_MAIN,
+    "side": COLOR_LAYER_SIDE,
+    "external": COLOR_EXTERNAL,
+}
+
+
 def generate_architecture(out_dir: Path, project_root: Path | None = None) -> Path:
     """Draw the package layer diagram: entry points down to the TypeSafe API."""
     _style()
     fig, ax = _new_diagram("daf-jev package architecture")
 
-    # Layer 4 (top): entry points.
-    _box(ax, 6, 86, 38, 11, "cli.py", facecolor=COLOR_LAYER_MAIN, sublabel="daf-jev command line")
-    _box(ax, 56, 86, 38, 11, "scripts/", facecolor=COLOR_LAYER_MAIN, sublabel="benchmarks, docs snapshot")
-
-    # Layer 3: composition surface.
-    _box(ax, 6, 60, 38, 12, "primitives.py", facecolor=COLOR_LAYER_MAIN, sublabel="noul / choice / score")
-    _box(ax, 56, 60, 38, 12, "compose.py", facecolor=COLOR_LAYER_MAIN, sublabel="routing + decision patterns")
-
-    # Layer 2: transport.
-    _box(ax, 2, 34, 24, 12, "client.py", facecolor=COLOR_LAYER_MAIN, sublabel="JevClient")
-    _box(ax, 30, 34, 22, 12, "_http.py", facecolor=COLOR_LAYER_MAIN, sublabel="transport")
-    _box(ax, 56, 34, 20, 12, "_retry.py", facecolor=COLOR_LAYER_MAIN, sublabel="retry policy")
-    _box(ax, 80, 34, 18, 12, "_errors.py", facecolor=COLOR_LAYER_MAIN, sublabel="typed errors")
-
-    # Layer 1 (bottom): the external API.
-    _box(ax, 20, 6, 60, 12, "TypeSafe Jev API", facecolor=COLOR_EXTERNAL, sublabel="System One")
-
-    # Side inputs (dashed).
-    _box(ax, 2, 12, 14, 10, "models.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
-    _box(ax, 84, 76, 14, 10, "config.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
-    _box(ax, 84, 48, 14, 10, "_types.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
-    _box(ax, 2, 48, 14, 10, "evaluate.py", facecolor=COLOR_LAYER_SIDE, dashed=True)
-
-    # Entry → composition.
-    _arrow(ax, (25, 86), (25, 73))
-    _arrow(ax, (75, 86), (75, 73))
-    _arrow(ax, (40, 66), (58, 66))  # primitives ↔ compose flow
-    _arrow(ax, (58, 66), (40, 66))
-
-    # Composition → transport.
-    _arrow(ax, (25, 60), (16, 47))
-    _arrow(ax, (75, 60), (41, 47))
-    _arrow(ax, (66, 60), (66, 47))
-    _arrow(ax, (16, 60), (16, 47))
-
-    # Transport → API.
-    _arrow(ax, (14, 34), (40, 19))
-    _arrow(ax, (41, 34), (46, 19))
-    _arrow(ax, (66, 34), (52, 19))
-    _arrow(ax, (89, 34), (60, 19))
-
-    # Side inputs (dashed arrows into their consumers).
-    _arrow(ax, (9, 48), (14, 46), dashed=True)  # evaluate → client
-    _arrow(ax, (91, 76), (86, 72), dashed=True)  # config → compose
-    _arrow(ax, (91, 48), (89, 47), dashed=True)  # types → errors
-    _arrow(ax, (9, 22), (14, 34), dashed=True)  # models → client
+    for _node_id, label, sublabel, role, x, y, w, h in _ARCHITECTURE_NODES:
+        _box(ax, x, y, w, h, label, facecolor=_ROLE_FACECOLORS[role], sublabel=sublabel, dashed=role == "side")
+    for _src_id, _dst_id, dashed, start_xy, end_xy in _ARCHITECTURE_EDGES:
+        _arrow(ax, start_xy, end_xy, dashed=dashed)
     return _save(fig, out_dir, "architecture.png")
+
+
+def architecture_mermaid() -> str:
+    """Render the architecture diagram as a byte-deterministic mermaid source.
+
+    Nodes and edges come from the static :data:`_ARCHITECTURE_NODES` /
+    :data:`_ARCHITECTURE_EDGES` tables — the same data
+    :func:`generate_architecture` draws — and emission is sorted (nodes by
+    id, edges by ``(src, dst)``; the duplicate ``primitives → client`` arrow
+    the figure draws is kept), so the returned string is byte-identical on
+    every run. Ids are mermaid-safe; real filenames stay in the labels. The
+    string carries no trailing newline; writers add one.
+    """
+    nodes = sorted(_ARCHITECTURE_NODES, key=lambda row: row[0])
+    edges = sorted(_ARCHITECTURE_EDGES, key=lambda row: (row[0], row[1]))
+    lines = ["graph TD"]
+    for node_id, label, sublabel, _role, _x, _y, _w, _h in nodes:
+        label_text = label if sublabel is None else f"{label}<br/>{sublabel}"
+        lines.append(f'    {node_id}["{label_text}"]')
+    for src_id, dst_id, dashed, _start, _end in edges:
+        arrow = "-.->" if dashed else "-->"
+        lines.append(f"    {src_id} {arrow} {dst_id}")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

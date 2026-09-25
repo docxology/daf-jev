@@ -44,6 +44,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
 
 __all__ = ["main", "parse_question_spec"]
@@ -490,6 +491,26 @@ def _cmd_docs_verify(args: argparse.Namespace) -> int:
     _emit(summary, args.pretty)
     return 0 if summary["ok"] else 1
 
+def _cmd_posteriors_load(args: argparse.Namespace) -> int:
+    try:
+        sidecar = load_posteriors(args.file, graphspec=args.graphspec)
+    except ValueError as exc:
+        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        return 1
+    deviations = row_sum_deviations(sidecar)
+    _emit(
+        {
+            "ok": True,
+            "format": sidecar.format,
+            "evidence_count": len(sidecar.evidence or {}),
+            "variable_count": len(sidecar.posteriors),
+            "min_row_sum_deviation": min(deviations.values(), default=0.0),
+            "max_row_sum_deviation": max(deviations.values(), default=0.0),
+        },
+        args.pretty,
+    )
+    return 0
+
 
 def _cmd_serve(args: argparse.Namespace) -> int:
     try:
@@ -655,6 +676,23 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_common(p_providers, base_url=False)
     p_providers.set_defaults(func=_cmd_providers)
+
+    p_posteriors = sub.add_parser(
+        "posteriors-load", help="load and validate a posteriors/marginals sidecar"
+    )
+    p_posteriors.add_argument(
+        "file",
+        metavar="FILE",
+        help="path to a dafjev.bayesnet-posteriors/1 or gnn.marginals/1 document",
+    )
+    p_posteriors.add_argument(
+        "--graphspec",
+        default=None,
+        metavar="FILE",
+        help="optional dafjev.bayesnet/1 GraphSpec to cross-check against",
+    )
+    add_common(p_posteriors, base_url=False)
+    p_posteriors.set_defaults(func=_cmd_posteriors_load)
 
     return parser
 

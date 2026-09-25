@@ -5,11 +5,12 @@ authoritative design contract see `docs/ARCHITECTURE.md` (v1, 2026-09-16 —
 single source of truth; workers must match its signatures exactly and report
 any contradiction rather than silently deviating).
 
-This is a sidecar project under `projects/ongoing/`, now **self-versioned**
-(see invariants). Repo-wide lane policy (symlink topology, never `git add`
-lane paths into an outer repo, doc standard) lives in `../../AGENTS.md` (the
-`ongoing/` root) and `../AGENTS.md` (Code_Tools category) — do not restate it
-here.
+This is a **self-versioned** git repo at
+`projects/platform/hum-docxology/repos/public/daf-jev` — a managed Docxology
+checkout (each checkout there owns its own git history and upstream; the
+hum-docxology worktree intentionally ignores nested checkouts). Container
+rules live in `../../AGENTS.md` (the `repos/` checkout container) — do not
+restate them here; there is no `../AGENTS.md` in this location.
 
 ## Layout
 
@@ -85,25 +86,59 @@ here.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
-    (`--transport stdio` — the only choice), `providers` (registry listing;
+    (`--transport stdio` — the only choice), `posteriors-load` (FILE +
+    optional `--graphspec`; validates a `dafjev.bayesnet-posteriors/1` or
+    `gnn.marginals/1` sidecar, keyless), `providers` (registry listing;
     global `--provider` flag); JSON to stdout, exit 0/1/2.
   - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
     `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
-    `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify` + the
-    `jev://docs/snapshot` resource; stdio transport only; `jev_evaluate` /
-    `jev_models` are async; `jev_composite_score` validates finite
-    non-negative probabilities (`ValueError`); imports `mcp` at module
-    import (optional `mcp` extra — never import from core modules); every
-    tool takes an optional `provider` argument (default `jev`).
+    `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`,
+    `jev_posteriors_load` + the `jev://docs/snapshot` resource; stdio
+    transport only; `jev_evaluate` / `jev_models` / `jev_posteriors_load`
+    are async; `jev_composite_score` validates finite non-negative
+    probabilities (`ValueError`); imports `mcp` at module import
+    (optional `mcp` extra — never import from core modules); every tool
+    but `jev_posteriors_load` (sidecar ingest, no API call) takes an
+    optional `provider` argument (default `jev`).
+  - `questions.py` — shared native question-mapping builder (no I/O):
+    `question_from_mapping(value, *, context="question")` builds
+    `NoulQuestion` / `ChoiceQuestion` / `ScoreQuestion` from a
+    `{type, instructions, criteria}` mapping with strict validation and
+    actionable `ValueError` messages; the CLI (`evaluate
+    --questions-file`) and the MCP server (`jev_ask` / `jev_evaluate`)
+    route native mappings through it (spec strings keep using
+    `cli.parse_question_spec`).
+  - `docs_verify.py` — shared read-only docs-snapshot manifest verifier:
+    `verify_manifest(manifest_path)` re-hashes every listed page (sha256 +
+    byte length), flags url→path mismatches as `drifted` and extra `.md`
+    files as `added`; report `{manifest, pages, missing, drifted, added,
+    ok}`. Routed through by `daf-jev docs-verify` and MCP
+    `jev_docs_verify`; `DEFAULT_MANIFEST` is module-anchored to the repo
+    checkout (installed copies fail — see the docs-verify battery note).
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
+  - `jaggedness.py` — model-jaggedness statistics (pure stdlib `math`):
+    how far repeated answers to stochastic prompts stray from the stated
+    uniform distribution. Fixtures `COIN` / `COIN_NOUL` / `D6`;
+    `uniform_chi2` (chi-square + df + p via `chi2_sf`),
+    `uniform_deviation` (max |Δp| from 1/k + total variation),
+    `runs_test_z` / `max_streak` (serial structure), `position_slope`
+    (order-rotation position bias), `noul_choice_delta` (same coin,
+    noul vs choice). Entry `run_battery(client, fixtures, *, repeats=50,
+    concurrent=32, timeout=None)` drives a duck-typed `ask` client and
+    returns `{fixture: battery}` (floats rounded to 6 decimals);
+    degeneracy is a reported finding, not an error. No I/O beyond the
+    injected client. Live battery: `benchmarks/bench_jaggedness.py`.
   - `graphical.py` — discrete Bayes nets (`Variable`, `Edge`, `CPT`,
     `BayesNet`): graph helpers + deterministic `topological_order`,
     `validate()`, exact inference (`posterior` / `query`, pure-stdlib
     variable elimination, no numpy; zero-probability evidence —
     including the fully-observed case — raises), decision methods
     (`most_probable_explanation`, `sample`, `conditional_scenarios`),
+    plus public `decompose_single_parent` (joint-preserving aux-chain
+    decomposition; single-parent scoped to ORIGINAL nodes — the RxInfer
+    5.5.x multi-parent `DiscreteTransition` stall mitigation),
     and the `dafjev.bayesnet/1` GraphSpec JSON round-trip — a
     cross-repo contract with the GNN bridge (see invariants).
   - `graphical_elicitation.py` — `elicit_cpts` (every CPT row of a net
@@ -126,19 +161,36 @@ here.
     GIF via PillowWriter; lazy matplotlib import with the
     figures-extra hint; fail-closed validation before any figure
     (`figures` extra).
+  - `bayesnet_posteriors.py` — fail-closed ingest of GNN-emitted
+    posterior sidecars: `load_posteriors(path, graphspec=None) ->
+    PosteriorsSidecar` over the two sibling variants
+    (`dafjev.bayesnet-posteriors/1` `{format, evidence, posteriors}` —
+    raw Float64 rows, flat `1e-6` per-row row-sum budget, one-hot
+    evidence rule; `gnn.marginals/1` `{format, marginals, source_model}`
+    — 6-digit-rounded rows with the length-widened budget), optionally
+    cross-checked against a `dafjev.bayesnet/1` GraphSpec;
+    `pair_for_calibration(sidecar, assignments) -> CalibrationPairing`
+    (calibration target pairing: `(confidence, correct)` pairs matching
+    the `daf_jev.calibration` convention + per-variable soft multiclass
+    Brier scores); `row_sum_deviations(sidecar)`. Exported at package
+    root; surfaced as `daf-jev posteriors-load` and MCP
+    `jev_posteriors_load`.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
   manuscript_variables, calibration, and mcp_server modules, plus
   test_graphical.py, test_graphical_elicitation.py,
-  test_graphical_viz.py, test_graphical_methods.py, and
-  test_graphical_animation.py),
+  test_graphical_viz.py, test_graphical_methods.py,
+  test_graphical_animation.py, and test_bayesnet_posteriors.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
 - `scripts/scrape_docs.py` — standalone stdlib re-scraper for the docs
   snapshot; CLI: `--index-url`, `--out-dir`, `--check`, `--manifest PATH`
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
+  Plain mode prunes snapshot pages the fresh manifest does not list
+  (`prune_orphans`; receipt under `"pruned"` in the summary line) — the
+  snapshot dir stays an exact manifest mirror; `--check` stays read-only.
 - `scripts/generate_figures.py` — thin orchestrator over `figures.py`;
   CLI: `--out-dir DIR` (default `output/figures`), `--only NAME`; needs the
   `figures` extra (`uv sync --extra figures`). Exit 0 ok, 2 unknown
@@ -164,10 +216,12 @@ here.
   `network.png`, `posterior_trajectory.png`, `mermaid.txt`, and
   `receipts.json` (per-run provenance: provider/model, proposed edges,
   elicited CPTs, posterior trajectory); keyless SKIP.
-- `examples/` — eight runnable walkthroughs (`quickstart.py`,
+- `examples/` — twelve runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
   `gated_fallback.py`, `decider_loop.py`, `providers_example.py`,
-  `asia_bayes.py`) + `README.md`; each prints `SKIP: JEV_API_KEY not set`
+  `asia_bayes.py`, `decider_resilience.py`, `evaluate_async.py`,
+  `calibration_walkthrough.py`, `retry_policies.py`) + `README.md`; each
+  prints `SKIP: JEV_API_KEY not set`
   and exits 0 without a key (see invariants); `providers_example.py` makes
   no network call even with a key (injected transport); `asia_bayes.py`
   builds the Asia net from Jev factors (elicit + propose against the
@@ -190,10 +244,9 @@ here.
   the newer modules (evaluate, calibration, ledger, resilience, decider,
   questions, docs_verify, mcp_server, providers, graphical,
   graphical_elicitation, graphical_viz) and the figure/variables/experiment
-  scripts. The
-  manuscript-pipeline module internals (`figures.py`,
-  `manuscript_variables.py`) are the one remaining gap — the map above is
-  the detailed on-disk truth for those.
+  scripts, plus the manuscript-pipeline module internals (`figures.py`,
+  `manuscript_variables.py`) — the contract now documents both; the map
+  above remains the quick on-disk map for those.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
@@ -203,10 +256,12 @@ here.
   rendered provenance), `experiments/` (Asia run:
   `output/experiments/asia/` — `asia_graphspec.json`, `network.png`,
   `posterior_trajectory.png`, `mermaid.txt`, `receipts.json`; the
-  cross-repo artifacts, see Cross-repo pipeline below).
+  cross-repo artifacts, see Cross-repo pipeline below). `web/` —
+  `_combined_manuscript.md`, the template-render combined manuscript
+  (tracked in git, not gitignored; verified 2026-09-24).
 - `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
-  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp),
-  `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
+  runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp,
+  mypy, types-PyYAML, ruff), `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
 
@@ -241,8 +296,11 @@ emitter/parser in [`src/daf_jev/graphical.py`](src/daf_jev/graphical.py) and
    gap below); single-parent specs print exact marginals end-to-end.
    `--out FILE` writes a `dafjev.bayesnet-posteriors/1` sidecar for
    re-asking Jev.
-5. **Feed back** — posteriors re-enter daf-jev (calibration, evidence
-   queries, trajectory re-walk).
+5. **Feed back** — posteriors re-enter daf-jev through
+   [`src/daf_jev/bayesnet_posteriors.py`](src/daf_jev/bayesnet_posteriors.py)
+   (`load_posteriors` + `pair_for_calibration`; surfaced as
+   `daf-jev posteriors-load` and MCP `jev_posteriors_load`) —
+   calibration, evidence queries, trajectory re-walk.
 
 Known gap: single-parent nets run end-to-end with exact posteriors on
 both RxInfer 5.5.0 and 5.5.2; multi-parent `DiscreteTransition` nodes
@@ -270,24 +328,28 @@ fallback environment is `src/gnn/execute/rxinfer/`).
 
 - **Self-versioned git repo, canonical checkout in the flat mirror**
   (branch `main`; remote `origin` → https://github.com/docxology/daf-jev;
-  local `main` last recorded in sync with `origin/main` @ `7c4db8e`
-  (2026-09-21).
+  local `main` carries the improvement-campaign commits (jaggedness, waves 1-3
+  folds, battery housekeeping) and is ahead of `origin/main` (`5591d31`, which
+  predates the campaign); the campaign lands upstream exclusively via PR
+  branches — `campaign-wave-1` → PR #1 — never direct pushes to `main`; the
+  ahead count and tip move with every fold, so read them from git, not here.
   Commit meaningful changes locally — the template's provenance validation
   requires git-tracked worktree files — and push to `origin` for
   owner-approved publication (2026-09-18). Never `git add` any path under
-  this lane into an OUTER repo (`../../AGENTS.md`, `../AGENTS.md`).
-- **Zenodo deposits (v0.4.1 published 2026-09-21; v0.4.2 deposit
-  pending).** The v0.4.1 release is archived as Zenodo deposit id
-  **22884676** (version DOI `10.5281/zenodo.22884676`, record
-  <https://zenodo.org/records/22884676>; source zip from tag `v0.4.1` +
-  the rendered PDF); v0.4.0 remains deposit **22884305** (version DOI
-  `10.5281/zenodo.22884305`);
-  v0.3.0 remains deposit **22817425** (version DOI
-  `10.5281/zenodo.22817425`); the concept DOI
-  `10.5281/zenodo.22816187` is stable across versions and always resolves
-  to the latest published version. Deposit **22816188** is the earlier
-  superseded deposit in the same concept family — never cite or pin it. New
-  releases MUST be new version deposits on the same concept via the Zenodo
+  this lane into an OUTER repo (the hum-docxology worktree; container
+  rules in `../../AGENTS.md`).
+- **Zenodo deposits (v0.6.0 published 2026-09-23; family re-verified
+  against the live API 2026-09-24).** The stable concept DOI
+  `10.5281/zenodo.22816187` always resolves to the latest published
+  version. Version deposits: v0.3.0 = **22817425**, v0.4.0 = **22884305**,
+  v0.4.1 = **22884676** (published 2026-09-21; source zip from tag
+  `v0.4.1` + the rendered PDF), v0.4.2 = **22921823** (2026-09-22),
+  v0.5.0 = **22921963** (2026-09-22), v0.6.0 = **22921974** (2026-09-23,
+  latest; version DOI `10.5281/zenodo.22921974`, record
+  <https://zenodo.org/records/22921974>). Deposit **22816188** is the
+  earlier superseded deposit in the same concept family — never cite or
+  pin it. New releases MUST be new version deposits
+  on the same concept via the Zenodo
   deposits API (`POST /api/records/<latest-id>/versions`, then PUT metadata
   — this build wants (re-verified 2026-09-23 against the live API; the
   older flat-shape note below was wrong): creators in the RDM nested form
@@ -339,6 +401,12 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   hit recording; tests drive the real `HttpxTransport`/`JevClient` through
   it — including retry (429 once with `Retry-After: 0` then 200, assert 2
   hits), error mapping (401/422/529), and timeout (slow handler).
+  Carve-out: the rule bans patching daf-jev behavior. Relocating INPUTS
+  is not patching — point parameterized seams (e.g.
+  `docs_verify.verify_manifest(manifest_path=...)`,
+  `mcp_server._snapshot_summary(manifest_path=...)`) at fixture paths
+  instead of setattr-ing module globals; env-relocation monkeypatch
+  (setenv/delenv/chdir) remains sanctioned.
 - **Live marker.** `tests/live/test_live_api.py` carries
   `pytest.mark.live` + `pytest.mark.skipif(not os.environ.get("JEV_API_KEY"))`
   — the `live` marker is registered in `pyproject.toml`
@@ -445,11 +513,16 @@ uv run mypy src/daf_jev
 uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
 uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
+uv run python benchmarks/bench_jaggedness.py    # live; per-provider SKIP lines; global
+                                                # "SKIP: no provider keys set" + exit 0 when
+                                                # none of JEV/JEFF/KEV_API_KEY is set
+                                                # flags: --providers 'jeff,kev,jev', --fixtures,
+                                                # --repeats 50, --concurrent 32, --timeout, --model
 uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mismatch
                                             # repo-checkout only: docs/reference/ is not
                                             # packaged into wheels (module-anchored
                                             # manifest path); installed copies fail
-python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # offline
+uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # --check re-fetches every linked page (live network, NOT offline); exit 1 on drift
 uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
 uv sync --extra figures
 uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
@@ -478,8 +551,10 @@ cd /Volumes/external_drive/Git/template && \
   uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
 # -> output/pdf/daf-jev_combined.pdf; 9 validation checks
 
-# MCP server full handshake needs the mcp extra: uv sync --extra mcp, then
-# connect any MCP client to `daf-jev serve` over stdio.
-python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
-python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
+# MCP server full handshake needs the mcp extra (mcp>=1.2,<2 — already
+# carried by the `dev` extra, so `uv sync --extra dev` suffices; the
+# separate `mcp` extra only matters for a minimal env): connect any MCP
+# client to `daf-jev serve` over stdio.
+uv run python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
+uv run python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
 ```

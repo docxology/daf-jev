@@ -241,6 +241,31 @@ Not every user request needs the same kind of handler. Some can be answered with
 
 Let's imagine you are building a customer service system. Messages come in and need to be routed to the right handler. Rather than sending every message through an expensive LLM to figure out what kind of request it is, you classify first and route accordingly.
 
+```mermaid actions={true} theme={null}
+%%{init: {"fontFamily": "Inter, sans-serif", "flowchart": {"rankSpacing": 35, "wrappingWidth": 300, "subGraphTitleMargin": {"top": 12, "bottom": 36}}}}%%
+flowchart LR
+    message["customer message"]
+
+    subgraph req["TypeSafe evaluates questions<br/>in parallel"]
+        direction TB
+        intent["<b>Choice:</b> intent"]
+        complexity["<b>Score:</b> complexity"]
+        %% Invisible links stack the questions; they are answered in parallel.
+        intent ~~~ complexity
+    end
+
+    message -- "one request<br/>message + 2 questions" --> req
+    req -- "one response<br/>2 answers with<br/>confidence" --> confidence{"<b>intent confidence<br/>≥ 0.5?</b><br/>your code"}
+    confidence -- "no" --> human["human agent"]
+    confidence -- "yes" --> route{"<b>which intent?</b><br/>"}
+    route -- "order_status" --> order["order lookup<br/>deterministic code"]
+    route -- "product_question" --> product["product specialist LLM"]
+    route -- "return_exchange" --> returns["returns specialist LLM"]
+    route -- "complaint" --> escalate{"<b>complexity > 1<br/>or its confidence < 0.5?</b><br/>"}
+    escalate -- "yes" --> human
+    escalate -- "no" --> complaint["complaint resolution LLM"]
+```
+
 ### Step 1: classify intent and complexity
 
 <TypesafeExample

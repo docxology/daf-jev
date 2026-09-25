@@ -4,7 +4,7 @@ The Python API is the primary door into daf-jev, but not the only one. Four addi
 
 ## Command-line interface
 
-The `daf-jev` console script (`src/daf_jev/cli.py`) exposes five subcommands that cover the package's main paths without writing Python:
+The `daf-jev` console script (`src/daf_jev/cli.py`) exposes six subcommands that cover the package's main paths without writing Python:
 
 - **`daf-jev ask`** — one call, one state: the state arrives as inline text or JSON (`--state`) or from a file (`--state-file`), and one or more `--question ID=SPEC` flags build the question set from a compact grammar (`noul:<instructions>`, `choice:<instructions>:k1=desc,k2=...`, `score:<instructions>:l1,l2,...`). The answer is emitted as JSON (compact by default, `--pretty` for readability).
 - **`daf-jev evaluate`** — the batch `Evaluator` of [@sec:methodology] as a command: a fixed question set runs concurrently over many states, and the evaluation records — answers, per-state failures, and measured latency — are emitted as JSON.

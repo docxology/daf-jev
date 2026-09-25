@@ -14,6 +14,14 @@ concatenated per-page hashes (in page order).
 existing manifest and files on disk: exit 0 when everything matches,
 1 when anything would change (no files are written).
 
+Plain mode (no ``--check``) also prunes: after a successful scrape the
+fresh manifest is the source of truth and the snapshot directory is its
+mirror — every ``.md`` file under the output directory the new manifest
+does not list is deleted (never ``MANIFEST.json``, never anything
+outside the output directory), keeping ``daf-jev docs-verify``
+custody-green after upstream restructures. The summary line reports the
+pruned paths under ``"pruned"``.
+
 Importable as a module; logic lives in functions, only the ``__main__``
 guard runs anything.
 """
@@ -52,6 +60,7 @@ __all__ = [
     "main",
     "page_sha256",
     "parse_index",
+    "prune_orphans",
     "rel_from_url",
     "scrape",
     "snapshot_id",
@@ -207,6 +216,39 @@ def write_snapshot(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
     (out_dir / MANIFEST_NAME).write_bytes(_manifest_bytes(manifest))
+
+
+def prune_orphans(
+    manifest: dict[str, Any],
+    out_dir: Path = DEFAULT_OUT_DIR,
+) -> list[str]:
+    """Delete snapshot ``.md`` pages the fresh manifest does not list.
+
+    The manifest is the source of truth; the snapshot directory is its
+    mirror. Mirrors the ``added`` walk of ``daf_jev.docs_verify`` (and
+    the offline ``--check`` diff) so the custody gate is self-sufficient
+    after upstream restructures: every regular ``.md`` file under
+    ``out_dir`` whose relative path is absent from ``manifest["pages"]``
+    is removed. Only files are deleted (emptied directories remain),
+    ``MANIFEST.json`` is never a candidate (not a ``.md`` match), and
+    nothing outside ``out_dir`` can be affected.
+
+    Returns the sorted list of pruned relative paths.
+    """
+    out_dir = Path(out_dir)
+    if not out_dir.is_dir():
+        return []
+    listed = set(manifest.get("pages", {}))
+    pruned: list[str] = []
+    for path in sorted(out_dir.rglob("*.md")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(out_dir).as_posix()
+        if rel in listed:
+            continue
+        path.unlink()
+        pruned.append(rel)
+    return pruned
 
 
 def diff_snapshot(
@@ -366,12 +408,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(report, indent=2))
         return 0 if report["ok"] else 1
     write_snapshot(manifest, contents, out_dir=args.out_dir)
+    pruned = prune_orphans(manifest, out_dir=args.out_dir)
     print(
         json.dumps(
             {
                 "snapshot_id": manifest["snapshot_id"],
                 "page_count": manifest["page_count"],
                 "out_dir": str(args.out_dir),
+                "pruned": pruned,
             }
         )
     )

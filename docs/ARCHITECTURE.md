@@ -27,10 +27,25 @@ contradictions (report the delta; do not silently deviate).
   honoring `Retry-After` when present: the `Retry-After-ms` header wins when set, then
   the numeric `Retry-After` form — both clamped to [0, 300] seconds; the HTTP-date form
   is intentionally unsupported and falls back to exponential backoff.
+  Status→exception mapping is centralized in `_errors.py`: each
+  status-specific `_HTTPStatusError` subclass pins a `_STATUS` ClassVar
+  (400/401/403/404/422/429/529) and `error_from_status()` resolves a
+  status code to that class — unmapped 5xx become `InternalServerError`,
+  statuses < 400 return `None`.
 - Models listing exists in the official SDK (Models resource). Exact HTTP path/shape:
   read `docs/reference/sdk/python/api/clients/sync/models.md` and `.../client.md`
   before implementing; if the snapshot gives a path, use it. If no explicit path is
   documented, implement `models()` as `GET /v1/models` and note the assumption in code.
+
+Wire strictness (pinned by `tests/unit/test_types.py:249-353`): answer
+float fields (`noul`, `choice` `probabilities` values, `score`,
+`confidence`) reject bools AND numeric strings — no `float()` coercion;
+usage integer fields (`input_tokens`, `output_tokens`) reject `None`,
+numeric strings, and bools, and deliberately accept integral floats
+(`100.0` means 100 tokens; non-integral floats like `3.7` are rejected);
+score `legend` parsing is strict (`legend` required, string level-index
+keys → string descriptions; non-string values rejected). Nothing on the
+wire path is silently coerced.
 
 ## Environment
 
@@ -211,6 +226,16 @@ contradictions (report the delta; do not silently deviate).
   each confidence in [0, 1] through the shared `_check_confidence` (NaN fails
   the chained comparison) — `ValueError` otherwise; `brier_score` also
   rejects empty `pairs`.
+- `jaggedness.py` — model-jaggedness instrument: repeated asking of
+  stochastic prompts (coin flips, dice rolls) across the provider registry,
+  quantifying statistical deviation from the stated uniform distribution.
+  `JaggednessFixture` plus the built-in fixtures `COIN` / `D6` /
+  `COIN_NOUL`; pure statistics `chi2_sf`, `uniform_chi2`,
+  `uniform_deviation`, `runs_test_z`, `max_streak`, `position_slope`;
+  `noul_choice_delta` — the cross-instrument noul-vs-choice gap on the coin
+  fixture; `run_battery` drives a fixture battery and returns a JSON-safe
+  dict (choice counts, uniformity chi-square, degeneracy, prob mean/std,
+  wobble, runs/streak, order-rotation and concurrent-batch metrics).
 - `config.py` —
   - `load_dotenv(path: Path = Path(".env")) -> dict[str, str]` (KEY=VALUE, ignore
     comments/blank, no quoting gymnastics needed; never raise on missing file).
@@ -336,6 +361,14 @@ contradictions (report the delta; do not silently deviate).
     CWD); prints `{manifest, pages, missing, drifted, added, ok}` where
     `added` lists extra `.md` files the manifest does not list; exit 1 when
     `ok` is False.
+  - `daf-jev posteriors-load FILE [--graphspec FILE]` — loads and
+    validates a `dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`
+    sidecar (same loader as the MCP `jev_posteriors_load` tool);
+    `--graphspec` cross-checks variables/states against a
+    `dafjev.bayesnet/1` document. Prints `{ok, format, evidence_count,
+    variable_count, min_row_sum_deviation, max_row_sum_deviation}`; a
+    failed validation exits 1 with `{"error": "ValueError", ...}`.
+    Keyless — no API call.
   - `daf-jev serve [--transport stdio]` — runs the MCP server (stdio only);
     a missing `mcp` extra prints a `uv sync --extra mcp` hint (exit 1).
   - `daf-jev providers` — prints the provider registry as a JSON array to
@@ -345,23 +378,30 @@ contradictions (report the delta; do not silently deviate).
     Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (58 names incl. `__version__`): the original 41-name list plus five
-  intentional additions — `ModelCard`, `Answer`, `JSONContent`,
-  `answer_from_wire`, `parse_response` — plus the six provider-dispatch
-  additions — `ProviderSpec`, `register_provider`, `get_provider`,
-  `list_providers`, `open_client`, `open_async_client` — plus the six
-  graphical-model additions — `Variable`, `Edge`, `CPT`, `BayesNet`,
-  `elicit_cpts`, `propose_structure` — i.e.:
-  `JevClient, AsyncJevClient, NoulQuestion, ChoiceQuestion, ScoreQuestion, Question,
-  Answer, JSONContent, NoulAnswer, ChoiceAnswer, ScoreAnswer, Usage, SystemOneResponse,
-  ModelCard, RetryPolicy, TypeSafeError, RateLimitError, OverloadedError, APITimeoutError,
-  APIConnectionError, noul, choice, score, QuestionSet, composite_score, confidence_gate,
-  route, Settings, load_settings, resolve_retry, resolve_timeout, pick_model,
-  Evaluator, EvaluationRecord, UsageLedger, UsageSnapshot, CircuitBreaker,
-  CircuitOpenError, CircuitState, Budget, ConfidenceGate, DecisionEvent,
-  Decider, answer_from_wire, parse_response, ProviderSpec, register_provider,
-  get_provider, list_providers, open_client, open_async_client, Variable,
-  Edge, CPT, BayesNet, elicit_cpts, propose_structure, __version__`.
+  (75 names incl. `__version__`): the wire/client/compose/evaluate/decider/
+  provider-dispatch core plus the jaggedness fixtures and statistics
+  (`COIN`, `COIN_NOUL`, `D6`, `JaggednessFixture`, `chi2_sf`, `max_streak`,
+  `noul`, `noul_choice_delta`, `position_slope`, `run_battery`, `runs_test_z`,
+  `uniform_chi2`, `uniform_deviation`), the graphical-model additions
+  (`Variable`, `Edge`, `CPT`, `BayesNet`, `elicit_cpts`, `propose_structure`,
+  `decompose_single_parent`), and the posteriors-ingest additions
+  (`CalibrationPairing`, `PosteriorsSidecar`, `load_posteriors`,
+  `pair_for_calibration`) — i.e.:
+  `COIN, COIN_NOUL, CPT, D6, APIConnectionError, APITimeoutError, Answer,
+  AsyncJevClient, BayesNet, Budget, CalibrationPairing, ChoiceAnswer,
+  ChoiceQuestion, CircuitBreaker, CircuitOpenError, CircuitState,
+  ConfidenceGate, Decider, DecisionEvent, Edge, EvaluationRecord, Evaluator,
+  JSONContent, JaggednessFixture, JevClient, ModelCard, NoulAnswer,
+  NoulQuestion, OverloadedError, PosteriorsSidecar, ProviderSpec, Question,
+  QuestionSet, RateLimitError, RetryPolicy, ScoreAnswer, ScoreQuestion,
+  Settings, SystemOneResponse, TypeSafeError, Usage, UsageLedger,
+  UsageSnapshot, Variable, __version__, answer_from_wire, chi2_sf, choice,
+  composite_score, confidence_gate, decompose_single_parent, elicit_cpts,
+  get_provider, list_providers, load_posteriors, load_settings, max_streak,
+  noul, noul_choice_delta, open_async_client, open_client,
+  pair_for_calibration, parse_response, pick_model, position_slope,
+  propose_structure, register_provider, resolve_retry, resolve_timeout,
+  route, run_battery, runs_test_z, score, uniform_chi2, uniform_deviation`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
   `MANIFEST.json` with per-page sha256 + `snapshot_id` (sha256 of concatenated page
@@ -371,14 +411,69 @@ contradictions (report the delta; do not silently deviate).
   unrecognized llms.txt lines are skipped with a stderr warning.
 - `scripts/generate_figures.py` — thin orchestrator over `figures.py` (needs
   the `figures` extra): renders the registry (or `--only NAME`, exit 2 on an
-  unknown name) and ALWAYS writes `figure_registry.json` — `--only` runs
-  included — because template validation requires it; exit 1 on unexpected
-  error (missing benchmark data names the file), 0 on success.
+  unknown name), ALWAYS writes `figure_registry.json` — `--only` runs
+  included — because template validation requires it, and always writes the
+  sibling `architecture.mmd` (byte-deterministic mermaid source emitted by
+  the pure `figures.architecture_mermaid()`; deliberately NOT a registry
+  entry); exit 1 on unexpected error (missing benchmark data names the
+  file), 0 on success.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`: writes `output/data/manuscript_variables.json`
   and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
-  exits 1 with a `FileNotFoundError` naming the missing analysis output rather
-  than fabricating values; `--allow-draft` emits `N/A` sentinels instead.
+  exits 1 with a `FileNotFoundError` naming the missing analysis output —
+  manuscript config, docs snapshot manifest, benchmark JSONs, or
+  `output/figures/figure_registry.json` (the `FIGURES` token derives from
+  that registry, never a raw PNG glob) — rather than fabricating values;
+  `--allow-draft` emits `N/A` sentinels instead.
+- `figures.py` — the manuscript figure registry (matplotlib imported at
+  module level, headless `Agg`; NEVER import from core modules). One
+  `generate_<name>()` per manuscript figure — `graphical_abstract`,
+  `architecture`, `primitives`, `batching`, `latency`, `confidence`,
+  `calibration` (7 figures in `_REGISTRY`; `generate_one(name, ...)`
+  raises `ValueError` naming the valid choices on an unknown name) —
+  orchestrated by `generate_all(out_dir, project_root)`: renders in
+  registry order and ALWAYS writes `figure_registry.json` after the
+  PNGs via `write_figure_registry` (one entry per `fig:*` label:
+  `figure_id` `figure_NNN`, filename, caption, section, width,
+  `placement: "h"`, `metadata.alt_text` — static metadata, no measured
+  statistics; template validation consumes it). Data-driven figures
+  (`batching`, `latency`, `calibration`, `graphical_abstract`) read the
+  newest benchmark JSONs under `output/benchmarks/` via
+  `_latest_benchmark` and raise `FileNotFoundError` naming the missing
+  file; `architecture`, `primitives`, and `confidence` are data-free
+  and always renderable. `architecture_mermaid() -> str` re-renders the
+  architecture diagram as byte-deterministic mermaid from the same
+  static `_ARCHITECTURE_NODES` / `_ARCHITECTURE_EDGES` tables the PNG
+  drawer consumes (nodes sorted by id, edges by (src, dst), the
+  duplicate `primitives -> client` arrow kept; `graph TD`; no trailing
+  newline) — deliberately NOT a registry entry; `generate_figures.py`
+  writes it as the sibling `architecture.mmd` on every run. Shared
+  style surface: `_style()` (module-level rcParams constants — DPI 200,
+  DejaVu Sans, palette, light gridlines; every generator calls it
+  first) and `_ROLE_FACECOLORS` (`main` / `side` / `external` role ->
+  facecolor; side modules draw dashed).
+- `manuscript_variables.py` — the `{{TOKEN}}` map generator (no
+  matplotlib): `generate_variables(project_root, *,
+  require_analysis_outputs=True) -> dict[str, str]` returns the flat
+  UPPERCASE_KEY token map (no braces) and `save_variables(variables,
+  output_path)` persists it as JSON. Strict mode (default) raises
+  `FileNotFoundError` naming the missing analysis output — manuscript
+  config, docs snapshot manifest, benchmark JSONs, or
+  `output/figures/figure_registry.json`; draft mode (`--allow-draft`)
+  emits `"N/A"` sentinels; test counts and coverage degrade to `"N/A"`
+  in both modes. FIGURES derivation: the registry JSON is consumed
+  entry-by-entry — every entry must be a dict with a string `filename`
+  (`ValueError` naming the label otherwise), and `FIGURES` is the
+  sorted filenames joined with ", " (empty registry -> `"N/A"`). The
+  registry path is the module-local `_FIGURE_REGISTRY` constant, a
+  deliberate mirror of `figures.FIGURE_REGISTRY_FILENAME` — never a
+  `daf_jev.figures` import, which would pull matplotlib into core;
+  `_load_manifest` (docs snapshot `MANIFEST.json`) follows the same
+  loader shape (strict-raise vs draft-empty). The 49-token set derives
+  from manuscript/config.yaml (`CONFIG_*`; batch-width token NAMES
+  derive from the configured widths, canonical 5/10/20 fallback),
+  pyproject metadata, AST-derived code stats, pytest collection +
+  coverage, benchmark JSONs, and provenance — no hardcoded results.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
   `graphical_elicitation` (+ `graphical_viz` for the rendered artifacts):
   CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
@@ -400,7 +495,7 @@ contradictions (report the delta; do not silently deviate).
   `DEFAULT_MANIFEST` is anchored to the repo root this module is installed
   in, not the process CWD.
 - `mcp_server.py` — FastMCP server (`build_server()`,
-  `main(transport="stdio")`): 7 tools — `jev_ask` (state widened to
+  `main(transport="stdio")`): 8 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
   `question_from_mapping`), `jev_evaluate` (async: `AsyncJevClient` +
   `Evaluator.evaluate_async()` on the serving loop; empty `states` →
@@ -408,12 +503,19 @@ contradictions (report the delta; do not silently deviate).
   `jev_models` (async; `pick` is a Literal schema; `contains=""` = no
   filter), `jev_composite_score` (finite/non-negative probability validation
   via `composite_score`), `jev_confidence_gate`, `jev_tiered_gate`,
-  `jev_docs_verify` (error shape `{"error", "message", "ok": False}`) — plus
+  `jev_docs_verify` (error shape `{"error", "message", "ok": False}`),
+  `jev_posteriors_load` (async sidecar ingest: `path` plus optional
+  `graphspec_path` cross-checked against a `dafjev.bayesnet/1` document;
+  same loader as the CLI `posteriors-load` command; makes no API call —
+  the only tool that needs no provider/key; error shape
+  `{error, message, ok: False}`) — plus
   the `jev://docs/snapshot` resource via `docs_verify` (CWD-independent).
   Every return is JSON-safe (`dataclasses.asdict`); stdio transport only;
   `mcp` imports at module level (optional extra — never from core modules);
-  client/compose/evaluate import lazily inside the tools.
-  Every tool additionally accepts an optional string `provider` argument
+  client/compose/evaluate import lazily inside the tools; the posteriors
+  helpers import at module level (pure stdlib, no client).
+  Every tool except `jev_posteriors_load` (sidecar ingest, no API call)
+  additionally accepts an optional string `provider` argument
   (default `"jev"`; validated via `get_provider` — unknown providers return
   a JSON-safe error result listing the available keys, no traceback); MCP
   stays stdio-only. Details in the Provider dispatch section.
@@ -430,11 +532,57 @@ contradictions (report the delta; do not silently deviate).
   take any object with `.ask(state, questions)`. Full contract in the
   Graphical models section below.
 - `graphical_viz.py` — rendering over the public `BayesNet` API:
-  `to_mermaid` (zero-dependency mermaid `graph TD` source), `plot_network`
-  (deterministic layered PNG; matplotlib imported inside the function),
-  and `plot_posterior_trajectory` (grouped P(true) bars over cumulative
-  evidence steps). Full contract in the Visualization part of the
-  Graphical models section below.
+  `to_mermaid` (zero-dependency mermaid source; `direction="TD"` and
+  `description_limit=40` kwargs), `plot_network` (deterministic layered
+  PNG; matplotlib imported inside the function; `dpi=200`/`figsize=None`
+  kwargs), and `plot_posterior_trajectory` (grouped P(true) bars over
+  cumulative evidence steps; `dpi`/`figsize` kwargs). Full contract in the
+  Visualization part of the Graphical models section below.
+- `graphical_animation.py` — GIF animations over the public `BayesNet`
+  API (optional `figures` extra): `animate_posterior` (grouped P(true)
+  bars growing one cumulative evidence step per frame; `labels`/`fps`/
+  `dpi` kwargs) and `animate_network` (the layered DAG layout with node
+  fills set to P(true) per step; `fps`/`dpi` kwargs). matplotlib and
+  Pillow import lazily INSIDE the call — without the `figures` extra
+  the ImportError names `uv sync --extra figures`. Fail-closed
+  validation precedes any figure; deterministic byte-identical output.
+  Full contract in the Animation part of the Graphical models section
+  below.
+- `bayesnet_posteriors.py` — posteriors/marginals sidecar ingest (pure
+  stdlib; the only I/O is reading the sidecar and optional GraphSpec JSON
+  documents — no client, no matplotlib). Accepts both
+  `dafjev.bayesnet-posteriors/1` (variant A) and `gnn.marginals/1`
+  (variant B) documents fail-closed and pairs Jev assignments against
+  sidecar rows for calibration. Full contract in the Posteriors sidecar
+  ingest section below.
+
+Shared figures theme: `figures.py` owns the single visual identity — the
+named `COLOR_*` / `FONT_*` / `SIZE_*` constants, `DPI`, `ARROW_STYLE` /
+`ARROW_LW`, the `_style()` rcParams including the 4-color
+`axes.prop_cycle` (`COLOR_LAYER_MAIN` -> `COLOR_ACCENT` ->
+`COLOR_LAYER_SIDE` -> `COLOR_EXTERNAL`), and `_ROLE_FACECOLORS` over the
+shared `_ARCHITECTURE_NODES` / `_ARCHITECTURE_EDGES` spec consumed by
+both the PNG drawer and `architecture_mermaid()` (the shared style
+surface is noted in the `figures.py` bullet above). The figures-adjacent
+plotters (`graphical_viz`, `graphical_animation`) import those constants
+lazily per call, together with matplotlib — a module-level import would
+break `to_mermaid`'s zero-dependency contract, pinned by
+`test_plotters_without_matplotlib_name_figures_extra` (the
+missing-matplotlib `ImportError` names `uv sync --extra figures`). The
+def-time `dpi` signature defaults are the one accepted literal pair
+(module-local, not resolved from the theme): `graphical_viz._DPI ==
+figures.DPI` is sync-pinned by `test_dpi_default_matches_shared_theme`,
+while the animation plotters keep their own `dpi: int = 110` GIF-frame
+defaults, outside that pin. Documented viz-local exceptions (NOT theme
+API): the node face `#EAF2FA`, the bar-grid alpha, the coolwarm posterior
+fills, and the arrow curvature / mutation-scale geometry constants. Bar
+series in `plot_posterior_trajectory` and `animate_posterior` follow the
+`_style()` prop_cycle order (cycling per query-variable series); registry
+PNGs never route through the viz modules — every `generate_<name>()`
+draws inside `figures.py`. The posteriors-ingest module
+`bayesnet_posteriors.py` is likewise outside the theme: pure stdlib with
+no figure surface — it never imports `figures`, matplotlib, or the viz
+modules.
 
 ## Provider dispatch
 
@@ -548,7 +696,8 @@ CLI + MCP (`cli.py` / `mcp_server.py`):
   flows into client construction (`open_client` / `open_async_client`).
   The keyless error JSON for `--provider kev models` mentions
   `KEV_API_KEY`.
-- `mcp_server.py`: every tool gains optional string arg `provider`
+- `mcp_server.py`: every tool except `jev_posteriors_load` gains optional
+  string arg `provider`
   (default "jev"), validated via `get_provider`; unknown provider => error
   result listing available keys (JSON-safe, no traceback). MCP stays
   stdio-only.
@@ -609,6 +758,58 @@ Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
     the final marginal.
   - `query(variable: str, evidence: Mapping[str, str] | None = None) ->
     tuple[float, ...]` — one marginal.
+  - `most_probable_explanation(evidence: Mapping[str, str]) ->
+    dict[str, str]` — most probable explanation: the single joint
+    assignment over ALL variables with the highest probability
+    consistent with `evidence` (evidence variables pinned to their
+    observed states in the result). Consistent assignments are
+    enumerated exhaustively and scored as the product of their CPT
+    entries (exponential in the state counts — 2**n for binary nets;
+    targets small nets), which makes the tiebreak exact: among
+    maxima, the lexicographically smallest state tuple in
+    variable-declaration order wins. Unknown evidence keys/states
+    raise `ValueError` as in `posterior`; zero-probability evidence
+    raises `ValueError` (no consistent assignment has positive
+    probability, so the MPE is undefined).
+  - `sample(n: int, rng: random.Random | None = None) ->
+    list[dict[str, str]]` — `n` joint assignments by ancestral
+    sampling: variables in `topological_order()` order, each state a
+    categorical draw over its CPT row given the already-drawn parent
+    states (`rng.random()` against the row's cumulative distribution).
+    `rng` defaults to a fresh `random.Random` — pass a seeded instance
+    for reproducible draws; `n` must be an integer >= 1 (`bool`
+    rejected, `ValueError`); rows are used as stored with a
+    float-rounding fallback to the last state of positive probability.
+    No evidence handling — rejection sampling is caller-composed.
+  - `conditional_scenarios(variable: str,
+    evidence: Mapping[str, str] | None = None,
+    targets: Sequence[str] | None = None) ->
+    dict[str, dict[str, tuple[float, ...]]]` — "what-if" enumeration
+    over one variable: for each state of `variable`, the posterior
+    marginal of every target under `evidence` plus
+    `{variable: state}` (one `posterior` call per state; the scenario
+    state overrides the same key in `evidence`), returned as
+    `{state: {target: distribution}}`. `targets` defaults to all
+    other variables in declaration order. Unknown `variable` or
+    target keys raise `ValueError` naming the offender (`targets`
+    must be a sequence, not a string); evidence keys, states, and
+    zero-probability scenarios surface from `posterior` unchanged.
+  - `decompose_single_parent(net: BayesNet) -> BayesNet` — returns a copy
+    in which every ORIGINAL variable has at most one parent: each
+    multi-parent CPT `P(X|B1..Bk)` (k >= 2) is replaced by a chain of
+    deterministic auxiliary variables (`X__aux1` conditioned on `B1`;
+    `X__auxi` on `X__aux{i-1}`, `Bi`; `X` on `X__auxk`), aux states
+    enumerating the joint parent-state indices in `itertools.product`
+    order with every aux CPT row an exact point mass, so `X`'s rewritten
+    CPT re-indexes the original rows. The joint distribution over the
+    original variables is preserved exactly — posteriors/queries over
+    originals (evidence still propagates) are unchanged; aux marginals
+    are deterministic bookkeeping, not elicited beliefs; aux `i >= 2`
+    nodes carry two deterministic parents (the minimal joint-preserving
+    merge). Mitigation seam for the RxInfer 5.5.x multi-parent
+    `DiscreteTransition` stall (single-parent nets run end-to-end; the
+    multi-parent stall is upstream ReactiveMP) — a bridge can lower the
+    degenerate deterministic aux CPTs outside the graphical model.
 
 Elicitation (`src/daf_jev/graphical_elicitation.py` — pure orchestration
 over an injected client; no I/O of its own):
@@ -658,28 +859,81 @@ Visualization (`src/daf_jev/graphical_viz.py` — pure over the public
 `BayesNet` API; the only I/O is the file write the caller asks for, plus
 creating the output's parent directory when missing):
 
-- `to_mermaid(net: BayesNet) -> str` — zero-dependency mermaid `graph TD`
-  source: one node per variable (`key["key<br/>description"]`, the
-  description truncated to ~40 chars at a word boundary and `[<>"]`
-  stripped from the label text), one `parent --> child` line per edge;
-  deterministic node/edge order = `BayesNet.variables` / `.edges` order.
-- `plot_network(net: BayesNet, path: str | Path) -> Path` — matplotlib PNG
+- `to_mermaid(net: BayesNet, *, direction: str = "TD",
+  description_limit: int = 40) -> str` — zero-dependency mermaid source
+  with header `graph {direction}`: one node per variable
+  (`key["key<br/>description"]`, the description truncated to
+  `description_limit` chars at a word boundary and `[<>"]` stripped from
+  the label text), one `parent --> child` line per edge; deterministic
+  node/edge order = `BayesNet.variables` / `.edges` order. Fail closed:
+  `direction` must be one of TD/TB/BT/RL/LR and `description_limit` >= 1
+  (`ValueError` otherwise).
+- `plot_network(net: BayesNet, path: str | Path, *, dpi: int = 200,
+  figsize: tuple[float, float] | None = None) -> Path` — matplotlib PNG
   (import inside the function; the ImportError names the `figures` extra:
   `uv sync --extra figures`). Layered layout: topological generations
   top-to-bottom, deterministic coordinates within a generation by
   variable index; FancyArrowPatch parent->child arcs with slight
   curvature; node boxes labeled key (+ description truncated to two
-  lines); no title by default (the caller adds one).
+  lines); no title by default (the caller adds one). An empty net raises
+  `ValueError` before any figure; `dpi` must be > 0 and `figsize`, when
+  given, a (width, height) pair of positive finite numbers — both
+  validated fail-closed (`figsize=None` keeps the computed default size).
 - `plot_posterior_trajectory(net: BayesNet, query_keys: Sequence[str],
   steps: Sequence[Mapping[str, str]], path: str | Path, *,
-  labels: Sequence[str] | None = None) -> Path` — one grouped bar chart:
-  x = step index (labels, default the index as a string), one bar per
-  query variable showing P(state=true), where "true" is the LAST state of
-  the variable's states tuple (binary convention) and values come from
-  `net.posterior(evidence)` per step; legend = query keys; default
-  matplotlib color cycle. Fail closed before any figure is drawn: empty
+  labels: Sequence[str] | None = None, dpi: int = 200,
+  figsize: tuple[float, float] | None = None) -> Path` — one grouped bar
+  chart: x = step index (labels, default the index as a string), one bar
+  per query variable showing P(state=true), where "true" is the LAST
+  state of the variable's states tuple (binary convention) and values
+  come from `net.posterior(evidence)` per step; legend = query keys;
+  default matplotlib color cycle; `figsize=None` keeps the fixed default
+  size. Fail closed before any figure is drawn: empty
   `steps`/`query_keys`, a label-count mismatch, unknown query keys
-  (`KeyError` naming the key), invalid evidence (`ValueError`).
+  (`KeyError` naming the key), invalid evidence (`ValueError`), a
+  non-positive `dpi`, or a malformed `figsize`.
+
+Animation (`src/daf_jev/graphical_animation.py` — GIF writers over the
+public `BayesNet` API; matplotlib and Pillow import lazily INSIDE the
+call — without the optional `figures` extra both raise `ImportError`
+naming `uv sync --extra figures`; the layered-layout geometry stays
+local while style constants come from the shared figures theme (see
+the Shared figures theme paragraph in Package layout); the lazy
+per-call import keeps the two renderers decoupled at import time;
+deterministic — identical inputs give
+byte-identical GIFs; every frame's posteriors are computed before any
+figure exists):
+
+- `animate_posterior(net: BayesNet, query_keys: Sequence[str],
+  evidence_steps: Sequence[Mapping[str, str]], path: str | Path, *,
+  labels: Sequence[str] | None = None, fps: float = 1,
+  dpi: int = 110) -> Path` — one frame per evidence step (applied
+  cumulatively, the same contract as
+  `graphical_viz.plot_posterior_trajectory`): frame `k` draws grouped
+  bars for steps `0..k` (growing left-to-right), one bar per query
+  variable showing P(state=true) with the same LAST-state binary
+  convention; the frame title names the evidence ADDED at that step;
+  the legend lists the query keys and the x tick labels come from
+  `labels` (step indices as strings when omitted). Fail closed before
+  any figure: empty `evidence_steps` / `query_keys`, a labels-count
+  mismatch, unknown query keys, unknown/zero-probability evidence
+  (`ValueError` from `posterior`), or non-positive `fps`/`dpi` — no
+  file is written in any of those cases; the output parent directory
+  is created when missing.
+- `animate_network(net: BayesNet,
+  evidence_steps: Sequence[Mapping[str, str]], path: str | Path, *,
+  fps: float = 1, dpi: int = 110) -> Path` — the layered DAG of
+  `plot_network`'s coordinate scheme (private `_layered_layout`:
+  longest-path levels over the topological order, deterministic
+  coordinates within a generation; FancyArrowPatch parent->child arcs
+  drawn below the node boxes), each node's fill color set to P(true)
+  per step (coolwarm, 0..1; LAST state) and the frame title carrying
+  the FULL evidence mapping (`priors` when the first step is empty).
+  The empty-net guard is hoisted before any figure (`ValueError`
+  "cannot animate an empty Bayes net: no variables"); otherwise the
+  same fail-closed-before-figure rules as `animate_posterior` (no
+  query keys or labels here). GIF encoding via
+  `matplotlib.animation.PillowWriter` at the given `fps`/`dpi`.
 
 Experiment runner (`scripts/bayes_experiment.py` — thin orchestrator; ALL
 logic lives in src):
@@ -784,7 +1038,11 @@ julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
 The Julia script prints marginal posteriors in topological order;
 `--evidence xray=true` clamps GraphSpec evidence, and `--out` writes
 a `dafjev.bayesnet-posteriors/1` sidecar (evidence + marginals) that
-re-feeds daf-jev for calibration / re-asking — the downstream seam.
+re-feeds daf-jev for calibration / re-asking — the downstream seam:
+`load_posteriors` ingests and validates it (CLI `daf-jev posteriors-load`,
+MCP `jev_posteriors_load`), and `pair_for_calibration` pairs Jev
+assignments against the sidecar rows (Posteriors sidecar ingest section
+below).
 
 Artifacts (step 1; `--out-dir`, default `output/experiments/asia`):
 
@@ -807,6 +1065,77 @@ posteriors on RxInfer 5.5.0 and 5.5.2; the full Asia net (multi-parent
 `DiscreteTransition` nodes) stalls variational message passing — an
 upstream ReactiveMP limitation, reproduced independently of the
 bridge.
+
+## Posteriors sidecar ingest (src/daf_jev/bayesnet_posteriors.py)
+
+Pure-stdlib ingest of posterior/marginals sidecar documents — the
+downstream seam of the cross-repo pipeline above (the Julia `--out`
+sidecar re-enters daf-jev here). No client, no numpy; the only I/O is
+reading the sidecar and optional GraphSpec JSON documents.
+Line receipts against current source: formats/tolerances
+`src/daf_jev/bayesnet_posteriors.py:60-65`, dataclasses `:68-95`,
+`load_posteriors` `:119-155`, `row_sum_deviations` `:399-404`,
+`pair_for_calibration` `:407-521`; CLI `src/daf_jev/cli.py:494-510`
+(handler) and `:680-695` (parser); MCP `src/daf_jev/mcp_server.py:382-410`
+(tool) and `:450` (registration). Pinned by
+`tests/unit/test_bayesnet_posteriors.py`.
+
+- Formats: `FORMAT_POSTERIORS = "dafjev.bayesnet-posteriors/1"` (variant
+  A: exactly `{format, evidence, posteriors}`) and `FORMAT_MARGINALS =
+  "gnn.marginals/1"` (variant B: exactly `{format, marginals,
+  source_model}`) — the top-level key sets are enforced (`ValueError`
+  otherwise).
+- Tolerances: `ROW_SUM_TOLERANCE = 1e-6` (variant A flat per-row
+  budget), `ROUNDED_STATE_BUDGET = 5e-7` (variant B per-state budget —
+  a row's budget is `1e-6 + len(row) * 5e-7`, length-widened for
+  6-digit rounding), `ONE_HOT_TOLERANCE = 1e-6` (evidence rule),
+  `ASSIGNMENT_ROW_SUM_TOLERANCE = 1e-6` (assignment distributions in
+  `pair_for_calibration`).
+- `PosteriorsSidecar` — frozen dataclass: `format: str`,
+  `posteriors: Mapping[str, Mapping[str, float]]` (var -> state -> p;
+  "posteriors" rows for variant A, "marginals" rows for variant B),
+  `evidence: Mapping[str, str] | None` (variant A only),
+  `source_model: str | None` (variant B only). Insertion order is
+  preserved everywhere (plain dicts).
+- `CalibrationPairing` — frozen dataclass: `brier_scores:
+  Mapping[str, float]` (var -> soft multiclass Brier score of the
+  assignment against the sidecar row, summed over the union of both
+  key sets), `pairs: tuple[tuple[float, bool], ...]` —
+  `(confidence, correct)` tuples in the same order and length,
+  matching the `daf_jev.calibration` pair convention.
+- `load_posteriors(path: str | Path, graphspec: str | Path | None =
+  None) -> PosteriorsSidecar` — fail-closed parse and validation:
+  invalid JSON, unknown/missing/non-string `format`, unexpected or
+  missing top-level keys, non-mapping rows, bool/non-numeric/
+  NaN/infinite/negative probabilities, a row-sum budget breach, and the
+  variant-A one-hot evidence rule (observed state carries >=
+  `1 - ONE_HOT_TOLERANCE`; every other state in the row carries <=
+  `ONE_HOT_TOLERANCE`) all raise `ValueError` naming the offending
+  var/state/key/path; missing files raise `FileNotFoundError`
+  naturally. When `graphspec` is given, every sidecar variable and
+  state is cross-checked against that `dafjev.bayesnet/1` document —
+  sidecar -> spec direction only (extra spec detail is ignored); a
+  GraphSpec whose `format` is not exactly `dafjev.bayesnet/1`, or that
+  does not define a sidecar variable or state, is rejected.
+- `row_sum_deviations(sidecar) -> dict[str, float]` — per-variable
+  absolute row-sum deviation `|sum(row) - 1|`, in the insertion order
+  of `sidecar.posteriors`.
+- `pair_for_calibration(sidecar, assignments: Mapping[str, str |
+  Mapping[str, float]]) -> CalibrationPairing` — pairs Jev assignments
+  against the sidecar as the calibration target: per assigned variable,
+  `confidence` is the exact posterior support for the chosen state and
+  `correct` whether the chosen state matches the sidecar's modal state
+  (ties break to the first maximum in insertion order on both sides);
+  distribution assignments reduce to their argmax for the pair while
+  the full distribution feeds only the Brier term. Partial pairing is
+  by design (sidecar variables without an assignment are skipped). Like
+  `bench_calibration.py`, this is a self-consistency proxy against the
+  sidecar — NOT ground-truth calibration.
+- CLI/MCP surface (the same loader both ways): `daf-jev posteriors-load
+  FILE [--graphspec FILE]` and MCP `jev_posteriors_load(path,
+  graphspec_path=None)` both return `{ok, format, evidence_count,
+  variable_count, min_row_sum_deviation, max_row_sum_deviation}` and
+  need no API key — no client is constructed.
 
 ## Tests (tests/) — template "no-mock" convention
 
@@ -849,7 +1178,21 @@ bridge.
   and speedup to stdout and `output/benchmarks/batching_<date>.json`.
 - `bench_patterns.py` — latency of composite-score pipeline and confidence routing
   decisions end-to-end (1 call each); report p50/p95 over >= 10 runs.
-- Both: argparse `--runs`, exit 0 with "SKIP: JEV_API_KEY not set" when key absent.
+- `bench_calibration.py` — self-consistency confidence calibration: for N
+  short states, the same three-option choice question is asked R times
+  (modal choice across repeats = self-consistency proxy, NOT ground
+  truth); report ECE, Brier, reliability table, and mean pairwise |Δnoul|
+  stability to stdout and `output/benchmarks/calibration_<date>.json`;
+  flags `--states N` / `--repeats N` / `--model NAME`, exit 0 with
+  "SKIP: JEV_API_KEY not set" when key absent.
+- The first two: argparse `--runs`, exit 0 with "SKIP: JEV_API_KEY not set" when key absent.
+- `bench_jaggedness.py` — model-jaggedness battery: repeated asking of
+  stochastic prompts per provider; report uniformity deviation
+  (chi-square/total variation), choice degeneracy, runs/streak, order
+  rotation, concurrent wobble, and the noul-vs-choice delta to stdout and
+  `output/benchmarks/jaggedness_<date>.json`.
+  Multi-provider: `--providers 'jeff,kev,jev'`; a provider without its key
+  prints `SKIP[<provider>]` and the run continues.
 
 ## Conventions (template_code_project)
 

@@ -163,8 +163,9 @@ def _write_analysis_outputs(root: Path) -> None:
     (bench_dir / "calibration_20260916.json").write_text(json.dumps(_CALIBRATION_JSON), encoding="utf-8")
     figures_dir = root / "output" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    (figures_dir / "b.png").write_bytes(b"png")
-    (figures_dir / "a.png").write_bytes(b"png")
+    registry = {"fig:b": {"filename": "b.png"}, "fig:a": {"filename": "a.png"}}
+    (figures_dir / "figure_registry.json").write_text(json.dumps(registry), encoding="utf-8")
+    (figures_dir / "stray.png").write_bytes(b"png")  # must NOT leak into FIGURES
 
 
 @pytest.fixture()
@@ -239,7 +240,7 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
     assert variables["PLATFORM"] == platform.platform()
     assert variables["PYTHON_VERSION"] == platform.python_version()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", variables["GENERATION_TIMESTAMP"])
-
+    # Sorted registry filenames; stray.png (present on disk) is absent.
     assert variables["FIGURES"] == "a.png, b.png"
 
 
@@ -317,7 +318,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
     ):
         assert variables[token] == "N/A", token
     assert variables["CONFIG_KEYWORDS"] == ""
-    assert variables["FIGURES"] == ""
+    assert variables["FIGURES"] == "N/A"
     # Inputs that exist regardless of mode are still computed.
     assert variables["PACKAGE_VERSION"] == FAKE_VERSION
     assert variables["CODE_MODULES"] == "1"
@@ -331,6 +332,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
         ("output/benchmarks/batching_20260916.json", "batching"),
         ("output/benchmarks/patterns_20260916.json", "patterns"),
         ("output/benchmarks/calibration_20260916.json", "calibration"),
+        ("output/figures/figure_registry.json", "figure_registry"),
     ],
 )
 def test_generate_variables_strict_missing_analysis_output_raises(
@@ -342,6 +344,28 @@ def test_generate_variables_strict_missing_analysis_output_raises(
 
     with pytest.raises(FileNotFoundError, match=re.escape(needle)):
         generate_variables(tmp_path, require_analysis_outputs=True)
+
+
+@pytest.mark.parametrize("require", [True, False])
+def test_generate_variables_stray_png_never_leaks_into_figures(
+    fake_project: Path, require: bool
+) -> None:
+    variables = generate_variables(fake_project, require_analysis_outputs=require)
+    assert variables["FIGURES"] == "a.png, b.png"
+    assert "stray.png" not in variables["FIGURES"]
+
+
+@pytest.mark.parametrize("require", [True, False])
+def test_generate_variables_malformed_figure_registry_raises(
+    tmp_path: Path, require: bool
+) -> None:
+    _write_minimal_skeleton(tmp_path)
+    _write_analysis_outputs(tmp_path)
+    registry_path = tmp_path / "output" / "figures" / "figure_registry.json"
+    registry_path.write_text(json.dumps({"fig:bad": {}}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="filename"):
+        generate_variables(tmp_path, require_analysis_outputs=require)
 
 
 def test_generate_variables_missing_pyproject_raises_even_in_draft(tmp_path: Path) -> None:
