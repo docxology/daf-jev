@@ -897,10 +897,10 @@ Animation (`src/daf_jev/graphical_animation.py` — GIF writers over the
 public `BayesNet` API; matplotlib and Pillow import lazily INSIDE the
 call — without the optional `figures` extra both raise `ImportError`
 naming `uv sync --extra figures`; the layered-layout geometry stays
-local while style constants come from the shared `figures.py` theme
-via the same lazy per-call import (see the shared figures theme
-paragraph above), which is what keeps the two renderers decoupled at
-import time; deterministic — identical inputs give
+local while style constants come from the shared figures theme (see
+the Shared figures theme paragraph in Package layout); the lazy
+per-call import keeps the two renderers decoupled at import time;
+deterministic — identical inputs give
 byte-identical GIFs; every frame's posteriors are computed before any
 figure exists):
 

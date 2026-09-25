@@ -188,6 +188,9 @@ restate them here; there is no `../AGENTS.md` in this location.
 - `scripts/scrape_docs.py` — standalone stdlib re-scraper for the docs
   snapshot; CLI: `--index-url`, `--out-dir`, `--check`, `--manifest PATH`
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
+  Plain mode prunes snapshot pages the fresh manifest does not list
+  (`prune_orphans`; receipt under `"pruned"` in the summary line) — the
+  snapshot dir stays an exact manifest mirror; `--check` stays read-only.
 - `scripts/generate_figures.py` — thin orchestrator over `figures.py`;
   CLI: `--out-dir DIR` (default `output/figures`), `--only NAME`; needs the
   `figures` extra (`uv sync --extra figures`). Exit 0 ok, 2 unknown
