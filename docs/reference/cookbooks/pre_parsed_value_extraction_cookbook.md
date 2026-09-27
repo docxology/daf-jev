@@ -34,7 +34,7 @@ code normalizes it and acts on it.*
 ## Setup
 
 ```bash theme={null}
-pip install ipython phonenumbers "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install ipython phonenumbers 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 then set `TYPESAFE_API_KEY`.
@@ -301,7 +301,7 @@ display(
 )
 ```
 
-<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIAYgE4RwEAiAhktfgOoAWAlivgDxi3UB0A7qxQABalEQBaKBBIAHXtLgA+ADpI0EAgCMWAG10skAc1HiEUmfMVqAwlAIywCEgGdTk6XIXk1AJQSyugCeEhoE3HS8ss4uEHS6wkZw1HrecGpqABIs+CgI1HD4EviB+S4I+JBIAOTsMOW5TBU6+oZG+NQG1C74AGYyjSw9cQi8+ADKyGD4cEH4JAhQCCyy7CgQM0Fq0a5xnR1gYAsuPYYuedRgY2hMtADWLgA0+DSRIM8gsmRwqy4Y2HhCMAVCAFksVigQQRgSAUEFolD8CCoEwICwliDnsiSGxnCxqIiYRE+II2O5zJ4rD5AUgYPosSAWgZjOSLF5rDS6boGY4YqzKWlEbT6UjwDwojE9gkkildILOSKQUgRoiQQA5Eb4CC9RoIBpDXXzBAARxgery0wAbp0zbwQQBfBlnFAkGBQFAsOIuVUgZjopj4BDJPQHI56nqQPWG8pIJwkfD8WhrJoseNg5arfAxtYQAD8Dvt70I1FkLAAajFPUhASBLQBGIsgcq6RYWgCyECcuhcgIA2iAAFYIS0SOu8OsAJhAAF17UA" target="_blank" rel="noreferrer" className="text-primary">Open this thread + selection in the TypeSafe playground →</a>
+<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIAYgE4RwEAiAhktfgOoAWAlivgDxi3UB0A7qxQABalEQBaKBBIAHXtLgA+ADpI0EAgCMWAG10skAc1HiEUmfMVqAwlAIywCEgGdTk6XIXk1AJQSyugCeEhoE3HS8ss4uEHS6wkZw1HrecGpqABIs+CgI1HD4EviB+S4I+JBIAOTsMOW5TBU6+oZG+NQG1C74AGYyjSw9cQi8+ADKyGD4cEH4JAhQCCyy7CgQM0Fq0a5xnR1gYAsuPYYuedRgY2hMtADWLgA0+DSRIM8gsmRwqy4Y2HhCMAVCAFksVigQQRgSAUEFolD8CCoEwICwliDniCzigSDAoCgWHEXIiQcx0Ux8AhknoDkcECdKhAGY0KuUkE4SPh+LQ1k0WFywctVvh2WsIAB+TFIkBQEhsZwsaiImERPiCNjucyeKw+QFIGD6LEgFoGYxaixeaz6w26Y2OGIWnVpREGo0ytVRGJ7BJJFK6F0290gpAjUkgAByI3wEF6rIaQ1Z8wQAEcYAy8tMAG6ddO8EEAXyL70I1FkLAAajEiUhASAswBGEsgcq6RaZgCyECcuhcgIA2iAAFYILMSBu8BsAJhAAF0C0A" target="_blank" rel="noreferrer" className="text-primary">Open this thread + selection in the TypeSafe playground →</a>
 
 ## Two limits
 

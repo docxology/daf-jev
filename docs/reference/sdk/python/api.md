@@ -8,8 +8,8 @@
 
 <a id="api-reference" />
 
-* Sync client: [Client](/sdk/python/api/clients/sync/client) · [Models](/sdk/python/api/clients/sync/models)
-* Async client: [Client](/sdk/python/api/clients/async/client) · [Models](/sdk/python/api/clients/async/models)
+* [Sync client](/sdk/python/api/clients/sync)
+* [Async client](/sdk/python/api/clients/async)
 * Types: [Common](/sdk/python/api/types/common) · [Questions](/sdk/python/api/types/questions) · [Responses](/sdk/python/api/types/responses)
 * [Retries](/sdk/python/api/retries)
 * [Exceptions](/sdk/python/api/exceptions)

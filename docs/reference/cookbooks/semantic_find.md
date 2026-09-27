@@ -25,9 +25,9 @@ The search backend comes together in three parts:
 
 1. Tag each line with an ID so TypeSafe can point to it.
 2. Use a `Choice` question to rank those line IDs by how well they answer the query. Choice
-   question
-   probabilities always add up to 1, so a line ranks first even when none answer the query.
-3. In the same request, use a `Noul` to check whether the document contains an
+   question probabilities always add up to 1, so a line ranks first even when none
+   answer the query.
+3. In the same request, use a `Noul` question to check whether the document contains an
    answer at all.
 
 ## Setup
@@ -43,8 +43,7 @@ export TYPESAFE_API_KEY="your-key-here"
 ### Install the dependencies
 
 ```bash theme={null}
-pip install "typesafe-sdk>=0.5.7" cooksafe \
-  --extra-index-url https://pypi.typesafe.ai/
+pip install 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 `JsonCache` replays the included API responses, so the steps below run without an API key

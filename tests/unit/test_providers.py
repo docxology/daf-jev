@@ -254,7 +254,7 @@ def test_register_provider_rejects_duplicate_key() -> None:
 def test_register_provider_rejects_invalid_key_pattern() -> None:
     providers = _providers_module()
     for bad_key in ("", "1abc", "UPPER", "has space", "-leading"):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"provider key must match"):
             providers.register_provider(_spec(key=bad_key))
     assert [spec.key for spec in providers.list_providers()] == list(SIX_KEYS)
 
@@ -262,7 +262,7 @@ def test_register_provider_rejects_invalid_key_pattern() -> None:
 def test_register_provider_rejects_blank_required_fields() -> None:
     providers = _providers_module()
     for field in ("display_name", "default_base_url", "default_model"):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"must be a non-empty string"):
             providers.register_provider(_spec(**{field: ""}))
     assert [spec.key for spec in providers.list_providers()] == list(SIX_KEYS)
 

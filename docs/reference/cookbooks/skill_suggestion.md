@@ -4,7 +4,7 @@
 
 # Skill suggestion
 
-> Picks at most one skill for an agent turn out of the 182 in Nous Research's Hermes catalog: one TypeSafe request ranks every skill and asks whether the turn needs one at all, a second reads the top three properly and can reject all of them. The winner's name goes into a single line of the agent's system prompt, and both the wrong skills it loads and the ones it loads when nothing fits drop by more than half.
+> Picks at most one skill for an agent turn out of the 182 in Nous Research's Hermes catalog, using two TypeSafe requests to rank and re-check the top candidates.
 
 *Agents choose skills by truncating and loading them all into the system message, which
 increases costs, degrades skill selection performance, and induces context rot for the rest
@@ -54,7 +54,7 @@ You end up with a `suggest()` function that returns at most one skill name, a
 `suggestion_block()` that wraps it for the system prompt, and the harness that produced the
 table above, ready to point at your own roster.
 
-```mermaid theme={null}
+```mermaid actions={true} theme={null}
 flowchart LR
     subgraph C1["Call 1 - skim all 182 skills"]
         direction TB
@@ -84,7 +84,7 @@ flowchart LR
   agent being measured.
 
 ```bash theme={null}
-pip install anthropic matplotlib ipython "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install anthropic matplotlib ipython 'cooksafe>=0.2.0,<0.3.0'
 export TYPESAFE_API_KEY=your-key-here
 export ANTHROPIC_API_KEY=your-key-here
 ```
@@ -477,7 +477,7 @@ GATE_QUESTIONS = {
 INVERTED = {"prose_suffices"}  # a yes here points away from needing a skill
 
 
-def document(request: str) -> dict:
+def build_state(request: str) -> dict:
     return {"request": request, "recent_context": ""}
 
 
@@ -494,7 +494,7 @@ def rank_wide(request: str) -> dict:
         questions[f"gate::{key}"] = Noul(instructions=text)
     started = perf_counter()
     response = client.system_one(
-        state=document(request), questions=questions, model=TYPESAFE_MODEL
+        state=build_state(request), questions=questions, model=TYPESAFE_MODEL
     )
     ranked = sorted(
         response.answers["which"].probabilities.items(), key=lambda kv: -kv[1]
@@ -561,8 +561,8 @@ because posting to an account is an action, and with a skill for posting to X an
 for Mastodon the closest skill wins anyway.
 
 That leaves the deck. Both leaders are `.pptx` skills, and on 60 characters the wide Choice
-question
-puts the editing skill ahead of the authoring one, for a request about authoring a deck.
+question puts the editing skill ahead of the authoring one, for a request about
+authoring a deck.
 
 ## Step 4: rerank the top three
 
@@ -611,7 +611,7 @@ def rerank(request: str, names: tuple[str, ...], excerpt: int) -> dict:
     """Request 2: the same Choice over a shortlist, plus one absolute noul per candidate."""
     started = perf_counter()
     response = client.system_one(
-        state=document(request),
+        state=build_state(request),
         questions=rerank_questions(names, excerpt),
         model=TYPESAFE_MODEL,
     )
@@ -671,10 +671,10 @@ The `fits` nouls and the Choice disagree there: the nouls score the editing skil
 while the Choice picks the authoring one. They are deciding different things. The Choice
 settles *which* skill, and the nouls settle *whether* to say anything at all.
 
-The Mastodon request survives both checks. Its best `fits` noul lands above 0.30, so the
-recipe suggests the X skill for a request about Mastodon. Most requests like it do get
-caught, but a second pass can only reject what the wide ranking hands it, and here that was
-three near-misses.
+The Mastodon request survives both checks: its best `fits` noul lands above 0.30, so the
+recipe suggests the X skill for a request about Mastodon. Most requests like it are caught.
+The second pass can only reject what the wide ranking hands it, and here that was three
+near-misses.
 
 The function below is the whole recipe: two requests and two thresholds, with at most one
 skill name coming back.
@@ -900,7 +900,7 @@ description and body excerpt as its criteria.
 ```python theme={null}
 demo_shortlist = tuple(name for name, _ in rank_wide(DEMO[1])["ranked"][:SHORTLIST])
 playground_link = make_playground_link(
-    document(DEMO[1]),
+    build_state(DEMO[1]),
     rerank_questions(demo_shortlist, EXCERPT_CHARS),
     models=[TYPESAFE_MODEL],
 )
@@ -911,7 +911,7 @@ display(
 )
 ```
 
-<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIwAOiAE4ICOMCAziqQaQMICGS+AnhDPgA4wU+FBADmCFAAsEZfK34BLFFEn4wCKAGt8tTQgA2EiBwAUUCADcZAGh1KYrFAuP5LMiwoQB3W+bh9aWz4KKAR1VGEydlpWKCdjQPwAEWYAMVsAGQAhAHkASjlaOXwAOj4+FExbGFoFJFFXGFkAMwUyOABaFAR-fUcEMorMfGaIWQAjKKQwOob2MBGICBQkZdn8BFjVC1Z9B3iOJHhxmXxx2O0RYWl8UP19fCVb1kQRsgg4R44pBHw4CHU+gA-KRbKQQsgUAB9cyoLAMPD4UikAC+IFsIGCHwqtAw2ERRFIXkkChUjHwJBAKE4fAQ5NIKggpLp6KRICgZCUMgUrHJlL4EC8MgFdQRTBAzAo-VsUrAtjCT0GlTUGk0iVo+gU6kSq26iW6vX6tBK+EAKAT4ADE+AACoLhUyIgBlTQKe74SWbboyzZyuTTDYzIS2oVkW2ilVaIrm5rvTq0DmOFT4cRIGSOZwcLxKVTlSopgBW+p6fD63Q651oYQDSnWHnkMxCQgAGgBZDJ-dgKASljO2Wi01h6WS6ui+SSsMgoRLzFW1UQcACKAEETUv8AADJWYdePIryABaAElrXIyCoFFZXM18K3261DMbLVaAOrSb4QfAAVUrX5-UgURS6K6DzsJwwgKK88hbq4shlMswz3r8AFfBYED6FYCx1H6YFeKwYHmqwRR1AIKC2DwKAkWREzLJIBAcp66walqvzqJGQRKEmrFqlR-AUJWqDpgkADc+CyusYwbNgURxOs3TYG8HzYaUuaYCJCpOPUkkARpDTBHQkKCUgtAiX44x1OJsj9pqKA6TomrqCMrp0CJXhjC6mlZlIwjFqWdD4CYcGVHkth9NwgjqgOQ74COiQSX4iCoI+aCcqI4iyMSyAIFYsg-PgNSnAlBxFMQJXgKq1glaQSKlUx2oVaV1WkHp-EoIZ9VVRJFDNDIyChHuylDAA9IFCFOUgLwDE+NoUBQ1AAVyoJsipHSsIIkhjPSIBZDAroLMGMhhhEXFFNIrBgA+RSeTmnBSMYHQqSa5pWstq23bI1rvGAMChMU0GIa4HAzLoeW1Jp658Dd61IPdQybr+vwZRwYXRQgVZXICF6nPWqqFMU-0Tk4zSxKR0XLGonKXvImqXvtoYOkIla0LUxirmArAVFWMaKUuqCSO8fCkgA5EU4NDCta1jDuM7gxxkgdFxO5AfcREcAA2uwUj86StCDa041IFAPL6B0lZkB4fUALomJINkBLgg2DaI2YwOMJR+INGt8xAAtQDrevsIbuwm+4zK0HkJpoDcLbMCeg34DkzStKEHQAFKOmcUwqH5EDXrlYwKE7436HuFDk97tILOa-57kz8B+ad510EU1qQyz+CpBJuWTBAZ02HI+iypwJskuUVa04dQivetnKaUrDwmLVo46JFpwxfKcAnGAiSIDMrDBToqPXL84w7foKAdFh4N2mQIqoIrLr3BHJKAQ-DzIVTBc2zIHRCp-Qh8I4boZBvgwFTAsUYsh-iAnLBcKsx1-IC2UKoY6thDzMD+D0CAiRNjANmEUGKBQMqlyyjIMCRwN4FRqEIFA0lfhXHkLQHgZ4EZuXGEsTQJoLRWhyIIPgi0GRezgLyREpAACiFCwAzE0mzVqFZfgQPwAAJSXAAcT9AsSsQjUCkgPhOFQj1LTukEfIDo8daTQ0dEwn64jN5SIaEkRwrA5H4Ejr8Jch4OjjScJeGRTjCLyIkifXa6wMgZBbHIcomooCGUutmDB-wyCcE4S+N8wgPz5SMbGeQAAqbJ35fjMGMfgRGuBcn4FMdtYJmllFqJMBQGhngdjG1WqIQqVYUxpgOAUdmJZSQxPKfgAAcqjBY+hoC7EGpWfQzQOjrXoFWKwcQJK+OcaY58GtXDmJNlY34jC9gHH8kuABWd8AACYSgAAYCimI+ssZYNJ1hYRHGwiAaoBmOh6BrHRlY9GqDcLISAsBCpFFMY6EQM8Gg9FsXg4pcTECtV8fgXJLYJCcl9rkggpjcmnIACzWAAMwXIuQAanwCopQAAJF2OhWpkFoGUrF2SACM1gACcRLSUQLVAypF2SLBMpKPiwVZSF6yMMLYIUCBND6DAhQQw-iw4DNyUcrYvxzkXPwFE5AlYym5Pyf3IBXjMYq3mWdDFSrsnWjqBoYwCBzUtnYKwcQCwoBjJgL6V6EATbRM1JpRlqR3GOkdOa60TRdkQVdBOJQYEflnkkLYVYGCEWOItc+TYdZughs+t9A5bZPHph8Y41ZvKFxgCmCgc1FLP5shRGCEAdR6BkBzRmWgm1RGYGJjKgGvwc5Hx-HPIiRRcopRtt2tJmqe7gM7jcfKZBhaaqNEIWaNB6AmlfKSP5qYgRKJ9MU8cQhNhJmJg4e4YFIBL11PgfMVDHhTmihNEoqI62tCnLgXAAoQy3zFBSUg1JaSbVWDAfQ-D61GRoc2hIm0kgQD8rlOe+BBYfvtKKQWagPxwdpIbJO1xZIztNvO5ddBJ66CKBA7dh4hDIW1ByBQm9CgEA9NKUSPp5SBgGsqFBdlmI6mWEvA0JYjSPpALWtkL7aBvpehLMgfJf00hZOKQDwHWSkAbeBmSkGREgGg7Bm48HENiynmMVDkAj7Lw0AobD-5NK5VnQRqgK7iNvLI-gCju5Zw0bo4RAglT9B7WvhPCMbyG4XVhV5CGt1oYPSfaJpQ4ncAqCyTJqkcmAM8CU3W1TTb1NGSgzBodunX4IYSx8Vgxn0O6cwxZnRVmGg2fw0UQj9BChObGORyjRRqOck8+J-ANiwh2LUEW-xixZA1PUQfLRTgoC6LjUJlEaIMTswUAANRkMzJABJ+WshAFMjQ3QwAtgBAYWgiJVYgHzFlDoAqmWnJABbFEQA" target="_blank" rel="noreferrer" className="text-primary">Open the shortlist + questions in the TypeSafe playground →</a>
+<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIwAOiAE4ICOMCAziqQaQMICGS+AnhDPgA4wU+FBADmCFAAsEZfK34BLFFEn4wCKAGt8tTQgA2EiBwAUUCADcZAGh1KYrFAuP5LMiwoQB3W+bh9aWz4KKAR1VGEydlpWKCdjQPwAEWYAMVsAGQAhAHkASjlaOXwAOj4+FExbGFoFJFFXGFkAMwUyOABaFAR-fUcEMorMfGaIWQAjKKQwOob2MBGICBQkZdn8BFjVC1Z9B3iOJHhxmXxx2O0RYWl8UP19fCVb1kQRsgg4R44pBHw4CHU+gA-KRbKQQsgUAB9cyoLAMPD4UikAC+IFsIGCHwqtAw2ERRFIXkkChUjHwJBAKE4fAQ5NIKggpLp6KRIDq9DIMDiziQtHpIAAophYih9JxXEhfhBmtc6L9dAp7kUFEUfvgyApRJIhMZfld9BBWAtRrJ1TUZAByIp9br0DVUGj0Er4ADqJJUkoQQPwACVNgtiY4Nls5HEHPcJZA6LZVkIAFY1IRKIpIF4DUFsqCa7qa1jkyl8CBeGRFuoIpggZgUfq2GtgWxhJ6DSpqDSaRK0fQKdSJOMx4Q9Pi2uguwAoBPgAMT4AAKxdLTIiAGVNEqHtXNt06wHbPMNjMhHOS2Q5+W21oihPmu9OrRs45PeIpVEDvgvEpVOVKk-44lur1+g6c5aDCfclHWDx5BmEIhAADQAWQyP52AUARbV5WxaFpVg9FkftEhUVgyBQRI917LUOAARQAQRdaj8AAAxbTAGMeIp5AALQASRnOQyBUBQrFcWUEKQ1pDFoF1J2nd1kGECB8AAVRApSVKkVUdFXe45CQCUnFeeRmNcWQymWYZxN+DS6gsCB9CsBY6h0iUvFYCUJ1YFUkAEFBbB4FBvN8iZlkkAhs03dYux7X51AvIIlE9GKO0C-gKBA1BHF5WgAG4HWNdYxg2bAoh5epB2wN4Pic0ov0wHKmycUqsFVBqGmCeV0oObLbg+cY6ny2QsO7FAWp0bt1BGJU6ByrwxlXUr3ykQcALtfATFMyo8lsPpuEETtsNw-B8OSvxEFQST8DQTVRHEWRiWQBArDNG4LVkU7OqRYhSES6xPtID7SEi3sfs+kB-sxVLIQy4xgb+gqKGaGRkFCdjqqGAB6dbzMmtNECk6cZwoChqFVJQWTBTEhg6VhBEkMYBSyGAlQWI8ZFPCJEqKaRjQkooFs-TgpGMDoavHKd+Ep6nBdkAmAW5X5DJqibDElNRVW0Gp1gYvgBdppBhaGJjVN+O6OB2w6EFAq5AUE04oPbQpigsvinGaUVY2WNRNSE+RuyElmT0XIQQNoWpjDosBWAqUDr0q6jUEkd4+FJa1GJqqmabGVi9y1+LJA6RLWMVZUvnwABtdgpET0laDR1o0yQKAFF2DoQLIDxkYAXRMHV-NoXA0bR0QPxgcYSj8NGK4TiAk6gGu6-YRvm9b9u6DyF00BueDmF4tH8ByZpWlCDoACklzOKYVDoYS5WMrU6l2diKE96faQWCd1PYkP4CvrmwB52cdZh3wKkAq6pJhGnUGQXc+h6ycBbiScooF-ZsyEJLWmmpSpFweCYQGA4sKbAOkdDYcAThgESIgGYrBNo6AtjfcYjN9AoA6I5LW84yBllQIXLS+h14kiKFgtixRuzalzB0EsWodT8EcLmb4MApQmgKv8QEQELigQ5qtJOyhVAc1sFxZgfwegQESJsMgSBZipmWKvN80gn4PRkBKI4JDThwCTJEWI+oFLyFoDwfixtZrjCWJoPGe9BB8EzAyKecB8yIlIIKJxYAZilQjigVgwFfimj9NRAA4jpBYIEomoFJDQoiKhRbTmYJE+QHQ960j1kuHxoR8BxNIYkhoSRHCpI8r8DevxqJcQ6GmJwQlkmdJUhk+hTN1gZAyPBOQ5RuxQChnyN8H4DH-DIJwYJslvgKQtPgCpN55AACojnKV+Acj48gTa4BOfgapDNJmlV9Nk1aFAUCages3amog3qgSfDIJZBRI7DlJEsoo1SAByFsFiGkWfoNGIF9DNA6LTegoErBxAKiMtJdy3QV1cLUluDSFS2UELyVa1E+BbF+AAJhKAABgKNUmWIhqRJ1Ko5fsASIAdlxUuHoFcikgRKaoNwshICwDeuC-AS4RAYIaD0Fp5iVmLUQCkkZ+ATnwQkJqWeJyCDVJOTSgALNYAAzPS+lABqfAWSlAAAkR46BSWQWgtzDVHIAIzWAAJyWptaaDs7rNVHIsJ6koZqI23JwSk8YhhbAlgQJocUDpDBdNoEykNlLqX4DpfS-ACzkAgVuScs5chGEyEGTbTyaLjT6txScmcdQNB6nrfBdgrBxALCgIaGADY5CCAgC3OF6wPWpD6UuJc9aZxNAVAoOASoiJKAlMK-ikh3YGPVR0htRzXSbEgt0ad7wwDclfIhAZGVhkdJxR6yiYApgoHrfaiRbIUQonJq0EiuBcBFmPBwisFJSBspZJWVYMB9DhPZHyd5p7MoCiSBAK+6oBGWl-Qucslo1AKWQ7SRuh9rjrHNK3FORMnSoN0EUU0PouLJiKL2bMChSGFAIBuWsuV+31VRq2HRo0op9ksX+IcI5JKog-Smb9ac0F00RJSYDAowMQdZKQDkMGeQJHg4htUNwUOSYzmQTDkAb74Lw0U9SpUiNWiKKRug5HeVUfwDRwR9HNRMY8gQB5+hmZsJQeeXlv9-5834IAvWItRNsk-X3XAKhDkFiAzSEDbIFOQZU1yNTfINNIe09w-AlpouXIM9h7TuGFD4bMw0Cz+mrOOhs4UOzYxqO0bbHeFzoE3NNPia0tQ16umLFkM8nJe58mCqgMUtdJRURogxJHBQAA1GQockAEjDayEAiKNDdDAPBAEBhaCIlLiAeMD0Ojhs9TSkAHcURAA" target="_blank" rel="noreferrer" className="text-primary">Open the shortlist + questions in the TypeSafe playground →</a>
 
 ## What's next
 

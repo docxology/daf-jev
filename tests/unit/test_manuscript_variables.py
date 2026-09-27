@@ -6,14 +6,21 @@ docs/reference/MANIFEST.json, benchmark JSONs, src/daf_jev) in ``tmp_path`` and
 asserts the computed token values. Strict mode (missing analysis output raises)
 and draft mode (``--allow-draft``: missing output becomes ``"N/A"``) are both
 covered; only ``SOURCE_DATE_EPOCH`` is touched via the environment, which the
-module reads itself for deterministic timestamps.
+module reads itself for deterministic timestamps. The timestamp-from-git tests
+run git only inside ``tmp_path`` fixtures — the real repo is never touched.
+The stale/fresh coverage fixtures build real ``.coverage`` state via
+``os.utime`` (mtimes) and the ``coverage`` subprocess (a genuine data file).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import platform
 import re
+import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -21,6 +28,9 @@ import pytest
 from daf_jev.manuscript_variables import generate_variables, save_variables
 
 FAKE_VERSION = "1.2.3"
+
+_STALE_TS = datetime(1988, 1, 1, tzinfo=timezone.utc).timestamp()
+_NEWER_TS = datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp()
 
 _CONFIG_YAML = """\
 paper:
@@ -163,8 +173,9 @@ def _write_analysis_outputs(root: Path) -> None:
     (bench_dir / "calibration_20260916.json").write_text(json.dumps(_CALIBRATION_JSON), encoding="utf-8")
     figures_dir = root / "output" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    (figures_dir / "b.png").write_bytes(b"png")
-    (figures_dir / "a.png").write_bytes(b"png")
+    registry = {"fig:b": {"filename": "b.png"}, "fig:a": {"filename": "a.png"}}
+    (figures_dir / "figure_registry.json").write_text(json.dumps(registry), encoding="utf-8")
+    (figures_dir / "stray.png").write_bytes(b"png")  # must NOT leak into FIGURES
 
 
 @pytest.fixture()
@@ -239,7 +250,7 @@ def test_generate_variables_full_token_dict(fake_project: Path) -> None:
     assert variables["PLATFORM"] == platform.platform()
     assert variables["PYTHON_VERSION"] == platform.python_version()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", variables["GENERATION_TIMESTAMP"])
-
+    # Sorted registry filenames; stray.png (present on disk) is absent.
     assert variables["FIGURES"] == "a.png, b.png"
 
 
@@ -317,7 +328,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
     ):
         assert variables[token] == "N/A", token
     assert variables["CONFIG_KEYWORDS"] == ""
-    assert variables["FIGURES"] == ""
+    assert variables["FIGURES"] == "N/A"
     # Inputs that exist regardless of mode are still computed.
     assert variables["PACKAGE_VERSION"] == FAKE_VERSION
     assert variables["CODE_MODULES"] == "1"
@@ -331,6 +342,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
         ("output/benchmarks/batching_20260916.json", "batching"),
         ("output/benchmarks/patterns_20260916.json", "patterns"),
         ("output/benchmarks/calibration_20260916.json", "calibration"),
+        ("output/figures/figure_registry.json", "figure_registry"),
     ],
 )
 def test_generate_variables_strict_missing_analysis_output_raises(
@@ -342,6 +354,28 @@ def test_generate_variables_strict_missing_analysis_output_raises(
 
     with pytest.raises(FileNotFoundError, match=re.escape(needle)):
         generate_variables(tmp_path, require_analysis_outputs=True)
+
+
+@pytest.mark.parametrize("require", [True, False])
+def test_generate_variables_stray_png_never_leaks_into_figures(
+    fake_project: Path, require: bool
+) -> None:
+    variables = generate_variables(fake_project, require_analysis_outputs=require)
+    assert variables["FIGURES"] == "a.png, b.png"
+    assert "stray.png" not in variables["FIGURES"]
+
+
+@pytest.mark.parametrize("require", [True, False])
+def test_generate_variables_malformed_figure_registry_raises(
+    tmp_path: Path, require: bool
+) -> None:
+    _write_minimal_skeleton(tmp_path)
+    _write_analysis_outputs(tmp_path)
+    registry_path = tmp_path / "output" / "figures" / "figure_registry.json"
+    registry_path.write_text(json.dumps({"fig:bad": {}}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="filename"):
+        generate_variables(tmp_path, require_analysis_outputs=require)
 
 
 def test_generate_variables_missing_pyproject_raises_even_in_draft(tmp_path: Path) -> None:
@@ -405,6 +439,147 @@ def test_generate_variables_unit_count_reflects_pytest_collection(fake_project: 
 
     assert variables["TEST_UNIT_COUNT"] == "1"
     assert variables["TEST_LIVE_COUNT"] == "N/A"  # tests/live stays absent
+
+
+# -------------------------- coverage freshness + provenance (regen hygiene) ---
+
+
+def _age_fixtures(root: Path, mtime: float) -> None:
+    """Pin every source/test ``.py`` mtime so the guard's "newest" is deterministic."""
+    for path in (root / "src" / "daf_jev").rglob("*.py"):
+        os.utime(path, (mtime, mtime))
+    tests_dir = root / "tests"
+    if tests_dir.is_dir():
+        for path in tests_dir.rglob("*.py"):
+            os.utime(path, (mtime, mtime))
+
+
+def _make_stale_coverage(root: Path) -> Path:
+    """A ``.coverage`` placeholder with a 1988 mtime; the guard fires before any load."""
+    data_file = root / ".coverage"
+    data_file.write_bytes(b"stale placeholder - never loaded by these tests")
+    os.utime(data_file, (_STALE_TS, _STALE_TS))
+    return data_file
+
+
+def _write_real_coverage(root: Path) -> Path:
+    """Build a REAL ``.coverage`` for the fake src tree via ``python -m coverage run``.
+
+    A subprocess (not an in-process second collector): under the battery's
+    pytest-cov this must never steal the session's trace function.
+    """
+    data_file = root / ".coverage"
+    probe = root / "_coverage_probe.py"
+    probe.write_text(
+        "import sys\n"
+        "sys.path.insert(0, sys.argv[1])\n"
+        "import daf_jev.core\n"
+        "daf_jev.core.alpha()\n",
+        encoding="utf-8",
+    )
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable, "-m", "coverage", "run",
+                f"--data-file={data_file}",
+                "--source", str(root / "src" / "daf_jev"),
+                str(probe), str(root / "src"),
+            ],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 0, proc.stderr
+    finally:
+        probe.unlink(missing_ok=True)
+    return data_file
+
+
+def test_generate_variables_stale_coverage_strict_raises_with_timestamps(
+    fake_project: Path,
+) -> None:
+    _age_fixtures(fake_project, _NEWER_TS)
+    _make_stale_coverage(fake_project)
+
+    with pytest.raises(
+        FileNotFoundError,
+        match=r"Stale coverage data.*1988-01-01T00:00:00Z.*2020-01-01T00:00:00Z.*"
+        + re.escape("run `uv run pytest tests/unit --cov=src` then re-run"),
+    ):
+        generate_variables(fake_project, require_analysis_outputs=True)
+
+
+def test_generate_variables_stale_coverage_draft_warns_and_na(
+    fake_project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _age_fixtures(fake_project, _NEWER_TS)
+    _make_stale_coverage(fake_project)
+
+    variables = generate_variables(fake_project, require_analysis_outputs=False)
+
+    assert variables["TEST_COVERAGE_PCT"] == "N/A"
+    err = capsys.readouterr().err
+    assert "1988-01-01T00:00:00Z" in err
+    assert "2020-01-01T00:00:00Z" in err
+    assert "uv run pytest tests/unit --cov=src" in err
+
+
+def test_generate_variables_fresh_coverage_still_reported(fake_project: Path) -> None:
+    """A current .coverage flows through the guard and yields a numeric token."""
+    _age_fixtures(fake_project, _NEWER_TS)
+    data_file = _write_real_coverage(fake_project)
+    assert data_file.stat().st_mtime >= _NEWER_TS  # fresh by construction
+
+    variables = generate_variables(fake_project)
+
+    token = variables["TEST_COVERAGE_PCT"]
+    assert token != "N/A"
+    assert re.fullmatch(r"\d+\.\d{2}", token)
+
+
+def test_generate_variables_timestamp_derived_from_head_commit(
+    fake_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No SOURCE_DATE_EPOCH: GENERATION_TIMESTAMP pins to the HEAD commit date."""
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "Test Author",
+        "GIT_AUTHOR_EMAIL": "author@example.invalid",
+        "GIT_COMMITTER_NAME": "Test Committer",
+        "GIT_COMMITTER_EMAIL": "committer@example.invalid",
+        "GIT_AUTHOR_DATE": "2023-11-14T22:13:20+00:00",
+        "GIT_COMMITTER_DATE": "2023-11-14T22:13:20+00:00",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
+    }
+    init = subprocess.run(["git", "init", "-q"], cwd=fake_project, capture_output=True, text=True)
+    assert init.returncode == 0, init.stderr
+    commit = subprocess.run(
+        ["git", "commit", "--allow-empty", "--no-gpg-sign", "-q", "-m", "init"],
+        cwd=fake_project,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert commit.returncode == 0, commit.stderr
+
+    first = generate_variables(fake_project)
+    second = generate_variables(fake_project)
+
+    assert first["GENERATION_TIMESTAMP"] == "2023-11-14T22:13:20Z"
+    assert second["GENERATION_TIMESTAMP"] == "2023-11-14T22:13:20Z"
+
+
+def test_generate_variables_timestamp_falls_back_to_wall_clock_without_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    _write_minimal_skeleton(tmp_path)  # not a git repo -> git fails -> wall clock
+
+    variables = generate_variables(tmp_path, require_analysis_outputs=False)
+
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", variables["GENERATION_TIMESTAMP"])
 
 
 # ------------------------------------------------------------ save_variables ---

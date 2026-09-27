@@ -321,7 +321,9 @@ def test_elicit_cpts_rejects_non_finite_probability(stub, clean_provider_env) ->
     answers = _canonical_answer_probabilities()
     answers["cpt::tub|asia=true"] = {"false": 0.95, "true": math.inf}
     stub.enqueue(body=_choice_body(answers))
-    with _open_client(stub) as client, pytest.raises(ValueError):
+    with _open_client(stub) as client, pytest.raises(
+        ValueError, match=r"non-finite probability"
+    ):
         _elicitation_module().elicit_cpts(
             _asia_variables(), _asia_edges(), client=client
         )
@@ -331,7 +333,9 @@ def test_elicit_cpts_rejects_unknown_state_label(stub, clean_provider_env) -> No
     answers = _canonical_answer_probabilities()
     answers["cpt::smoke|"] = {"false": 0.5, "true": 0.25, "maybe": 0.25}
     stub.enqueue(body=_choice_body(answers))
-    with _open_client(stub) as client, pytest.raises(ValueError):
+    with _open_client(stub) as client, pytest.raises(
+        ValueError, match=r"probabilities sum to"
+    ):
         _elicitation_module().elicit_cpts(
             _asia_variables(), _asia_edges(), client=client
         )
@@ -359,7 +363,9 @@ def test_elicit_cpts_rejects_cyclic_edges(stub, clean_provider_env) -> None:
         Variable(key="b", description="b", states=STATES),
     )
     edges = (Edge(parent="a", child="b"), Edge(parent="b", child="a"))
-    with _open_client(stub) as client, pytest.raises(ValueError):
+    with _open_client(stub) as client, pytest.raises(
+        ValueError, match=r"must form a DAG"
+    ):
         _elicitation_module().elicit_cpts(variables, edges, client=client)
     assert stub.hits == []  # rejected before any network round-trip
 
@@ -478,7 +484,7 @@ def test_propose_structure_exact_search_recovers_reference_edges(
     assert dict(net.cpts) == {}
     # Topology is usable pre-CPT; full validation is the second step's job.
     assert sorted(net.topological_order()) == sorted(VARIABLE_KEYS)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing CPT"):
         net.validate()
 
 

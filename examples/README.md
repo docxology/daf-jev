@@ -1,15 +1,16 @@
 # daf-jev examples
 
-Eight runnable scripts showing the core patterns of the toolkit. Each script:
+Twelve runnable scripts showing the core patterns of the toolkit. Each script:
 
 - resolves credentials with [`daf_jev.load_settings()`](../src/daf_jev/config.py) — from
   `JEV_API_KEY` or `TYPESAFE_API_KEY` (env or a `.env` file in the current
   directory);
 - prints `SKIP: JEV_API_KEY not set` and exits 0 when no key is found
   (the `.env` key is never printed);
-- accepts `--model NAME` to override the model (default: provider-resolved
-  — for the default `jev` provider: `JEV_MODEL`, then
-  `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`);
+- accepts `--model NAME` to override the model where a model call
+  happens (default: provider-resolved — for the default `jev`
+  provider: `JEV_MODEL`, then `TYPESAFE_DEFAULT_MODEL`, then
+  `jev-latest`);
 - writes nothing to disk and prints its results (the one exception:
   [`asia_bayes.py`](asia_bayes.py), which writes `asia_graphspec.json`).
 
@@ -21,9 +22,13 @@ Eight runnable scripts showing the core patterns of the toolkit. Each script:
 | [`triage_router.py`](triage_router.py) | Routing a choice answer by confidence: [`tiered_gate`](../src/daf_jev/compose.py) thresholds, then [`route`](../src/daf_jev/compose.py) dispatch with a fallback. |
 | [`composite_scoring.py`](composite_scoring.py) | Scoring a score answer: [`composite_score`](../src/daf_jev/compose.py) with custom weights, then [`confidence_gate`](../src/daf_jev/compose.py) for act vs. escalate. |
 | [`evaluate_corpus.py`](evaluate_corpus.py) | [`Evaluator`](../src/daf_jev/evaluate.py) over many states with bounded concurrency and per-state error capture. |
+| [`evaluate_async.py`](evaluate_async.py) | The async [`Evaluator`](../src/daf_jev/evaluate.py) path: `evaluate_async` on an `AsyncJevClient`, per-state error capture, single-use session. |
 | [`gated_fallback.py`](gated_fallback.py) | Heuristic-first triage: spend no model call when confident, fall back to [`ask`](../src/daf_jev/client.py) plus [`confidence_gate`](../src/daf_jev/compose.py) when unsure. |
 | [`decider_loop.py`](decider_loop.py) | The full [`Decider`](../src/daf_jev/decider.py) decision-point loop: hooks, gate, [`Budget`](../src/daf_jev/decider.py), and a JSON event receipt. |
+| [`decider_resilience.py`](decider_resilience.py) | The [`Decider`](../src/daf_jev/decider.py) wired for resilience: [`UsageLedger`](../src/daf_jev/ledger.py), [`CircuitBreaker`](../src/daf_jev/resilience.py), [`Budget`](../src/daf_jev/decider.py), cache, and the `"breaker"` fallback. |
+| [`calibration_walkthrough.py`](calibration_walkthrough.py) | [`Decider`](../src/daf_jev/decider.py) calibration pairs into [`calibration`](../src/daf_jev/calibration.py) statistics — a self-consistency proxy, not ground truth. |
 | [`providers_example.py`](providers_example.py) | Multi-provider dispatch through the [`provider registry`](../src/daf_jev/providers.py) and a canned in-process `Transport`. |
+| [`retry_policies.py`](retry_policies.py) | Pure [`RetryPolicy`](../src/daf_jev/_retry.py) `next_delay` math across configs plus `resolve_retry` env resolution — no network. |
 | [`asia_bayes.py`](asia_bayes.py) | Jev as a factor source for a graphical model: structure proposal, one-ask CPT elicitation, exact inference, GraphSpec export. |
 
 ## Scripts
@@ -71,6 +76,22 @@ error plus the aggregate summary.
 python examples/evaluate_corpus.py [--model NAME] [--concurrency N]
 ```
 
+### [`evaluate_async.py`](evaluate_async.py)
+
+The async half of [`Evaluator`](../src/daf_jev/evaluate.py): an
+[`AsyncJevClient`](../src/daf_jev/client.py) over an injected canned
+transport runs the four-state corpus through
+`await evaluator.evaluate_async([...])` with bounded concurrency. One
+canned reply is a 500, so per-state error capture shows without
+aborting the batch, and the printed summary aggregates the rest. The
+batch closes the async session when it completes — a follow-up `ask`
+demonstrates that an `AsyncJevClient` is single-use through one
+evaluation.
+
+```sh
+python examples/evaluate_async.py [--model NAME] [--concurrency N]
+```
+
 ### [`gated_fallback.py`](gated_fallback.py)
 
 Heuristic-first triage: a deterministic keyword lexicon scores each demo
@@ -101,6 +122,39 @@ action, the event log, and the usage snapshot.
 python examples/decider_loop.py [--model NAME]
 ```
 
+### [`decider_resilience.py`](decider_resilience.py)
+
+The [`Decider`](../src/daf_jev/decider.py) wired for resilience:
+[`UsageLedger`](../src/daf_jev/ledger.py) totals, a
+[`CircuitBreaker`](../src/daf_jev/resilience.py) around the ask
+(cooldown skipped via an injected fake clock — no sleeping), a
+[`Budget`](../src/daf_jev/decider.py), a per-decision
+`cache`/`cache_key` pair, and a `should_ask` veto. A scripted canned
+transport simulates an outage: two failing asks trip the breaker, the
+next decision falls back with reason `"breaker"`, the probe after the
+cooldown recovers, and the spent budget yields reason `"budget"`. No
+network even with a key.
+
+```sh
+python examples/decider_resilience.py [--model NAME]
+```
+
+### [`calibration_walkthrough.py`](calibration_walkthrough.py)
+
+Twelve [`Decider`](../src/daf_jev/decider.py) decisions under a
+[`ConfidenceGate`](../src/daf_jev/decider.py) feed
+`decider.calibration_pairs()` into the pure
+[`calibration`](../src/daf_jev/calibration.py) statistics: a bucketed
+reliability table, expected calibration error, and the Brier score.
+The pairs are (declared confidence, gate-accepted) — a
+self-consistency proxy, NOT ground-truth correctness; the caveat is
+printed with the numbers.
+
+```sh
+python examples/calibration_walkthrough.py \
+    [--model NAME] [--threshold FLOAT] [--buckets INT]
+```
+
 ### [`providers_example.py`](providers_example.py)
 
 Multi-provider dispatch: prints the registered provider list
@@ -115,6 +169,22 @@ field to show strict-parse tolerance.
 
 ```sh
 python examples/providers_example.py [--model NAME]
+```
+
+### [`retry_policies.py`](retry_policies.py)
+
+Pure [`RetryPolicy`](../src/daf_jev/_retry.py) math — no network and
+no model call: a `next_delay` comparison table across configs
+(exponential backoff with its cap, `Retry-After` precedence,
+deterministic `jitter=0` printing), then how the policy resolves from
+the environment (`JEV_MAX_ATTEMPTS` / `JEV_BACKOFF_BASE` /
+`JEV_BACKOFF_MAX` / `JEV_JITTER` via
+[`resolve_retry`](../src/daf_jev/config.py), invalid values silently
+keeping defaults; the Decider's default client pins
+`max_attempts=1`).
+
+```sh
+python examples/retry_policies.py
 ```
 
 ### [`asia_bayes.py`](asia_bayes.py)
@@ -183,7 +253,11 @@ are not relative links from here.)
   lacks them fails with a clear message instead of a raw traceback.
 - Network calls go to the selected provider's base URL (for the default
   `jev` provider: `JEV_BASE_URL` / `TYPESAFE_BASE_URL`, default
-  `https://api.typesafe.ai`). All eight scripts are offline-safe: without
-  a key they do nothing but print the SKIP line;
-  [`providers_example.py`](providers_example.py) makes no network call even
-  with one.
+  `https://api.typesafe.ai`). All twelve scripts are offline-safe:
+  without a key they do nothing but print the SKIP line;
+  [`providers_example.py`](providers_example.py),
+  [`decider_resilience.py`](decider_resilience.py),
+  [`evaluate_async.py`](evaluate_async.py),
+  [`calibration_walkthrough.py`](calibration_walkthrough.py), and
+  [`retry_policies.py`](retry_policies.py) make no network call even
+  with one (injected transports or pure computation).

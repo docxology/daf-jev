@@ -21,8 +21,7 @@ by a geometric-mean edge probability: `product(edge_probabilities) ** (1 / decis
 and prunes the rest. The probability is length-normalized so that shallow and deep leaves
 are compared fairly.
 
-This is an example of a structural decomposition of a problem, and there are many
-benefits, such as:
+Decomposing the problem into a hierarchy like this has benefits of its own:
 
 * Observability
   * identify which nodes your misclassifications occur most in

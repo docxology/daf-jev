@@ -5,7 +5,11 @@ Renders every figure in ``src/daf_jev/figures`` (or a single one via
 ``--only NAME``) into the output figures directory, then writes
 ``figure_registry.json`` alongside the PNGs on every run — including
 ``--only`` runs — because template validation requires the registry to
-accompany the figures. The ``--only`` choices are derived from the figure
+accompany the figures. It also always writes the sibling ``architecture.mmd``
+(byte-deterministic mermaid source emitted by the pure
+``figures.architecture_mermaid()``; deliberately NOT a registry entry —
+``figure_registry.json`` keeps its template-validation schema). The
+``--only`` choices are derived from the figure
 registry itself so the help text can never drift. Data-driven figures
 read the latest benchmark JSONs from ``output/benchmarks/`` at generation
 time; missing data raises a clear error naming the missing file (the
@@ -68,7 +72,12 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        from daf_jev.figures import generate_all, generate_one, write_figure_registry
+        from daf_jev.figures import (
+            architecture_mermaid,
+            generate_all,
+            generate_one,
+            write_figure_registry,
+        )
     except ImportError as exc:
         print(
             f"error: figure generation requires matplotlib — install with `uv sync --extra figures` ({exc})",
@@ -84,6 +93,11 @@ def main() -> int:
         # The registry must accompany the figures on every path, including
         # --only runs; it mirrors the full static registry metadata either way.
         write_figure_registry(args.out_dir, _PROJECT_ROOT)
+        # The .mmd sibling is written on every path too — including --only
+        # runs — and is deliberately NOT part of figure_registry.json (whose
+        # schema is the template-validation contract).
+        mmd_path = args.out_dir / "architecture.mmd"
+        mmd_path.write_text(architecture_mermaid() + "\n", encoding="utf-8")
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -93,6 +107,7 @@ def main() -> int:
 
     for path in written:
         print(path)
+    print(mmd_path)
     print(f"wrote {len(written)} figure(s) to {args.out_dir}", file=sys.stderr)
     return 0
 

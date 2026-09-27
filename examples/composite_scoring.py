@@ -3,7 +3,7 @@
 Demonstrates:
 - ``score`` questions returning a probability distribution over levels
 - ``composite_score`` re-weighting that distribution with custom weights
-- ``confidence_gate`` deciding act vs. review on the answer's confidence
+- ``confidence_gate`` deciding act vs. escalate on the answer's confidence
 
 Run: python examples/composite_scoring.py [--model NAME]
 """

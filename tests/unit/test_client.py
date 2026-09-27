@@ -118,7 +118,9 @@ def test_ask_exhausted_retries_raises_rate_limit(stub) -> None:
     for _ in range(3):
         stub.enqueue(status=429, body={"error": "rate limited"})
 
-    with _make_client(stub) as client, pytest.raises(RateLimitError):
+    with _make_client(stub) as client, pytest.raises(
+        RateLimitError, match=r"rate limit error \(HTTP 429\)"
+    ):
         client.ask("state", {"billing": NoulQuestion(instructions="q")})
 
     assert len(stub.hits) == 3
@@ -133,7 +135,9 @@ def test_ask_401_maps_to_authentication_error(stub) -> None:
 
 def test_ask_422_maps_to_unprocessable_entity_error(stub) -> None:
     stub.enqueue(status=422, body={"error": {"message": "invalid question"}})
-    with _make_client(stub) as client, pytest.raises(UnprocessableEntityError):
+    with _make_client(stub) as client, pytest.raises(
+        UnprocessableEntityError, match=r"unprocessable entity error \(HTTP 422\)"
+    ):
         client.ask("state", {"billing": NoulQuestion(instructions="q")})
 
 
@@ -177,7 +181,7 @@ def test_connection_refused_maps_to_api_connection_error() -> None:
         retry=RetryPolicy(max_attempts=1, jitter=0.0),
     )
     try:
-        with pytest.raises(APIConnectionError):
+        with pytest.raises(APIConnectionError, match=r"connection error"):
             client.ask("state", {"billing": NoulQuestion(instructions="q")})
     finally:
         client.close()
@@ -187,7 +191,9 @@ def test_ask_529_maps_to_overloaded_error(stub) -> None:
     # 529 is retryable (default max_attempts=3): exhaust all three attempts.
     for _ in range(3):
         stub.enqueue(status=529, body={"error": {"message": "overloaded"}})
-    with _make_client(stub) as client, pytest.raises(OverloadedError):
+    with _make_client(stub) as client, pytest.raises(
+        OverloadedError, match=r"overloaded error \(HTTP 529\)"
+    ):
         client.ask("state", {"billing": NoulQuestion(instructions="q")})
     assert len(stub.hits) == 3
 
@@ -260,7 +266,7 @@ def test_tiny_timeout_raises_api_timeout_error(stub) -> None:
         stub, timeout=0.05, retry=RetryPolicy(max_attempts=1, jitter=0.0)
     )
     try:
-        with pytest.raises(APITimeoutError):
+        with pytest.raises(APITimeoutError, match=r"timed out"):
             client.ask("state", {"billing": NoulQuestion(instructions="q")})
     finally:
         client.close()
@@ -272,7 +278,7 @@ def test_ask_per_call_timeout_none_keeps_constructor_default(stub) -> None:
     stub.set_delay(0.5)
     with (
         _make_client(stub, timeout=0.05) as client,
-        pytest.raises(APITimeoutError) as excinfo,
+        pytest.raises(APITimeoutError, match=r"timed out") as excinfo,
     ):
         client.ask(
             "state",
@@ -307,14 +313,18 @@ def test_models_happy_path(stub) -> None:
 
 def test_models_rejects_payload_without_a_model_list(stub) -> None:
     stub.enqueue(body={})  # no "models" key: nothing list-shaped to parse
-    with _make_client(stub) as client, pytest.raises(ValueError) as excinfo:
+    with _make_client(stub) as client, pytest.raises(
+        ValueError, match=r"must contain a list"
+    ) as excinfo:
         client.models()
     assert "must contain a list" in str(excinfo.value)
 
 
 def test_models_rejects_entry_missing_name(stub) -> None:
     stub.enqueue(body={"models": [{"description": "no name here"}]})
-    with _make_client(stub) as client, pytest.raises(ValueError) as excinfo:
+    with _make_client(stub) as client, pytest.raises(
+        ValueError, match=r"invalid model entry"
+    ) as excinfo:
         client.models()
     assert "invalid model entry" in str(excinfo.value)
 
@@ -352,7 +362,9 @@ def test_models_per_call_timeout_tightens_default(stub) -> None:
             ]
         }
     )
-    with _make_client(stub, timeout=5.0) as client, pytest.raises(APITimeoutError):
+    with _make_client(stub, timeout=5.0) as client, pytest.raises(
+        APITimeoutError, match=r"timed out"
+    ):
         client.models(timeout=0.05)
     assert len(stub.hits) == 1
 
@@ -372,7 +384,9 @@ def test_models_per_call_timeout_none_keeps_constructor_default(stub) -> None:
             ]
         }
     )
-    with _make_client(stub, timeout=0.05) as client, pytest.raises(APITimeoutError):
+    with _make_client(stub, timeout=0.05) as client, pytest.raises(
+        APITimeoutError, match=r"timed out"
+    ):
         client.models(timeout=None)
     assert len(stub.hits) == 1
 
@@ -424,7 +438,7 @@ def test_models_requires_get_json_capable_transport(stub) -> None:
         api_key="test-key", transport=PostOnlyTransport(), retry=RetryPolicy(jitter=0.0)
     )
     try:
-        with pytest.raises(TypeSafeError) as excinfo:
+        with pytest.raises(TypeSafeError, match=r"get_json") as excinfo:
             client.models()
         assert "get_json" in str(excinfo.value)
         stub.enqueue(body=_answers_body())
@@ -474,7 +488,9 @@ def test_ask_raw_dict_question_passes_through_verbatim(stub) -> None:
 
 
 def test_ask_empty_questions_raises_without_hitting_the_wire(stub) -> None:
-    with _make_client(stub) as client, pytest.raises(TypeSafeError) as excinfo:
+    with _make_client(stub) as client, pytest.raises(
+        TypeSafeError, match=r"nonempty"
+    ) as excinfo:
         client.ask("state", {})
     assert len(stub.hits) == 0  # rejected before any request is sent
     assert "nonempty" in str(excinfo.value)
@@ -484,7 +500,7 @@ def test_double_close_is_idempotent_and_guarded_afterwards(stub) -> None:
     client = _make_client(stub)
     client.close()
     client.close()  # second close is a no-op, never an exception
-    with pytest.raises(TypeSafeError) as excinfo:
+    with pytest.raises(TypeSafeError, match=r"closed") as excinfo:
         client.ask("state", {"billing": NoulQuestion(instructions="q")})
     assert "closed" in str(excinfo.value)
     assert len(stub.hits) == 0
@@ -547,7 +563,7 @@ def test_ask_per_call_timeout_tightens_default(stub) -> None:
     # the per-call 0.05s timeout wins for this call only.
     stub.set_delay(0.5)
     with _make_client(stub, timeout=5.0) as client:
-        with pytest.raises(APITimeoutError):
+        with pytest.raises(APITimeoutError, match=r"timed out"):
             client.ask(
                 "state",
                 {"billing": NoulQuestion(instructions="q")},
@@ -568,7 +584,7 @@ def test_ask_per_call_timeout_loosens_default(stub) -> None:
     # per-call 5.0s timeout completes the same call.
     stub.set_delay(0.5)
     with _make_client(stub, timeout=0.05) as client:
-        with pytest.raises(APITimeoutError):
+        with pytest.raises(APITimeoutError, match=r"timed out"):
             client.ask("state", {"billing": NoulQuestion(instructions="q")})
         stub.reset()
         stub.enqueue(body=_answers_body())
@@ -617,7 +633,7 @@ def test_async_ask_per_call_timeout_and_headers(stub) -> None:
     async def scenario():
         try:
             stub.set_delay(0.5)
-            with pytest.raises(APITimeoutError):
+            with pytest.raises(APITimeoutError, match=r"timed out"):
                 await client.ask(
                     "state",
                     {"billing": NoulQuestion(instructions="q")},
@@ -656,7 +672,7 @@ def test_retry_resolved_from_env_when_not_explicit(stub, monkeypatch) -> None:
             headers={"Retry-After": "0"},
         )
     client = _make_client(stub, retry=None)  # retry=None -> config.resolve_retry(env)
-    with pytest.raises(RateLimitError):
+    with pytest.raises(RateLimitError, match=r"rate limit error \(HTTP 429\)"):
         client.ask("state", _questions())
     assert len(stub.hits) == 2
 
@@ -682,7 +698,7 @@ def test_timeout_resolved_from_env_when_not_explicit(stub, monkeypatch) -> None:
     monkeypatch.setenv("JEV_TIMEOUT", "0.05")
     stub.set_delay(0.5)
     client = _make_client(stub, timeout=None)  # timeout=None -> resolve_timeout(env)
-    with pytest.raises(APITimeoutError):
+    with pytest.raises(APITimeoutError, match=r"timed out"):
         client.ask("state", {"billing": NoulQuestion(instructions="q")})
     client.close()
 

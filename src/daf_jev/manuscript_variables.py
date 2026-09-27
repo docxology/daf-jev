@@ -6,7 +6,7 @@ Reads project metadata and analysis outputs:
 - ``manuscript/config.yaml``            — paper metadata and experiment params
 - ``docs/reference/MANIFEST.json``      — docs snapshot stats
 - ``output/benchmarks/{batching,patterns}_*.json`` — benchmark results
-- ``output/figures/*.png``              — rendered figure registry
+- ``output/figures/figure_registry.json`` — figure registry
 - ``pytest --collect-only``             — per-directory test counts
 - ``.coverage`` (coverage python API)   — coverage percent
 
@@ -45,10 +45,14 @@ __all__ = ["generate_variables", "save_variables"]
 _SRC_PACKAGE = Path("src") / "daf_jev"
 _BENCH_DIR = Path("output") / "benchmarks"
 _FIGURES_DIR = Path("output") / "figures"
+# Mirrors daf_jev.figures.FIGURE_REGISTRY_FILENAME; NOT imported because
+# figures.py pulls matplotlib in at module import.
+_FIGURE_REGISTRY = _FIGURES_DIR / "figure_registry.json"
 _MANIFEST_PATH = Path("docs") / "reference" / "MANIFEST.json"
 _CONFIG_PATH = Path("manuscript") / "config.yaml"
 _COVERAGE_PATH = Path(".coverage")
 _PYTEST_TIMEOUT_S = 180
+_GIT_TIMEOUT_S = 10
 _DEFAULT_BATCHING_N_VALUES: tuple[str, str, str] = ("5", "10", "20")
 
 _NA = "N/A"
@@ -59,15 +63,36 @@ _NA = "N/A"
 # ---------------------------------------------------------------------------
 
 
-def _build_timestamp() -> str:
+def _build_timestamp(project_root: Path) -> str:
     """Build an ISO-8601 UTC timestamp, honoring ``SOURCE_DATE_EPOCH``.
 
     Deterministic mode (byte-stable rendered manuscripts) sets
-    ``SOURCE_DATE_EPOCH``; wall-clock UTC otherwise.
+    ``SOURCE_DATE_EPOCH``. Otherwise the timestamp derives from the newest
+    commit date of *project_root*'s git repo (``git log -1 --format=%cI``,
+    converted to UTC) so repeated regenerations at the same HEAD are
+    byte-stable; wall-clock UTC is the fallback when git is unavailable
+    or fails.
     """
     epoch = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
     if epoch.isdigit():
         return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(project_root), "log", "-1", "--format=%cI"],
+            capture_output=True,
+            text=True,
+            timeout=_GIT_TIMEOUT_S,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        proc = None
+    commit_iso = proc.stdout.strip() if proc is not None and proc.returncode == 0 else ""
+    if commit_iso:
+        try:
+            parsed = datetime.fromisoformat(commit_iso.replace("Z", "+00:00"))
+            return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            pass
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -134,6 +159,20 @@ def _load_manifest(project_root: Path, *, strict: bool) -> dict[str, Any]:
         return json.load(f)
 
 
+def _load_figure_registry(project_root: Path, *, strict: bool) -> dict[str, Any]:
+    registry_path = project_root / _FIGURE_REGISTRY
+    if not _require(
+        registry_path.is_file(),
+        "figure registry",
+        registry_path,
+        "Run scripts/generate_figures.py first.",
+        strict=strict,
+    ):
+        return {}
+    with registry_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def _code_stats(project_root: Path) -> dict[str, Any]:
     """Count modules, nonblank lines, module names, and ``__all__`` entries."""
     package_dir = project_root / _SRC_PACKAGE
@@ -178,7 +217,25 @@ def _pytest_collected(project_root: Path, test_dir: str) -> int | None:
     return len(ids) if ids else None
 
 
-def _coverage_percent(project_root: Path) -> float | None:
+def _iso_utc(timestamp: float) -> str:
+    """UTC ISO-8601 rendering of a filesystem timestamp (for diagnostics)."""
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _newest_source_mtime(project_root: Path) -> float | None:
+    """Newest mtime among source/test ``.py`` files (recursive, ``__pycache__`` skipped)."""
+    candidates: list[Path] = []
+    for pattern in (_SRC_PACKAGE, Path("tests")):
+        tree = project_root / pattern
+        if not tree.is_dir():
+            continue
+        candidates.extend(p for p in tree.rglob("*.py") if "__pycache__" not in p.parts)
+    if not candidates:
+        return None
+    return max(p.stat().st_mtime for p in candidates)
+
+
+def _coverage_percent(project_root: Path, *, strict: bool) -> float | None:
     """Return the enforced coverage percentage from an existing ``.coverage``.
 
     Delegates to ``coverage.Coverage.report()`` so the number is computed by
@@ -186,9 +243,29 @@ def _coverage_percent(project_root: Path) -> float | None:
     patterns all come from ``pyproject.toml``) — no hand-rolled aggregation
     to drift out of sync. Returns None when the data file is missing or the
     report covers nothing.
+
+    A stale data file — older than the newest source/test ``.py`` file —
+    would re-report a superseded measurement over the current tree, so
+    strict mode raises :class:`FileNotFoundError` naming both timestamps
+    and the fix; draft mode warns on stderr and returns None (the token
+    degrades to ``"N/A"``) instead of repeating a stale lie.
     """
     data_file = project_root / _COVERAGE_PATH
     if not data_file.is_file():
+        return None
+    newest = _newest_source_mtime(project_root)
+    if newest is not None and data_file.stat().st_mtime < newest:
+        data_iso = _iso_utc(data_file.stat().st_mtime)
+        newest_iso = _iso_utc(newest)
+        message = (
+            f"Stale coverage data: {data_file} (modified {data_iso}) predates the "
+            f"newest source/test file (modified {newest_iso}); re-reporting it would "
+            "misdescribe the current tree. "
+            "Fix: run `uv run pytest tests/unit --cov=src` then re-run."
+        )
+        if strict:
+            raise FileNotFoundError(message)
+        print(f"WARNING: {message}", file=sys.stderr)
         return None
     import io
     from contextlib import redirect_stdout
@@ -269,10 +346,14 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
             ``manuscript/``, ``output/``, ``src/daf_jev``, ``tests/``).
         require_analysis_outputs: When True (pipeline mode), missing
             analysis outputs (manuscript config, docs manifest, benchmark
-            JSONs) raise :class:`FileNotFoundError`. When False (draft
-            mode, ``--allow-draft``), those become ``"N/A"``. Test counts
+            JSONs, figure registry) raise :class:`FileNotFoundError`. When
+            False (draft mode, ``--allow-draft``), those become ``"N/A"``. Test counts
             and coverage degrade to ``"N/A"`` on unavailability in both
-            modes.
+            modes. A stale ``.coverage`` (older than the newest source/test
+            file) raises in pipeline mode and degrades to ``"N/A"`` with a
+            stderr warning in draft mode; ``GENERATION_TIMESTAMP`` derives
+            from the repo's newest commit date unless ``SOURCE_DATE_EPOCH``
+            is set, so regens at the same HEAD are byte-stable.
 
     Returns:
         ``dict[str, str]`` with plain UPPERCASE_KEY keys (no braces), ready
@@ -335,7 +416,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     unit_count = _pytest_collected(project_root, "tests/unit")
     live_count = _pytest_collected(project_root, "tests/live")
     test_files = sorted((project_root / "tests").glob("**/test_*.py"))
-    coverage_pct = _coverage_percent(project_root)
+    coverage_pct = _coverage_percent(project_root, strict=strict)
     variables["TEST_UNIT_COUNT"] = str(unit_count) if unit_count is not None else _NA
     variables["TEST_LIVE_COUNT"] = str(live_count) if live_count is not None else _NA
     variables["TEST_COVERAGE_PCT"] = _fmt(coverage_pct, ".2f")
@@ -390,14 +471,18 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
 
 
     # ---- Provenance ----
-    variables["GENERATION_TIMESTAMP"] = _build_timestamp()
+    variables["GENERATION_TIMESTAMP"] = _build_timestamp(project_root)
     variables["PLATFORM"] = platform.platform()
     variables["PYTHON_VERSION"] = platform.python_version()
 
-    # ---- Figure registry (output/figures/*.png) ----
-    figures_dir = project_root / _FIGURES_DIR
-    figures = sorted(p.name for p in figures_dir.glob("*.png")) if figures_dir.is_dir() else []
-    variables["FIGURES"] = ", ".join(figures)
+    # ---- Figure registry (output/figures/figure_registry.json) ----
+    registry = _load_figure_registry(project_root, strict=strict)
+    filenames = []
+    for label, entry in registry.items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("filename"), str):
+            raise ValueError(f"figure registry entry {label!r} has no filename string")
+        filenames.append(entry["filename"])
+    variables["FIGURES"] = ", ".join(sorted(filenames)) if registry else _NA
 
     return variables
 

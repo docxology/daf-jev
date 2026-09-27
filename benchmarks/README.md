@@ -1,14 +1,21 @@
 # daf-jev Benchmarks
 
 Live-API benchmarks for the documented TypeSafe patterns this package
-implements. All three scripts use the real network and the real key, so
+implements. All four scripts use the real network and the real key, so
 they are **not** part of the test suite.
 
 ## Requirements
 
 - A real API key: `JEV_API_KEY` (preferred) or `TYPESAFE_API_KEY`, from the
-  process environment or the project `.env`. Without a key all three
+  process environment or the project `.env`. Without a key all four
   scripts print `SKIP: JEV_API_KEY not set` and exit 0 — they never raise.
+- Multi-provider: per-provider keys `JEV_API_KEY` / `JEFF_API_KEY` /
+  `KEV_API_KEY` resolve per provider (registry defaults `localhost:8000`
+  jeff, `localhost:8009` kev — see
+  [`docs/models.md` §10](../docs/models.md#10-sibling-system-one-servers-jeff-and-kev)).
+  A provider without its key prints `SKIP[<provider>]` and the run
+  continues; missing all keys prints a global `SKIP` line and exits 0 —
+  scripts never raise.
 - The package importable (`uv run` handles the src layout).
 
 ## [`bench_batching.py`](bench_batching.py) — parallel-questions claim
@@ -77,6 +84,36 @@ uv run python benchmarks/bench_calibration.py
 **Caveat:** never present the ECE/Brier figures as ground-truth accuracy —
 they quantify confidence-vs-self-consistency only.
 
+## [`bench_jaggedness.py`](bench_jaggedness.py) — model jaggedness (uniformity of stochastic prompts)
+
+Measures how far a provider's answers to **stochastic prompts** (coin flips,
+six-sided rolls) deviate from their stated uniform distributions. Each
+fixture is repeated `--repeats` times and the chosen labels feed:
+
+- **uniformity deviation** — chi-square against uniform (with p-value) and
+  total variation / max per-outcome deviation from 1/k;
+- **degeneracy** — whether identical repeats always choose the same label;
+  deterministic servers make the choice a point mass, which is itself the
+  finding;
+- **order rotation** — options are rotated across asks; reports position
+  bias slope and argmax flips;
+- **concurrent wobble** — a concurrent batch re-asked side by side,
+  reporting max pairwise probability spread;
+- **noul-vs-choice delta** — the same coin asked as a noul yes/no question
+  vs a heads/tails choice; the cross-instrument gap is the
+  `noul_choice_delta` figure.
+
+```bash
+uv run python benchmarks/bench_jaggedness.py --providers jeff,kev
+# flags: --providers 'jeff,kev,jev' (comma list), --fixtures (subset),
+# --repeats 50, --concurrent 32, --timeout, --model
+```
+
+**Caveat:** the numbers quantify deviation from the stated distribution,
+NOT accuracy. Local self-hosted servers (jeff: temperature-scaled
+sigmoids; kev: calibrated pointer head) behave differently from the hosted
+jev endpoint.
+
 ## Output
 
 JSON results are written to deterministic filenames under `output/benchmarks/`:
@@ -84,6 +121,7 @@ JSON results are written to deterministic filenames under `output/benchmarks/`:
 - `output/benchmarks/batching_<YYYYMMDD>.json`
 - `output/benchmarks/patterns_<YYYYMMDD>.json`
 - `output/benchmarks/calibration_<YYYYMMDD>.json`
+- `output/benchmarks/jaggedness_<YYYYMMDD>.json`
 
 The directory is created with parents on first write (the writer lives in
 [`_util.py`](_util.py)). Each payload records the model, run count, and
@@ -100,3 +138,4 @@ stable):
 | [`bench_batching.py`](bench_batching.py) | [`batching_20260916.json`](../output/benchmarks/batching_20260916.json) | `jev-latest`, 2 runs; batch-vs-single speedup 3.98× / 8.77× / 18.55× at N=5/10/20; token-cost ratio 2.80× → 4.22×. |
 | [`bench_patterns.py`](bench_patterns.py) | [`patterns_20260916.json`](../output/benchmarks/patterns_20260916.json) | `jev-latest`, 6 runs; composite_score pipeline mean 0.154 s (p95 0.242 s), intent_routing mean 0.128 s (p95 0.152 s). |
 | [`bench_calibration.py`](bench_calibration.py) | [`calibration_20260916.json`](../output/benchmarks/calibration_20260916.json) | `jev-latest`, 6 states × 5 repeats; ECE 0.073, Brier 0.0252, mean pairwise \|Δnoul\| 0.005, 0 dropped states (self-consistency proxy, not ground truth). |
+| [`bench_jaggedness.py`](bench_jaggedness.py) | [`jaggedness_20260924.json`](../output/benchmarks/jaggedness_20260924.json) | jeff (GLiFormer) + kev-0.8b, 50 repeats × 32 concurrent × 2–7 orders per fixture; every fair-process fixture rejects uniform (coin chi² 50.0 / df 1, d6 chi² 250.0 / df 5, both p ≈ 0); both backends degenerate (50/50 one label); order shift up to 0.104 with one argmax flip each; jeff noul-vs-choice Δ 0.137, kev 0.011. |

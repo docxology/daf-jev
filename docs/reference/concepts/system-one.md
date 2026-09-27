@@ -12,6 +12,10 @@ Jev is TypeSafe's flagship model and the first System One model.
 
 Like an LLM, a System One model understands natural-language input. It returns typed decisions and probabilities rather than generated text.
 
+<Note>
+  Jev currently accepts text input only. It evaluates strings, JSON objects, and arrays of text. Images, audio, and video are not supported (yet).
+</Note>
+
 ## How it differs from an LLM
 
 System One models are trained for calibrated decisions: their probabilities are optimized against outcomes to reflect uncertainty. Calibration is measured across groups of predictions; it does not guarantee that an individual answer is correct.
@@ -46,6 +50,6 @@ Answers from System One models also include [confidence](/confidence), so you ca
 
 ## Call a System One model
 
-Call a System One model through one of our [client SDKs](/sdk) or `POST /v1/systemone` in the [HTTP API](/api). The `model` field selects which model handles the request. The examples in these docs use `jev-latest`, which is also the SDK default.
+Call a System One model through one of our [client SDKs](/sdk) or `POST /v1/systemone` in the [HTTP API](/api). The `model` field selects which model handles the request. The examples in these docs use `jev-latest`, which is also the SDK default. See [Models](/models) for the available models, their prices, and their aliases.
 
 Start with [State](/concepts/state) to prepare the input and [Primitives (Questions)](/primitives) to explore the types of questions you can ask.

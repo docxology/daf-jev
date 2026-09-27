@@ -1,0 +1,247 @@
+{
+  "generated": "2026-09-24",
+  "config": {
+    "providers": "jeff,kev,jev",
+    "fixtures": "coin,d6,coin-noul",
+    "repeats": 50,
+    "concurrent": 32,
+    "timeout": null,
+    "model": null
+  },
+  "providers": {
+    "jeff": {
+      "model": "jev-latest",
+      "fixtures": {
+        "coin": {
+          "fixture": "coin",
+          "kind": "choice",
+          "n_outcomes": 2,
+          "repeats": 50,
+          "n_errors": 0,
+          "orders": {
+            "n": 2,
+            "position_bias_slope": -0.0422,
+            "order_shift_max": 0.0422,
+            "argmax_flips": 0
+          },
+          "choice_counts": {
+            "heads": 50,
+            "tails": 0
+          },
+          "degenerate": true,
+          "prob_mean": {
+            "heads": 0.682,
+            "tails": 0.318
+          },
+          "prob_std": {
+            "heads": 0.0,
+            "tails": 0.0
+          },
+          "wobble_max": 0.0,
+          "uniform_chi2": {
+            "stat": 50.0,
+            "df": 1,
+            "p": 0.0
+          },
+          "uniform_deviation": {
+            "k": 2,
+            "max_abs": 0.182,
+            "total_variation": 0.364,
+            "chi2_per_n": 0.132496
+          },
+          "runs_z": null,
+          "max_streak": 50,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        },
+        "d6": {
+          "fixture": "d6",
+          "kind": "choice",
+          "n_outcomes": 6,
+          "repeats": 50,
+          "n_errors": 0,
+          "orders": {
+            "n": 7,
+            "position_bias_slope": 0.001839,
+            "order_shift_max": 0.1036,
+            "argmax_flips": 1
+          },
+          "choice_counts": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 50
+          },
+          "degenerate": true,
+          "prob_mean": {
+            "1": 0.2483,
+            "2": 0.1374,
+            "3": 0.0925,
+            "4": 0.1486,
+            "5": 0.0954,
+            "6": 0.2777
+          },
+          "prob_std": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0
+          },
+          "wobble_max": 0.0,
+          "uniform_chi2": {
+            "stat": 250.0,
+            "df": 5,
+            "p": 0.0
+          },
+          "runs_z": null,
+          "max_streak": 50,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        },
+        "coin_noul": {
+          "fixture": "coin_noul",
+          "kind": "noul",
+          "repeats": 50,
+          "n_errors": 0,
+          "noul_mean": 0.8186,
+          "noul_std": 0.0,
+          "noul_min": 0.8186,
+          "noul_max": 0.8186,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        }
+      },
+      "noul_choice_delta": 0.1366
+    },
+    "kev": {
+      "model": "kev-latest",
+      "fixtures": {
+        "coin": {
+          "fixture": "coin",
+          "kind": "choice",
+          "n_outcomes": 2,
+          "repeats": 50,
+          "n_errors": 0,
+          "orders": {
+            "n": 2,
+            "position_bias_slope": 0.1012,
+            "order_shift_max": 0.1012,
+            "argmax_flips": 1
+          },
+          "choice_counts": {
+            "heads": 0,
+            "tails": 50
+          },
+          "degenerate": true,
+          "prob_mean": {
+            "heads": 0.4364,
+            "tails": 0.5636
+          },
+          "prob_std": {
+            "heads": 0.0,
+            "tails": 0.0
+          },
+          "wobble_max": 0.0,
+          "uniform_chi2": {
+            "stat": 50.0,
+            "df": 1,
+            "p": 0.0
+          },
+          "uniform_deviation": {
+            "k": 2,
+            "max_abs": 0.0636,
+            "total_variation": 0.1272,
+            "chi2_per_n": 0.01618
+          },
+          "runs_z": null,
+          "max_streak": 50,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        },
+        "d6": {
+          "fixture": "d6",
+          "kind": "choice",
+          "n_outcomes": 6,
+          "repeats": 50,
+          "n_errors": 0,
+          "orders": {
+            "n": 7,
+            "position_bias_slope": 0.001266,
+            "order_shift_max": 0.1012,
+            "argmax_flips": 1
+          },
+          "choice_counts": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 50
+          },
+          "degenerate": true,
+          "prob_mean": {
+            "1": 0.2777,
+            "2": 0.1068,
+            "3": 0.0975,
+            "4": 0.0768,
+            "5": 0.0958,
+            "6": 0.3453
+          },
+          "prob_std": {
+            "1": 0.0,
+            "2": 0.0,
+            "3": 0.0,
+            "4": 0.0,
+            "5": 0.0,
+            "6": 0.0
+          },
+          "wobble_max": 0.0,
+          "uniform_chi2": {
+            "stat": 250.0,
+            "df": 5,
+            "p": 0.0
+          },
+          "runs_z": null,
+          "max_streak": 50,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        },
+        "coin_noul": {
+          "fixture": "coin_noul",
+          "kind": "noul",
+          "repeats": 50,
+          "n_errors": 0,
+          "noul_mean": 0.447,
+          "noul_std": 0.0,
+          "noul_min": 0.447,
+          "noul_max": 0.447,
+          "concurrent": {
+            "n": 32,
+            "wobble_max": 0.0,
+            "distinct": 1
+          }
+        }
+      },
+      "noul_choice_delta": 0.0106
+    }
+  }
+}

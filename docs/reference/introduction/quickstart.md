@@ -12,7 +12,7 @@
 2. **Paste any text** as the state.
 
 ```plaintext title="Sample state" theme={null}
-Hi, I've been trying to connect my Stripe account for 3 days and it keeps failing. I'm losing sales. Please help ASAP.
+Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.
 ```
 
 3. **Add a question.** Try a Noul question: `"Does this message express urgency?"`
@@ -30,7 +30,7 @@ Hi, I've been trying to connect my Stripe account for 3 days and it keeps failin
 
 ## Call it: the API
 
-1. **Get your API key** from the [dashboard](https://console.typesafe.ai/settings/keys)
+1. **Get your API key** from the [dashboard](https://console.typesafe.ai/keys)
 2. **Make a POST request** to the API endpoint
 3. **Review the [API Reference](/api)** for all the details.
 
@@ -48,7 +48,7 @@ curl -X POST https://api.typesafe.ai/v1/systemone \
   -H "Content-Type: application/json" \
   -d @- <<'EOF'
   {
-    "state": "Hi, I've been trying to connect my Stripe account for 3 days and it keeps failing. I'm losing sales. Please help ASAP.",
+    "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
     "model": "jev-latest",
     "questions": {
       "urgency": {
@@ -64,7 +64,7 @@ EOF
 
 ```json theme={null}
 {
-  "state": "Hi, I've been trying to connect my Stripe account for 3 days and it keeps failing. I'm losing sales. Please help ASAP.",
+  "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
   "model": "jev-latest",
   "questions": {
     "department": {
@@ -97,36 +97,41 @@ EOF
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "department": {
       "type": "choice",
       "choice": "technical",
+      "confidence": 0.78,
       "probabilities": {
-        "billing": 0.159,
-        "technical": 0.84,
-        "sales": 0.001
-      },
-      "confidence": 0.596
+        "technical": 0.85,
+        "sales": 0.0,
+        "billing": 0.15
+      }
     },
     "frustration": {
       "type": "score",
-      "score": 1.035,
+      "score": 1.0,
+      "confidence": 1.0,
       "legend": {
         "0": "Calm, just stating facts",
         "1": "Frustrated but civil",
         "2": "Very angry, strong language"
       },
-      "confidence": 0.842
+      "probabilities": {
+        "0": 0.0,
+        "1": 1.0,
+        "2": 0.0
+      }
     },
     "is_urgent": {
       "type": "noul",
-      "noul": 0.999
+      "noul": 1.0
     }
   },
   "usage": {
-    "input_tokens": 312,
-    "output_tokens": 48
+    "input_tokens": 392,
+    "output_tokens": 65
   }
 }
 ```
@@ -152,7 +157,7 @@ from typesafe_sdk import Choice, Noul, Score, TypeSafeClient
 
 client = TypeSafeClient()
 
-ticket = "Hi, I've been trying to connect my Stripe account for 3 days and it keeps failing. I'm losing sales. Please help ASAP."
+ticket = "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP."
 
 response = client.system_one(
     state=ticket,
@@ -180,8 +185,8 @@ response = client.system_one(
 )
 
 print(response.answers["department"].choice)  # "technical"
-print(response.answers["frustration"].score)  # 1.035
-print(response.answers["is_urgent"].noul)     # 0.999
+print(response.answers["frustration"].score)  # 1.0
+print(response.answers["is_urgent"].noul)     # 1.0
 ```
 
 See [client SDKs](/sdk) for installation options and detailed usage.
@@ -194,14 +199,14 @@ See [client SDKs](/sdk) for installation options and detailed usage.
   <Tab title="Claude Code">
     Run these two commands in your terminal:
 
-    ```bash theme={null} theme={null} theme={null} theme={null}
+    ```bash theme={null}
     claude plugin marketplace add typesafe-ai/skills
     claude plugin install typesafe@typesafe-ai
     ```
   </Tab>
 
   <Tab title="Other agents">
-    ```bash theme={null} theme={null} theme={null} theme={null}
+    ```bash theme={null}
     npx skills add typesafe-ai/skills --skill typesafe-ai
     ```
 
@@ -211,7 +216,7 @@ See [client SDKs](/sdk) for installation options and detailed usage.
   <Tab title="Copy to your agent">
     Paste this prompt into your coding agent:
 
-    ```text wrap theme={null} theme={null} theme={null} theme={null}
+    ```text wrap theme={null}
     Install the TypeSafe skill. If you're in Claude Code, run `claude plugin marketplace add typesafe-ai/skills`, then `claude plugin install typesafe@typesafe-ai`. If you're in another agent, run `npx skills add typesafe-ai/skills --skill typesafe-ai` and select your agent. Use one installation method. You can read the skill directly at https://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md (raw: https://raw.githubusercontent.com/typesafe-ai/skills/main/skills/typesafe-ai/SKILL.md). Then use the TypeSafe skill when working on this project.
     ```
   </Tab>

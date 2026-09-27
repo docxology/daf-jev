@@ -1,0 +1,30 @@
+graph TD
+    api["TypeSafe Jev API<br/>System One"]
+    cli["cli.py<br/>daf-jev command line"]
+    client["client.py<br/>JevClient"]
+    compose["compose.py<br/>routing + decision patterns"]
+    config["config.py"]
+    errors["_errors.py<br/>typed errors"]
+    evaluate["evaluate.py"]
+    http["_http.py<br/>transport"]
+    models["models.py"]
+    primitives["primitives.py<br/>noul / choice / score"]
+    retry["_retry.py<br/>retry policy"]
+    scripts["scripts/<br/>benchmarks, docs snapshot"]
+    types["_types.py"]
+    cli --> primitives
+    client --> api
+    compose --> http
+    compose --> primitives
+    compose --> retry
+    config -.-> compose
+    errors --> api
+    evaluate -.-> client
+    http --> api
+    models -.-> client
+    primitives --> client
+    primitives --> client
+    primitives --> compose
+    retry --> api
+    scripts --> compose
+    types -.-> errors

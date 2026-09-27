@@ -43,7 +43,7 @@ same threshold to LLM probability conditions, keeping abstentions and changes vi
 ## Setup
 
 ```bash theme={null}
-pip install anthropic openai matplotlib ipython "typesafe-sdk>=0.5.7" cooksafe --extra-index-url https://pypi.typesafe.ai/
+pip install anthropic openai matplotlib ipython 'cooksafe>=0.2.0,<0.3.0'
 ```
 
 then set `TYPESAFE_API_KEY`, `ANTHROPIC_API_KEY`, and `OPENAI_API_KEY`.
@@ -483,12 +483,13 @@ def ask_llm_rubric(
 | Reasoning Models     | `claude-opus-4-8`                |          —         |            ✓           |         —         |
 | TypeSafe             | `jev-latest` (`typesafe_choice`) |          —         |            ✓           |         —         |
 
-* Each ✓ marks one condition with 15 repeats; — means the combination is not tested.
-* The default column sends no temperature argument: non-reasoning models
-  use the API default, and reasoning models and TypeSafe run without a temperature setting.
+* A `✓` marks a condition tested with 15 repeats; a `—` marks a combination that is not
+  tested.
+* The default column sends no temperature argument: non-reasoning models use the API
+  default, and reasoning models and TypeSafe run without a temperature setting.
 * Single-pick conditions return one label per question.
-* Temperature `0` is commonly suggested for repeatability, so we compare it with
-  the API default.
+* Temperature `0` is commonly suggested for repeatability, so it is compared with the API
+  default.
 
 We draw `NUM_SAMPLES` = 15 repeats per condition. Each repeat has its own cache key and
 counts as a distinct draw, and the cache (`json_cache.json`) ships with the cookbook, so
@@ -925,11 +926,11 @@ display(fig_bar)
 
 <img src="https://mintcdn.com/ts-docs/BBcnWK7wRF0qekMh/cookbooks/consistency_choice_cookbook/consistency_choice_cookbook.executed.2.png?fit=max&auto=format&n=BBcnWK7wRF0qekMh&q=85&s=3bf99796df3faa60d1db45f626a7caee" alt="output" width="1052" height="651" data-path="cookbooks/consistency_choice_cookbook/consistency_choice_cookbook.executed.2.png" />
 
-With the same `0.60` rule, Haiku at temperature 0 scores 100%, TypeSafe scores 99.2%, and
-the other LLM conditions range from 84.2% to 94.2%. TypeSafe returns `uncertain` on 25.8%
-of answers and acts automatically on 74.2%; Haiku at temperature 0 has no abstentions here.
-This measures repeatability, not correctness. The table below keeps raw agreement and
-abstention rates visible alongside the policy agreement shown in this chart.
+Under the same `0.60` rule, Haiku at temperature 0 scored 100%. TypeSafe scored 99.2%, and
+the other LLM conditions landed between 84.2% and 94.2%. TypeSafe returned `uncertain` on
+25.8% of answers and acted automatically on the other 74.2%; Haiku at temperature 0 never
+abstained. These percentages measure repeatability only. The table below sets raw agreement
+and abstention rates next to the policy agreement in this chart.
 
 ## Let uncertain probabilities produce an uncertain decision
 
@@ -1006,11 +1007,12 @@ with more than one concrete label across the repeats, ignoring abstentions. Thes
 describe repeatability and how often the application acts, not whether its actions are
 right.
 
-TypeSafe's agreement rises from 90.8% to 99.2%, with 25.8% uncertain and 74.2% automatic.
-`primary_risk` and `link_handling` are uncertain on every repeat. `category` sometimes
-crosses the action threshold, alternating between Violence and `uncertain`. No question
-produces two different concrete TypeSafe labels. These numbers do not establish accuracy
-or superiority: Haiku at temperature 0 still has 100% agreement with no abstentions here.
+TypeSafe's agreement rose from 90.8% to 99.2%. Of the answers, 25.8% were uncertain and
+74.2% automatic. `primary_risk` and `link_handling` came back uncertain on every repeat;
+`category` alternated between Violence and `uncertain`, crossing the action threshold on
+some repeats and not others. No question produced two different concrete TypeSafe labels.
+None of this shows accuracy or superiority: Haiku at temperature 0 had 100% agreement
+here, with no abstentions.
 
 ```python theme={null}
 # Show every TypeSafe decision while retaining the top probability behind it.
@@ -1045,10 +1047,10 @@ display(fig_policy)
 
 <img src="https://mintcdn.com/ts-docs/BBcnWK7wRF0qekMh/cookbooks/consistency_choice_cookbook/consistency_choice_cookbook.executed.3.png?fit=max&auto=format&n=BBcnWK7wRF0qekMh&q=85&s=257663537c99b735f9f07609732d1a69" alt="output" width="1932" height="584" data-path="cookbooks/consistency_choice_cookbook/consistency_choice_cookbook.executed.3.png" />
 
-Abstaining can replace competing labels with the same human-review outcome. A probability
-near `0.60` can still move between a concrete label and `uncertain`. This policy does not
-make the model deterministic. The probability statistics and the table's `raw agree`
-column still report the original model outputs.
+This policy does not make the model deterministic. Abstaining can replace competing
+labels with the same human-review outcome, but a probability near `0.60` can still move
+between a concrete label and `uncertain`. The probability statistics and the table's `raw
+agree` column still report the original model outputs.
 
 ## Open it in the TypeSafe playground
 
@@ -1071,4 +1073,4 @@ display(
 )
 ```
 
-<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIwAOiAA4QDOKpBJ5VKA+gJZi36kAKAtABx8ATAEYAzKQA0nEAEMYKABYQATh3oxKCZa3Z5pMAPQAWIwHZhk6TKhQIMVExkBzBEzAyAnpQ6i+U0mTKLCpM1EEA1gjeesL+IABmEAA2SRAA7lrRBCIADAC+cbaoWDR69JQwyvHWCBwBMABGSSxQ+MoIZEkelqQsSEztnR5MKBB1skgQilr4GjNgCPHIYH1O+DL4TjKI+GQyKFAKPSC2cHD2LCjdeqTKBluICw37UaQF0kUoyKV0pF-Y4wAgu18B47PhNEE7JQuvhFCxKPgFkhNAB+fCApBgpAIfBpJRIxbLRGKfa7faHfAI9b4U6dBBfWmpNJIdZIMAQpQwJIchq4hBwZ7KZQySiaDmjfAIABuyF2jHwCi0CAAdPguAgIPT8M1IqDwTIQfj9gByRHKGB9VZwhTU07nJCXDxsjlKHHUWFgmD4HEICUQfB8wkyJIoPGXBRqgDCEB2lE8VLDkrgzuqUAQUj60suCDNbRYTgUYaV7TVAGkEB1E7MyC78ABJE0pKXs-WVPFKJK4w4yJA4pIq44KUVMZpIcIcFAWjPSMfhNyxmR9cYrSi2ZRgFVOJzHJK9pwwZy1G4gZBvOKDFQoLL4dSQgYdK83owXx-KZjtUUQFEcADapGHEUxUQVBjkoPY4GORRP1KABdPIEJAKRyGUWMyGvDBsD0IhSCgF4nBUa5fhAK4yGPAhcKUFpj0KIIviCGQ1FIAA5b9yOkVj5WaKBnWzZJ9mCVkIHiNlnXCPpN2OAAJQ1RRvUh6xRblr3wFRCUQXtEQ2MjlEob8pDSCMfQDaCEDJYTFUNOA60mXZUK+KAvjAHgoD3MV1hQFBrHCQckOkGSviBTzvK03ZMm-VTlE2VCYFrCBZSi7T7IQRy-VpQDrHohEUBafAAAoRXTKR2maJxBKkFx2S0KQVVqgBKXy4gANWCLskHTcYAFkZEiUKoHaFYmlxUzzJEwDrLUvooBzRE+La9N1i2PpqAhWNNRxRrpAAZQg8YAFUUWSFocw5QJYymQTIp1PpwghCCDKM2ydL0pAQw8ryoB844tqwQ8knGH7MD+q6ZDAZTaW-L5UF895ehRKcYEcwT5JAAB1Ycw2paYIVWLt8DgBUZDIToWhkIaIeKVAeAobjnTwr4COUVM1PhREKGoVFz2kQIWDgQ1hiCSgJzKP4PDI8ZDggajjn6nMGKYkAZKAygQJ+aQNV0783v2D7bpZw0XCc9YGjmKkSSVfGl1ZQWvr80gWuSZAOpPQEbRg1Sxqsq6+hyuA2AEiKsYtvm+nzIXNtIAAZG7ARNzRxgAUWwLRXqSHg5yu4T4mpvcUESZRrNsFQVlenKIpts2bVxEPrYRW24kBGw7FQKTssI8YuChRKm-sYs26Zq7BjMsM+WHPioqD6urbD+vpEj9IACU6-GTiNMdJAnHibl8YgBYRTL2uhcrwIom+GG4mWhGke-FH0bJSe7N5-md73gPD9u0kw0oLkeSRIJZThAxFw+B842mpOzFAnMQCwxIgbBkCtSLsUolLZ2tE5YsEYiLEArEcQrymEiFg7RUocjJL2bEuJQ57HfC0bkhoI4gA1i9cYAARQhKUjbmRxHdFKLB4i5QkiwbMYMQz0IAOIxTICwthxCPI0jOg5I2TgJFXVcnJehXBc750gieVhRCOFJgtvaC4VwrqdH2FoxMmgkjxCkJMMM2lwpIHPtIS+Fpr4-hPOjAMaljSY3Nt2SG3xH58yCLCFYei0r7CgTAzKgkEFiyQScKiqCPh0S0BghWgIUjpHGJHMyADsYQJrOGRQxl1juPoajQ0SBcn5OGhbIpsVAzyHetYBQNI0jVOtHuPkA5jgLwFPFRJAyCYFIaYwKQJswyQGMmGMiqcWAAC96m4msLYXu9CtpThYJEcYIyhlV3lCtXsJCwAkIhNsvUkpsZrObigehCc1whheOMNAPVcS2TkKMPmHD3EAG5FTJA5KAjYCh4C9kJNNSgglnFwzCIjA+t8MYtnzumVW5SD6cjsL-IMXlIhCVZKzI5kCuakAAI4wAQJS+J4sTyS2lnbE4aT5ZYMBPIMYLt2U8HaHpJIsoAW2TBXzVkFKqUfMrAsSSjLRHIC0CGcYMqcQiiSC-OVmLRWUvoWgBQMFXk6uHvgAw+A5pO1xDyigKJcQatVN9XaJ4drbDrGYvOKg4A8DJqba1Wqtp5NBq8i01B3Xsh4PGJYJiuyg0NRCZAwQopetJSAVxCLkbjHRi0dp0KN54wJq-dVlLKVYu5BydIhLbRs0YNEuIc4mDDnZGOHcWDEES2STRVJ6DMHESycyWpMgxm4gzpQvc6Z6ELzgNHccANtlxSiquMmeNsYZymfgSIVZCmMHoQAISCFsBY-qDULpuusRERcNx9BeLybdoNrQnIxZdS4R7jZzAeU83OiSfqtgPeOOEAYNjgR4SGbK36j2aHcnyfOqykYb1hYm+GbjEXjCkukQtv8yFSmTsoVO10v1qSzjncxrqqRIGzIyUOa6VpBlrWALsYBK3SHaNmBAaQmB7EUDSxJ9KUm4WZRk1l7KgTsp+ZE-5ZShUQvoywRj9CpLgpqS7EBqFUBjlxKJ1kOa1VqT5r1Q5eEUibJjSoIE0bHQ4ain+6aAGVricYzMak7QKVsKlXEPJWx-ongXnYRkkouwuaunuNIPBkCooFEEqIOm37QaTe4pFAZv7Yo5JplZICz0qp0yqiKRKIG0dIJoBKTo2PNpQa2rj7aFY4MSZxOa4XjjzzSHsmACwrqrj9mKQRM4l1RE0KgDBKRnTjS7GKehnU-QsHgB3Rxb0MrASCYZUptlXJmWULCfqw3yYjXudJAsRwTxKzkui0YhsSwlPaRsNbNoyTrJxWasyJDj0DRYENCLsHk031Tcih+QzlUqpy+kkxFkMsVreHkPysgyAsCapkQS2FpTCGB1Y9hfpOq7wQEkSgehfwgAAFYynTi8agIB4JAA" target="_blank" rel="noreferrer" className="text-primary">Open this post + rubric in the TypeSafe playground →</a>
+<a href="https://console.typesafe.ai/playground#share/N4IgJg9gxgrgtgUwHYBcAqCAeKQC4AEIwAOiAA4QDOKpBJ5VKA+gJZi36kAKAtABx8ATAEYAzKQA0nEAEMYKABYQATh3oxKCZa3Z5pMAPQAWIwHZhk6TKhQIMVExkBzBEzAyAnpQ6i+U0mTKLCpM1EEA1gjeesL+IABmEAA2SRAA7lrRBCIADAC+cbaoWDR69JQwyvHWCBwBMABGSSxQ+MoIZEkelqQsSEztnR5MKBB1skgQilr4GjNgCPHIYH1O+DL4TjKI+GQyKFAKPSC2cHD2LCjdeqTKBluICw37UaQF0kUoyKV0pF-Y4wAgu18B47PhNEE7JQuvhFCxKPgFkhNAB+fCApBgpAIfBpJRIxbLRGKfa7faHfAI9b4U6dBBfWmpNJIdZIMAQpQwJIchq4hBwZ7KZQySiaDmjfAIABuyF2jHwCi0CAAdPguAgIPT8M1IqDwTIQfj9gByRHKGB9VZwhTU07nJCXDxsjlKHHUWFgmD4HEICUQfB8wkyJIoPGXBRqgDCEB2lE8VLDkrgzuqUAQUj60suCDNbRYTgUYaV7TVAGkEB1E7MyC78ABJE0pKXs-WVPFKJK4w4yJA4pIq44KUVMZpIcIcFAWjPSMfhNyxmR9cYrSi2ZRgFVOJzHJK9pwwZy1G4gZBvOKDFQoLL4dSQgYdK83owXx-KZjtUUQFEcADapGHEUxUQVBjkoPY4GORRP1KABdPIEJAKRyGUWMyGvDBsD0IhSCgF4nBUa5fhAK4yGPAhcKUFpjziPowhgKAUGCH8TwAdWHMNqWmCFVi7fA4AVGQyE6FoZCabtvy+VAeAoZooGdPCvgI5RUxUG1qQoahUWOKAgi+IIZDUUgADlv3I6RTPlOTnWzZJ9mY-AIHiNlnXCPpN2OAAJQ1RRvUh6xRblr0c5RCUQXtEQ2MjlEob8pDSCMfQDaCEDJJzFUNOA60mXZUK+Ri-R4KA9zFdYUBQaxwkHJDpG8r4gXKyrIt2TJvxCzZUJgWsIFlUKoryhACo5HsRQKoJqBafAAApRpndpmicZipBcdktCkFUNoASmquIADVgi7JB03GABZGRIma3S-RYcSbRgxznMArK1L6KAc0RWzDvTdYtjosNYsQMydukABlCDxgAVRRZIWhzDlAljKYHLUucIQg+LEpy6LYqQEMyoqqAquOEGsEPJJxhJzAyfamQwCC2lJO+aqELiQIWDgQ1hnGicyj+DwyPGQ4IGo44-otRjmL8kB2LJLilVy9nOf4iAFhFJi2u5m0yUoLkeSRIJZThAyXHwRJQvhRFNJQbSatwvStBYQzeZAbygMoECfmkDUYu-PH9gJ8J2oq5QXC+DkxLmKkSXljm+nzSgidtkB9uSZBjpPQE7tSsN0qe9q+iYuA2Hstq5dxWPWW54HSAAGT6cJAQaOZxgAUWwLRcaSHhUbUpz4hkvcUDNrLbBUFZcfVyuEUDsv+KXKeE+rkBARsOxUE8hFRhU8YuChPrV-sYtN8I9rBmzwMEGHWzQtniv48TuIa-SAAlafxks8LHSQJx4m5ZXVZLgvGelt2iaFQMzd4fxDShyMiRfm5lKLC3TrRFEU4GKTyluxAMaljScWjhJYoqAFYcyCLCFY7QhplRtoUe2BlYGmRxO-KYSIWAULDmVFyZkqSsj2O+Fo3JDRL29jjcYAARVhg12FpRxGjQaLB4iTXciwbMdMQxLwAOKdTIGIiRlCyT9SmJIv0HU7DdVCsVXyQjB7Dx0Ww4xZJuL2guFcdqnR9jD0TJoJI8QpCTDDFFVqSAIFxGsJPWBpEEEnCosg6QYt0GS3GDLMMyAzbpg9usCWbUdZ2D1kGCqkRWRtQtvKLSOlaGO1gYCFI6Rxg11SobbiVsazhkUElDJk8l6sUNEgWp9TcSNIVF1QM8h8bWAUDSNI3TrR7j5AOY4z8BQ9UiQsgSDT5ZWykE3MMkAkphjIp3FgAAvfp8trC2EPkvEGU4WCRHGCspZNpcRNN7OHMA4cITXL1JKbiZy14oCXi3NcIYXjjDQOdXEOU5CjA5lIzJSAADcipkgcjNjSBQ8BeyEjepQZiwTpAAEcYAICJeE+Bgtok0Viag8WGDEm2kpDi7+fEBIAMnvgQlxLcTZO5BydIrJilW2oR8cpTtiKAnkGMDOEqeCgOSLKRFOV0Uc1ZByolPpKwLA8kndRyAtAhnGDqnEIokj-z1Wy1VqpjhoAUDBUFNrz4GHwJ9NOuJQEUBRLiC1lzwYnjBtsOsbih4qDgDwCOmh2VEqJUvNAIM6m01BRaagob2Q8HjEsFxXZab4EdWA4IoUvVvEgSAOcTBhzsjHDuZ2ETyVIMpb0al8TvxS08ukTkOTw5YilO3ZQncdT13an3Ae7jg3cOzIyOOAzqAXwyuWv0Qq7Y5joc7KpzJekyDWbiVGcc3HpiXs-OAddxwU2uWYlh8ZbrcVRls-AkQqyTv+ccAAQkELYCwE3n0vf20UDMx59BeLyF9tNrQvPaQ5S46xIpN00ACoFg9Ikk1bJ+8ccIAwbHAnIkMm8UMQc0KVPkZtcShNWHi24MoWAIDSEwPYihSUCxPELEWSc4lwswQSblesOZfPlgo3teFmxFNtJbRg86TgisqRKoEEqYX2LhQqgMSrMXtGzBRpenkMU9IzqbVCqAxy4gU6yFlZq1KcaiI82kIY5lJwQ3moEEJkB5vauht6mGp1KfIxkG+5oECEokVqx+CAtjkxPM-OwjJJRdkC+1PcaQeApJUGk74UpYOAJIyATQvUnS0ciQxmJ9b6IsbpbLfBjleoWbsxllx6UBXCbKYuipzsGGRMsp9FLxwn5pDuTABY7VVxFzFMomc16ohgKYhZ50T0uxiiXida68Ad6BLxoBXy6SEqtJysVVKyhYRXRWBe+1+xVMFiOCeV2y3EujFDiWFp4yNgpQcRxBmPLp2fnDoiHbN0uwQLyDVWQZAWC7UyMxbC0phA-a8UYsAJ0VYICSJQPQv4QAACsZTdxeNQEA8EgA" target="_blank" rel="noreferrer" className="text-primary">Open this post + rubric in the TypeSafe playground →</a>

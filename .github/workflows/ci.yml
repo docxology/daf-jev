@@ -27,12 +27,18 @@ jobs:
 
       - name: Unit tests + coverage gate (>= 90%)
         run: uv run pytest tests/unit --cov=src
+      - name: Live tests (2 tests skip without JEV_API_KEY)
+        run: uv run pytest tests/live
 
       - name: Docs snapshot drift check
         run: uv run daf-jev docs-verify
 
       - name: Offline scraper drift check
         run: uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json
+      - name: Serve subcommand smoke (stdio only)
+        run: uv run daf-jev serve --help
 
       - name: Keyless example smoke
         run: uv run python examples/quickstart.py
+      - name: Keyless provider-dispatch example smoke (SKIP + exit 0, no network even with a key)
+        run: uv run python examples/providers_example.py

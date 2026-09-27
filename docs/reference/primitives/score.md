@@ -6,6 +6,318 @@
 
 > A Score is a System One question type for rating content against ordered, descriptive levels. The answer includes a score, a probability for each level, and confidence.
 
+export function ScoreExplorer() {
+  const examples = [{
+    "id": "severity",
+    "label": "Bug severity",
+    "question": "How severe is the reported issue?",
+    "state": "The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.",
+    "levels": ["Cosmetic; no impact to functionality", "Broken or degraded feature, but workaround exists", "Blocking issue; no workaround exists"],
+    "shortLevels": ["Cosmetic", "Workaround", "Blocking"],
+    "answer": {
+      "type": "score",
+      "score": 1.43,
+      "confidence": 0.35,
+      "legend": {
+        "0": "Cosmetic; no impact to functionality",
+        "1": "Broken or degraded feature, but workaround exists",
+        "2": "Blocking issue; no workaround exists"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 0.57,
+        "2": 0.43
+      }
+    }
+  }, {
+    "id": "formality",
+    "label": "Outfit formality",
+    "question": "How formal is this outfit based on the description?",
+    "state": "A navy blazer over a plain white T-shirt, dark jeans, and clean leather loafers. No tie.",
+    "levels": ["gym clothes", "casual", "business casual", "formal", "black tie"],
+    "shortLevels": ["Gym", "Casual", "Business casual", "Formal", "Black tie"],
+    "answer": {
+      "type": "score",
+      "score": 1.86,
+      "confidence": 0.89,
+      "legend": {
+        "0": "gym clothes",
+        "1": "casual",
+        "2": "business casual",
+        "3": "formal",
+        "4": "black tie"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 0.14,
+        "2": 0.86,
+        "3": 0.0,
+        "4": 0.0
+      }
+    }
+  }, {
+    "id": "relevance",
+    "label": "Candidate fit",
+    "question": "How relevant is this candidate's experience to the job posting?",
+    "state": "Job posting: Senior backend engineer building Python APIs and PostgreSQL services. Candidate: Three years building Django REST APIs with PostgreSQL, preceded by two years in frontend JavaScript. Has owned small services but has not led a backend team.",
+    "levels": ["completely unrelated", "adjacent field", "some direct experience", "deep, direct experience"],
+    "shortLevels": ["Unrelated", "Adjacent", "Some direct", "Deep direct"],
+    "answer": {
+      "type": "score",
+      "score": 2.52,
+      "confidence": 0.52,
+      "legend": {
+        "0": "completely unrelated",
+        "1": "adjacent field",
+        "2": "some direct experience",
+        "3": "deep, direct experience"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.48,
+        "3": 0.52
+      }
+    }
+  }, {
+    "id": "frustration",
+    "label": "Customer frustration",
+    "question": "How frustrated is the customer?",
+    "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too. This is the third time I'm writing in and honestly I'm done. Steps: open any report, click Export, choose PDF. Chrome 128 on macOS.",
+    "levels": ["Calm, just stating facts", "Frustrated but civil", "Very angry, strong language or threatening to leave"],
+    "shortLevels": ["Calm", "Frustrated", "Very angry"],
+    "answer": {
+      "type": "score",
+      "score": 1.26,
+      "confidence": 0.61,
+      "legend": {
+        "0": "Calm, just stating facts",
+        "1": "Frustrated but civil",
+        "2": "Very angry, strong language or threatening to leave"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 0.74,
+        "2": 0.26
+      }
+    }
+  }, {
+    "id": "detail",
+    "label": "Report detail",
+    "question": "How much does the report give an engineer to work with?",
+    "state": "Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too. This is the third time I'm writing in and honestly I'm done. Steps: open any report, click Export, choose PDF. Chrome 128 on macOS.",
+    "levels": ["No detail; just says something is broken", "Names the feature but no steps or environment", "Steps to reproduce or environment, but not both", "Steps to reproduce and environment"],
+    "shortLevels": ["No detail", "Feature only", "Some detail", "Steps + environment"],
+    "answer": {
+      "type": "score",
+      "score": 3.0,
+      "confidence": 1.0,
+      "legend": {
+        "0": "No detail; just says something is broken",
+        "1": "Names the feature but no steps or environment",
+        "2": "Steps to reproduce or environment, but not both",
+        "3": "Steps to reproduce and environment"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 1.0
+      }
+    }
+  }];
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const example = examples[selectedIndex];
+  const topLevel = example.levels.length - 1;
+  const score = example.answer.score;
+  const confidence = example.answer.confidence;
+  const probabilities = example.levels.map((_, level) => example.answer.probabilities[String(level)]);
+  const percents = probabilities.map(probability => Number((probability * 100).toFixed(2)));
+  const accent = "#E551BA";
+  const eyebrow = {
+    fontSize: "0.6875rem",
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase"
+  };
+  const columnWidth = 56;
+  const buttonClass = "border px-3 py-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-500";
+  const unselectedStyle = {
+    borderColor: "#71717a"
+  };
+  const selectedStyle = {
+    borderColor: accent,
+    boxShadow: `inset 0 0 0 1px ${accent}`,
+    background: "color-mix(in srgb, #E551BA 10%, transparent)"
+  };
+  const endNameClass = "text-xs text-zinc-600 dark:text-zinc-400";
+  const midNameClass = "hidden sm:block text-xs text-zinc-600 dark:text-zinc-400";
+  function position(value) {
+    return `${value / topLevel * 100}%`;
+  }
+  function tickNameStyle(level) {
+    if (level === 0) return {
+      left: 0,
+      textAlign: "left",
+      maxWidth: "calc(50% - 8px)"
+    };
+    if (level === topLevel) return {
+      right: 0,
+      textAlign: "right",
+      maxWidth: "calc(50% - 8px)"
+    };
+    return {
+      left: position(level),
+      transform: "translateX(-50%)",
+      textAlign: "center",
+      maxWidth: `calc(${100 / topLevel}% - 8px)`
+    };
+  }
+  const chartSummary = example.levels.map((_, level) => `level ${level}, ${example.shortLevels[level]}: ${percents[level]}%`).join("; ");
+  return <section aria-label="Explore Score examples" className="not-prose my-6 border border-zinc-300 dark:border-zinc-700 p-5 sm:p-6 text-zinc-800 dark:text-zinc-200">
+      <div className="text-zinc-600 dark:text-zinc-400" style={eyebrow}>Example Score question</div>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Example questions">
+        {examples.map((item, index) => <button key={item.id} type="button" aria-pressed={index === selectedIndex} onClick={() => setSelectedIndex(index)} className={buttonClass} style={index === selectedIndex ? selectedStyle : unselectedStyle}>
+            {item.label}
+          </button>)}
+      </div>
+
+      {}
+      <div className="mt-6" style={{
+    minHeight: "152px"
+  }}>
+        <div className="mt-2 text-base font-semibold">{example.question}</div>
+        <div role="list" aria-label="Levels" className="mt-3 space-y-1 text-sm">
+          {example.levels.map((description, level) => <div role="listitem" key={level}>
+              <span className="font-semibold tabular-nums">{level}</span> {description}
+            </div>)}
+        </div>
+      </div>
+
+      {}
+      <div className="mt-5 h-40 sm:h-32 overflow-y-auto bg-zinc-100 dark:bg-zinc-900 px-4 py-3" role="region" aria-label="Example state" tabIndex={0}>
+        <div className="mb-1 text-zinc-600 dark:text-zinc-400" style={eyebrow}>State (content to evaluate)</div>
+        <p className="text-sm leading-relaxed">{example.state}</p>
+      </div>
+
+      {}
+      <div className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
+        {}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-zinc-600 dark:text-zinc-400" style={eyebrow}>Answer</div>
+            <div className="mt-3 text-sm font-semibold">Probability of each level</div>
+          </div>
+          <div className="shrink-0 text-right" role="status" aria-live="polite" aria-atomic="true">
+            <div className="text-sm text-zinc-600 dark:text-zinc-400">Confidence</div>
+            <output aria-label="Confidence" className="block text-3xl font-semibold tabular-nums">{confidence.toFixed(2)}</output>
+          </div>
+        </div>
+        <div className="mt-1 flex items-center justify-end gap-2 text-xs text-zinc-600 dark:text-zinc-400" aria-live="polite">
+          <span aria-hidden="true" style={{
+    display: "inline-block",
+    width: "10px",
+    height: "10px",
+    background: accent,
+    transform: "rotate(45deg)"
+  }} />
+          score {score.toFixed(2)}
+        </div>
+
+        <div role="img" aria-label={`Probability of each level: ${chartSummary}. Score ${score.toFixed(2)}`} style={{
+    padding: `0 ${columnWidth / 2}px`
+  }}>
+          <div aria-hidden="true" style={{
+    position: "relative",
+    height: "150px",
+    marginTop: "36px"
+  }}>
+            {[50, 100].map(tick => <div key={tick} style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: `${tick}%`,
+    borderTop: "1px dashed",
+    borderColor: "color-mix(in srgb, currentColor 30%, transparent)"
+  }} />)}
+            {example.levels.map((_, level) => <div key={level} className="bg-zinc-500" style={{
+    position: "absolute",
+    left: position(level),
+    bottom: 0,
+    width: `${columnWidth}px`,
+    height: `${percents[level]}%`,
+    transform: "translateX(-50%)"
+  }}>
+                <span className="text-sm font-semibold tabular-nums" style={{
+    position: "absolute",
+    bottom: "calc(100% + 6px)",
+    left: "50%",
+    transform: "translateX(-50%)",
+    whiteSpace: "nowrap"
+  }}>{percents[level]}%</span>
+              </div>)}
+          </div>
+
+          <div aria-hidden="true" style={{
+    position: "relative",
+    height: "72px"
+  }}>
+            <div className="bg-zinc-500" style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: "2px"
+  }} />
+            {example.levels.map((_, level) => <div key={level} className="bg-zinc-500" style={{
+    position: "absolute",
+    left: position(level),
+    top: 0,
+    width: "2px",
+    height: "10px",
+    transform: "translateX(-50%)"
+  }} />)}
+            {example.levels.map((_, level) => <div key={level} className="text-sm font-semibold tabular-nums" style={{
+    position: "absolute",
+    left: position(level),
+    top: "14px",
+    transform: "translateX(-50%)"
+  }}>{level}</div>)}
+            {example.levels.map((_, level) => <div key={level} className={level === 0 || level === topLevel ? endNameClass : midNameClass} style={{
+    position: "absolute",
+    top: "36px",
+    ...tickNameStyle(level)
+  }}>
+                {example.shortLevels[level]}
+              </div>)}
+            <div className="ring-2 ring-white dark:ring-black" style={{
+    position: "absolute",
+    left: position(score),
+    top: "1px",
+    width: "14px",
+    height: "14px",
+    background: accent,
+    transform: "translate(-50%, -50%) rotate(45deg)"
+  }} />
+          </div>
+        </div>
+      </div>
+
+      <details className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
+        <summary className="cursor-pointer">How the score and confidence are calculated</summary>
+        <div className="mt-3 font-semibold text-zinc-800 dark:text-zinc-200">Score:</div>
+        <p className="mt-1">Multiply each level number by its probability, then add the results:</p>
+        <div className="mt-2 font-mono text-sm" style={{
+    overflowWrap: "anywhere"
+  }}>
+          {probabilities.map((probability, level) => `${level} × ${probability}`).join(" + ")} ≈ {score.toFixed(2)}
+        </div>
+        <div className="mt-3 font-semibold text-zinc-800 dark:text-zinc-200">Confidence:</div>
+        <p className="mt-1">TypeSafe computes this from how the probability is spread across the levels. All of it on one level gives 1.0; the more evenly it spreads, the lower the confidence.</p>
+      </details>
+    </section>;
+}
+
 export function TypesafeExample({example, display, title}) {
   const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
   function compressToEncodedURIComponent(input) {
@@ -239,27 +551,7 @@ Use a Score when the answer is a position on a spectrum you can describe in step
 
 A Score answer is a position along your levels in `score`, which can fall between two levels. The model also returns a probability for every level in `probabilities`, and a `confidence` value for the answer.
 
-Example Score questions:
-
-```
-"How severe is the bug being reported?"
-  → 0: Cosmetic; no impact to functionality
-  → 1: Broken or degraded feature, but workaround exists
-  → 2: Blocking issue; no workaround exists
-
-"How formal is this outfit based on the description"
-  → 0: gym clothes
-  → 1: casual
-  → 2: business casual
-  → 3: formal
-  → 4: black tie
-
-"How relevant is this candidate's experience to the job posting"
-  → 0: completely unrelated
-  → 1: adjacent field
-  → 2: some direct experience
-  → 3: deep, direct experience
-```
+<ScoreExplorer />
 
 The numbers in front of each step are positions, explained under [Levels](#levels).
 
@@ -269,7 +561,7 @@ The POST request body to the [TypeSafe API](/api) has the same three top-level f
 
 * `type`: Always `"score"`.
 * `instructions`: The question the model answers. What it's rating.
-* `criteria`: An ordered array of level descriptions, from the low end of the scale to the high end. Needs at least two levels and takes up to 10.
+* `criteria`: An ordered array of level descriptions, from the low end of the scale to the high end. Should have at least two levels; the API accepts up to 10.
 
 Below is a request where the state is a bug report and the question is how severe the bug is:
 
@@ -339,12 +631,12 @@ The response has one entry in `answers` per question, under the ids from the req
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "bug_severity": {
       "type": "score",
-      "score": 1.3,
-      "confidence": 0.54,
+      "score": 1.43,
+      "confidence": 0.35,
       "legend": {
         "0": "Cosmetic; no impact to functionality",
         "1": "Broken or degraded feature, but workaround exists",
@@ -352,8 +644,8 @@ The response has one entry in `answers` per question, under the ids from the req
       },
       "probabilities": {
         "0": 0.0,
-        "1": 0.7,
-        "2": 0.3
+        "1": 0.57,
+        "2": 0.43
       }
     }
   },
@@ -368,11 +660,11 @@ Each Score answer has five values:
 
 * `type`: The type of TypeSafe question.
 * `probabilities`: The probability of each level, keyed by level number as a string. The sum of all values is 1.
-* `score`: The position on the level number line, from 0 to the top level number, which is 2 here. It's each level number multiplied by its probability, added up: 0 x 0.0 + 1 x 0.70 + 2 x 0.30 = 1.30.
+* `score`: The position on the level number line, from 0 to the top level number, which is 2 here. It's each level number multiplied by its probability, added up: 0 x 0.0 + 1 x 0.57 + 2 x 0.43 = 1.43.
 * `legend`: Each level number mapped back to its description.
 * [`confidence`](/confidence): A number from 0 to 1 computed from how `probabilities` is spread. A single peak on one level means high confidence. Probability spread over several levels means low confidence.
 
-A score of 1.30 means mostly level 1 with some weight on level 2. That matches the report: the export is broken, and switching to Chrome is a workaround for most customers, but not for the ones who only use Safari. The model puts 0.70 on "workaround exists" and 0.30 on "no workaround", and confidence is 0.54 because it's split.
+A score of 1.43 means the model is split between levels 1 and 2, leaning to level 1. That matches the report: the export is broken, and switching to Chrome is a workaround for most customers, but not for the ones who only use Safari. The model puts 0.57 on "workaround exists" and 0.43 on "no workaround", and confidence is 0.35 because it's split.
 
 Using the Python SDK, `ScoreAnswer` has `score`, `confidence`, `probabilities`, and `legend` as typed fields. The SDK keys `probabilities` and `legend` by integer level rather than by string.
 
@@ -420,12 +712,12 @@ We can see how different bug reports change the score:
 
     <tr>
       <td>Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.</td>
-      <td>1.12</td><td>0.81</td><td>0.0</td><td>0.88</td><td>0.12</td>
+      <td>1.11</td><td>0.84</td><td>0.0</td><td>0.89</td><td>0.11</td>
     </tr>
 
     <tr>
       <td>The export button crashes the settings page in Safari. It works in Chrome, but a few of our customers only use Safari.</td>
-      <td>1.3</td><td>0.54</td><td>0.0</td><td>0.7</td><td>0.3</td>
+      <td>1.43</td><td>0.35</td><td>0.0</td><td>0.57</td><td>0.43</td>
     </tr>
 
     <tr>
@@ -454,7 +746,7 @@ Every level is evaluated separately. The model doesn't see a level's number or i
 ```
 instructions: "Rate severity from 0 to 2, where 2 is worst"
 criteria: ["0", "1", "2"]
-→ score 0.57, confidence 0.35, probabilities 0: 0.43, 1: 0.57, 2: 0.0
+→ score 0.55, confidence 0.33, probabilities 0: 0.45, 1: 0.55, 2: 0.0
 ```
 
 The same report with the three descriptive levels scores 0.0 at confidence 1.0. With numbers only, the model has nothing to match against and splits the probability between 0 and 1.
@@ -515,12 +807,12 @@ TypeSafe's response:
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "severity": {
       "type": "score",
       "score": 1.24,
-      "confidence": 0.63,
+      "confidence": 0.64,
       "legend": {
         "0": "Cosmetic; no impact to functionality",
         "1": "Broken or degraded feature, but workaround exists",
@@ -534,8 +826,8 @@ TypeSafe's response:
     },
     "frustration": {
       "type": "score",
-      "score": 1.45,
-      "confidence": 0.33,
+      "score": 1.28,
+      "confidence": 0.58,
       "legend": {
         "0": "Calm, just stating facts",
         "1": "Frustrated but civil",
@@ -543,8 +835,8 @@ TypeSafe's response:
       },
       "probabilities": {
         "0": 0.0,
-        "1": 0.55,
-        "2": 0.45
+        "1": 0.72,
+        "2": 0.28
       }
     },
     "report_quality": {
@@ -574,8 +866,8 @@ TypeSafe's response:
 
 Each question is answered on its own against the ticket and given a score:
 
-* `severity` is 1.24 at confidence 0.63. Same reading as the opening example: the export is broken and some have a workaround.
-* `frustration` is 1.45 at confidence 0.33. The wording is civil, but "third time" and "I'm done" shift the score toward the top level, so the model splits 0.55 and 0.45 between "frustrated but civil" and "very angry". For this ticket the two levels overlap, which explains the low confidence.
+* `severity` is 1.24 at confidence 0.64. Same reading as the opening example: the export is broken and some have a workaround.
+* `frustration` is 1.28 at confidence 0.58. The wording is civil, but "third time" and "I'm done" shift some of the score toward the top level, so the model splits 0.72 and 0.28 between "frustrated but civil" and "very angry". For this ticket the two levels overlap, which is why the confidence is moderate.
 * `report_quality` is 3.0 at confidence 1.0. The steps and browser version are both stated.
 
 The three scales have different lengths, so before combining them, normalize each score. A four-level scale returns 0 to 3 and a three-level scale returns 0 to 2, so a top score on one is bigger than a top score on the other. Divide each score by its top level number, `len(criteria) - 1`, to put every score on 0 to 1. Then the weights mean what they say: 0.6 on severity and 0.3 on frustration makes severity count twice as much.
@@ -636,7 +928,7 @@ def priority(ticket: str) -> float:
     return 0.6 * severity + 0.3 * frustration + 0.1 * report_quality
 ```
 
-For the example response above, the normalized scores are 0.62 for severity, 0.725 for frustration, and 1.0 for report quality. The priority is `0.6 × 0.62 + 0.3 × 0.725 + 0.1 × 1.0 = 0.6895`, which rounds to `0.69`.
+For the example response above, the normalized scores are 0.62 for severity, 0.64 for frustration, and 1.0 for report quality. The priority is `0.6 × 0.62 + 0.3 × 0.64 + 0.1 × 1.0 = 0.664`, which rounds to `0.66`.
 
 The weights live in your code, so you can see exactly how the number is made and change it when the ranking doesn't match what your team would do. If you later need more Score questions, add them to `TRIAGE_QUESTIONS`. The request count stays at one. This technique of breaking a complex judgment into separate Scores and then combining them with weights in your code is called the [Composite scoring](/patterns/composite-scoring) pattern.
 
@@ -678,12 +970,12 @@ The response:
 
 ```json theme={null}
 {
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "answers": {
     "bug_severity": {
       "type": "score",
-      "score": 1.06,
-      "confidence": 0.91,
+      "score": 1.09,
+      "confidence": 0.87,
       "legend": {
         "0": {
           "what": "Cosmetic; no impact to functionality",
@@ -708,8 +1000,8 @@ The response:
       },
       "probabilities": {
         "0": 0.0,
-        "1": 0.94,
-        "2": 0.06
+        "1": 0.91,
+        "2": 0.09
       }
     }
   },
@@ -720,14 +1012,14 @@ The response:
 }
 ```
 
-With plain strings this ticket scored 1.12 with a confidence of 0.81. With examples it scores 1.06 at 0.91 confidence.
+With plain strings this ticket scored 1.11 with a confidence of 0.84. With examples it scores 1.09 at 0.87 confidence, a small shift because the plain strings already placed it well. The effect is larger when the plain strings leave the model split, as the next table shows.
 
 Examples steer the model, and they only help when they look like your real inputs. The table below is the opening Safari report with three different sets of level objects:
 
 | Level description                                                                                            | `score` | `confidence` |
 | ------------------------------------------------------------------------------------------------------------ | ------- | ------------ |
-| plain string: no object with examples                                                                        | 1.30    | 0.54         |
-| Added examples array with useful example: "export fails in one browser but works in another"                 | 1.07    | 0.90         |
-| Added examples array with example unrelated to browsers: "search fails, but browsing categories still works" | 1.28    | 0.57         |
+| plain string: no object with examples                                                                        | 1.43    | 0.35         |
+| Added examples array with useful example: "export fails in one browser but works in another"                 | 1.03    | 0.96         |
+| Added examples array with example unrelated to browsers: "search fails, but browsing categories still works" | 1.43    | 0.35         |
 
-In this comparison, the matching example concentrates more probability on one level. The unrelated example changes the result only slightly compared with plain strings. Higher confidence does not establish which answer is correct. Choose examples with known expected levels, then test the revised descriptions on separate inputs before keeping them.
+In this comparison, the matching example concentrates almost all the probability on one level. The unrelated example returns the same result as plain strings. Higher confidence does not establish which answer is correct. Choose examples with known expected levels, then test the revised descriptions on separate inputs before keeping them.

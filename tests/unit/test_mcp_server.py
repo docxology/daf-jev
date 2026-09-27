@@ -222,7 +222,7 @@ def test_jev_ask_accepts_dict_state_and_native_question_dicts(mcp_stub_env) -> N
 
 
 def test_jev_ask_requires_api_key(no_key_env) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"No API key found"):
         _run(ms.jev_ask("state", {"billing": "noul:Is this about billing?"}))
 
 
@@ -339,7 +339,7 @@ def test_jev_composite_score_reweighted_math() -> None:
 
 
 def test_jev_composite_score_requires_two_levels() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"at least 2 levels"):
         _run(ms.jev_composite_score({"0": 1.0}))
 
 def test_jev_confidence_gate_dispatch() -> None:
@@ -530,14 +530,11 @@ def test_docs_snapshot_resource_body_exposes_manifest_fields() -> None:
     assert body["page_count"] == manifest["page_count"]
 
 
-def test_docs_snapshot_resource_error_shape_when_manifest_missing(
-    monkeypatch, tmp_path
-) -> None:
-    # Input relocation, not behavior patching: point the resource at a
-    # manifest path that does not exist so its error branch runs.
-    monkeypatch.setattr(ms, "DEFAULT_MANIFEST", tmp_path / "absent.json")
-    server = ms.build_server()
-    body = _run(_resource_body(server, SNAPSHOT_RESOURCE))
+def test_docs_snapshot_error_shape_when_manifest_missing(tmp_path) -> None:
+    # Input relocation via the parameterized seam, not patching: point the
+    # summary builder at a manifest path that does not exist so its error
+    # branch runs.
+    body = ms._snapshot_summary(tmp_path / "absent.json")
     assert set(body) == {"error", "message", "ok"}
     assert body["ok"] is False
     assert body["error"]
