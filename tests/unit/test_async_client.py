@@ -400,7 +400,7 @@ def test_transport_protocol_satisfied_by_async_httpx_transport(stub) -> None:
         # A closed httpx.AsyncClient refuses further requests.
         await transport.post_json("/v1/systemone", {}, {})
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=r"client has been closed"):
         asyncio.run(main())
     assert len(stub.hits) == 1
 
@@ -451,5 +451,5 @@ def test_missing_key_raises_with_empty_env_mapping(tmp_path, monkeypatch) -> Non
     monkeypatch.delenv("JEV_API_KEY", raising=False)
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     monkeypatch.chdir(tmp_path)  # isolated cwd: no .env file to fall back to
-    with pytest.raises(daf_jev.TypeSafeError):
+    with pytest.raises(daf_jev.TypeSafeError, match=r"No API key found"):
         AsyncJevClient(env={})

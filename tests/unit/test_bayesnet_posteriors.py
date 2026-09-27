@@ -567,15 +567,15 @@ def test_missing_files_propagate_filenotfound(tmp_path: Path) -> None:
     FileNotFoundError (only JSONDecodeError is translated)."""
     sidecar_path = _write_json(tmp_path, "a.json", _valid_a_document())
     spec_path = _write_json(tmp_path, "spec.json", _graphspec_document())
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
         load_posteriors(tmp_path / "missing.json")
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
         load_posteriors(
             tmp_path / "missing.json", graphspec=tmp_path / "also_missing.json"
         )
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"no_spec\.json"):
         load_posteriors(sidecar_path, graphspec=tmp_path / "no_spec.json")
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
         load_posteriors(tmp_path / "missing.json", graphspec=spec_path)
 
 
@@ -1014,7 +1014,7 @@ def test_mcp_missing_file_propagates_filenotfound(tmp_path: Path) -> None:
     """Added: FileNotFoundError is not caught by the tool — it raises
     (mirrors jev_docs_verify)."""
     ms = _mcp_server_module()
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
         _run(ms.jev_posteriors_load(str(tmp_path / "missing.json")))
 
 

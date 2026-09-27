@@ -222,7 +222,7 @@ def test_jev_ask_accepts_dict_state_and_native_question_dicts(mcp_stub_env) -> N
 
 
 def test_jev_ask_requires_api_key(no_key_env) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"No API key found"):
         _run(ms.jev_ask("state", {"billing": "noul:Is this about billing?"}))
 
 
@@ -339,7 +339,7 @@ def test_jev_composite_score_reweighted_math() -> None:
 
 
 def test_jev_composite_score_requires_two_levels() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"at least 2 levels"):
         _run(ms.jev_composite_score({"0": 1.0}))
 
 def test_jev_confidence_gate_dispatch() -> None:

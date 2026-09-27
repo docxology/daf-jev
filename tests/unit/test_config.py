@@ -128,7 +128,7 @@ def test_load_settings_defaults_and_overrides(tmp_path: Path) -> None:
 
 def test_settings_are_frozen() -> None:
     settings = load_settings({"JEV_API_KEY": "k1"})
-    with pytest.raises(dataclasses.FrozenInstanceError):
+    with pytest.raises(dataclasses.FrozenInstanceError, match=r"cannot assign to field"):
         settings.api_key = "other"  # type: ignore[misc]
 
 

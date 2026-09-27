@@ -43,9 +43,9 @@ def test_score_builder() -> None:
 
 
 def test_builders_reject_invalid_criteria() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"requires at least one option"):
         choice("pick", {})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"requires at least 2 levels"):
         score("rate", ["only-one-level"])
 
 
