@@ -474,6 +474,16 @@ wire path is silently coerced.
   derive from the configured widths, canonical 5/10/20 fallback),
   pyproject metadata, AST-derived code stats, pytest collection +
   coverage, benchmark JSONs, and provenance — no hardcoded results.
+  Coverage freshness: ``TEST_COVERAGE_PCT`` re-reports an existing
+  ``.coverage`` only when it is not older than the newest source/test
+  ``.py`` mtime (recursive, ``__pycache__`` skipped); stale data raises
+  ``FileNotFoundError`` naming both timestamps and the fix
+  (``uv run pytest tests/unit --cov=src``) in strict mode, and warns on
+  stderr with an ``"N/A"`` token in draft mode. Provenance:
+  ``GENERATION_TIMESTAMP`` honors ``SOURCE_DATE_EPOCH`` first;
+  otherwise it derives from the repo's newest commit date (``git log -1
+  --format=%cI``, UTC-normalized) so regens at the same HEAD are
+  byte-stable, with wall-clock UTC only as the git-unavailable fallback.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
   `graphical_elicitation` (+ `graphical_viz` for the rendered artifacts):
   CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
