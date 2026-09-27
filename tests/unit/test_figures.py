@@ -235,7 +235,7 @@ def test_generate_all_stops_at_first_missing_benchmark(tmp_path: Path) -> None:
     empty_root = tmp_path / "empty"
     empty_root.mkdir()
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match=r"Missing benchmark data"):
         generate_all(out_dir, project_root=empty_root)
 
     for filename in EXPECTED_PNGS.values():

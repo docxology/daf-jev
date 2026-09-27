@@ -90,11 +90,11 @@ def test_chi2_sf_strictly_decreasing_in_x() -> None:
     assert all(a > b for a, b in pairwise(values))
 
 def test_chi2_sf_rejects_bad_arguments() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"x must be non-negative"):
         chi2_sf(-1.0, 2)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"df must be positive"):
         chi2_sf(1.0, 0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"df must be positive"):
         chi2_sf(1.0, -3)
 
 
@@ -119,13 +119,13 @@ def test_uniform_chi2_zero_counts_keep_df_minus_one() -> None:
 
 
 def test_uniform_chi2_rejects_bad_counts() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"counts must not be empty"):
         uniform_chi2({})  # empty
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"not all be zero"):
         uniform_chi2({"a": 0, "b": 0})  # all zero
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"is negative"):
         uniform_chi2({"a": 6, "b": -1})  # negative count
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"span at least 2 outcomes"):
         uniform_chi2({"a": 5})  # fewer than two outcomes
 
 
@@ -151,9 +151,9 @@ def test_uniform_deviation_single_outcome_is_perfectly_uniform() -> None:
 
 
 def test_uniform_deviation_rejects_unnormalized_and_empty() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"probs must not be empty"):
         uniform_deviation({})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must sum to 1"):
         uniform_deviation({"a": 0.6, "b": 0.3})  # sums to 0.9
 
 
@@ -174,9 +174,9 @@ def test_runs_test_z_none_for_degenerate_inputs() -> None:
 
 
 def test_runs_test_z_rejects_nonbinary() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"bits must be 0/1"):
         runs_test_z([1, 2, 0])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"bits must be 0/1"):
         runs_test_z([0.5, 0, 1])
 
 
@@ -193,7 +193,7 @@ def test_max_streak_edges() -> None:
 
 
 def test_max_streak_rejects_nonbinary() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"bits must be 0/1"):
         max_streak([1, 3, 1])
 
 
@@ -218,11 +218,11 @@ def test_position_slope_averages_over_labels() -> None:
 
 
 def test_position_slope_rejects_degenerate_geometry() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"observations must not be empty"):
         position_slope([])  # empty
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"span at least 2 distinct positions"):
         position_slope([("L", 0, 0.1), ("L", 0, 0.2)])  # one distinct position
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"x-variance is zero"):
         # M is only ever observed at position 0: no per-label x-variance.
         position_slope([("L", 0, 0.1), ("L", 1, 0.2), ("M", 0, 0.5)])
 
@@ -257,7 +257,7 @@ def test_fixture_constants_match_pinned_texts() -> None:
 
 
 def test_fixture_rejects_unknown_kind() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"kind must be"):
         JaggednessFixture(
             name="x",
             state="s",
@@ -291,13 +291,13 @@ def test_package_exports_jaggedness_surface() -> None:
 def test_run_battery_rejects_bad_configuration(stub) -> None:
     client = _battery_client(stub)
     try:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"repeats must be at least 1"):
             run_battery(client, COIN, repeats=0)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"concurrent must be at least 1"):
             run_battery(client, COIN, concurrent=0)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"fixtures must not be empty"):
             run_battery(client, [])
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"names must be unique"):
             run_battery(client, [COIN, COIN])  # duplicate fixture names
         assert stub.hits == []  # validation happens before any ask
     finally:

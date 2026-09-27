@@ -38,16 +38,16 @@ def test_bucket_index_single_bucket() -> None:
 
 
 def test_bucket_index_rejects_out_of_range_confidence() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"outside \[0, 1\]"):
         bucket_index(-0.01, 10)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"outside \[0, 1\]"):
         bucket_index(1.01, 10)
 
 
 def test_bucket_index_rejects_invalid_bucket_count() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"at least 1"):
         bucket_index(0.5, 0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"at least 1"):
         bucket_index(0.5, -3)
 
 
@@ -109,7 +109,7 @@ def test_expected_calibration_error_zero_when_perfectly_calibrated() -> None:
 
 
 def test_expected_calibration_error_rejects_empty_pairs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must not be empty"):
         expected_calibration_error([], n_buckets=2)
 
 
@@ -126,7 +126,7 @@ def test_brier_score_bounds() -> None:
 
 
 def test_brier_score_rejects_empty_pairs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must not be empty"):
         brier_score([])
 
 

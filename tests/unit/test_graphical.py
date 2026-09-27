@@ -520,7 +520,7 @@ def test_topological_order_rejects_two_cycle() -> None:
         ),
         cpts={},
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"contains a cycle"):
         net.topological_order()
 
 
@@ -539,7 +539,7 @@ def test_topological_order_rejects_three_cycle() -> None:
         ),
         cpts={},
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"contains a cycle"):
         net.topological_order()
 
 

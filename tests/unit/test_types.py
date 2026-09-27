@@ -138,11 +138,11 @@ def test_answer_from_wire_each_type() -> None:
 
 
 def test_answer_from_wire_rejects_unknown_type_and_missing_keys() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"unknown answer type"):
         answer_from_wire({"type": "vibe", "level": 9000})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required keys: \['noul'\]"):
         answer_from_wire({"type": "noul"})  # missing "noul"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required keys: \['probabilities', 'confidence'\]"):
         answer_from_wire({"type": "choice", "choice": "b"})  # missing probabilities
 
 
@@ -165,26 +165,26 @@ def test_parse_response_request_id_defaults_to_none() -> None:
 def test_parse_response_strict_unknown_answer_type() -> None:
     payload = _answers_payload()
     payload["answers"]["weird"] = {"type": "vibe", "level": 1}
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"unknown answer type"):
         parse_response(payload, None)
 
 
 def test_parse_response_strict_missing_top_level_keys() -> None:
     payload = _answers_payload()
     del payload["answers"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required key: 'answers'"):
         parse_response(payload, None)
 
     payload = _answers_payload()
     del payload["usage"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required key: 'usage'"):
         parse_response(payload, None)
 
 
 def test_parse_response_strict_missing_answer_key() -> None:
     payload = _answers_payload()
     del payload["answers"]["billing"]["noul"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required keys: \['noul'\]"):
         parse_response(payload, None)
 
 
@@ -212,36 +212,36 @@ def test_score_to_wire_rejects_non_string_levels() -> None:
 
 
 def test_answer_from_wire_rejects_non_numeric_fields() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"noul must be a number"):
         answer_from_wire({"type": "noul", "noul": "high"})
 
 
 def test_answer_from_wire_rejects_non_dict_payload() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"answer must be a dict"):
         answer_from_wire(["type", "noul"])
 
 
 def test_parse_response_rejects_non_dict_payload() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"response payload must be a dict"):
         parse_response(["model", "answers", "usage"], None)
 
 
 def test_parse_response_rejects_non_dict_answers_and_usage() -> None:
     payload = _answers_payload()
     payload["answers"] = ["not", "a", "dict"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"answers must be a dict"):
         parse_response(payload, None)
 
     payload = _answers_payload()
     payload["usage"] = "5 tokens"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"usage must be a dict"):
         parse_response(payload, None)
 
 
 def test_parse_response_rejects_missing_model_key() -> None:
     payload = _answers_payload()
     del payload["model"]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"missing required key: 'model'"):
         parse_response(payload, None)
 
 

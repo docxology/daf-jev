@@ -68,12 +68,12 @@ def test_passthrough_return_value_and_kwargs() -> None:
 
 def test_invalid_failure_threshold_raises_value_error() -> None:
     for bad in (0, -1):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"failure_threshold must be at least 1"):
             CircuitBreaker(failure_threshold=bad)
 
 
 def test_invalid_cooldown_raises_value_error() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"cooldown_seconds must not be negative"):
         CircuitBreaker(cooldown_seconds=-0.1)
     # Boundary values are legal.
     CircuitBreaker(failure_threshold=1, cooldown_seconds=0.0)
@@ -450,12 +450,12 @@ def test_circuit_breaker_opens_after_5xx_run(stub) -> None:
     client = _make_client(stub, retry=RetryPolicy(max_attempts=1, jitter=0.0))
 
     for _ in range(2):
-        with pytest.raises(InternalServerError):
+        with pytest.raises(InternalServerError, match=r"HTTP 500"):
             breaker.call(client.ask, "state", _questions())
     assert breaker.state is CircuitState.OPEN
 
     # The circuit now fails fast without touching the server.
-    with pytest.raises(CircuitOpenError):
+    with pytest.raises(CircuitOpenError, match=r"circuit is open"):
         breaker.call(client.ask, "state", _questions())
     assert len(stub.hits) == 2  # nothing new was requested
     client.close()
@@ -464,7 +464,7 @@ def test_circuit_breaker_opens_after_5xx_run(stub) -> None:
     breaker2 = _breaker(FakeClock(), threshold=1, cooldown=0.0)
     client2 = _make_client(stub, retry=RetryPolicy(max_attempts=1, jitter=0.0))
     stub.enqueue(status=500, body={"error": {"message": "internal"}})
-    with pytest.raises(InternalServerError):
+    with pytest.raises(InternalServerError, match=r"HTTP 500"):
         breaker2.call(client2.ask, "state", _questions())
     assert breaker2.state is CircuitState.OPEN
     stub.enqueue(body=_answers_body())

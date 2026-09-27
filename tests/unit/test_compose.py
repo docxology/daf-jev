@@ -67,30 +67,30 @@ def test_composite_score_is_scale_invariant() -> None:
 
 def test_composite_score_weight_length_mismatch() -> None:
     answer = _score_answer({"0": 0.5, "1": 0.5})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"does not match level count"):
         composite_score(answer, weights=[1.0, 2.0, 3.0])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"does not match level count"):
         composite_score(answer, weights=[1.0])
 
 
 def test_composite_score_rejects_zero_total_weight() -> None:
     answer = _score_answer({"0": 0.5, "1": 0.5})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must sum to a positive value"):
         composite_score(answer, weights=[0.0, 0.0])
 
 
 def test_composite_score_rejects_weights_with_no_probable_mass() -> None:
     # All probability sits on level 0, whose weight is 0: no mass to normalize.
     answer = _score_answer({"0": 1.0, "1": 0.0})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"no mass to probable levels"):
         composite_score(answer, weights=[0, 5])
 
 
 def test_composite_score_rejects_non_finite_weights() -> None:
     answer = _score_answer({"0": 0.5, "1": 0.5})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"weights must all be finite"):
         composite_score(answer, weights=[1.0, float("nan")])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"weights must all be finite"):
         composite_score(answer, weights=[1.0, float("inf")])
 
 
@@ -105,9 +105,9 @@ def test_composite_score_allows_negative_weights_staying_in_range() -> None:
 
 def test_composite_score_requires_probabilities() -> None:
     answer = ScoreAnswer(score=1.0, legend={}, probabilities={}, confidence=0.9)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"carries no probabilities"):
         composite_score(answer)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"carries no probabilities"):
         composite_score(answer, weights=[1.0, 2.0, 3.0])
 
 
@@ -215,7 +215,7 @@ def test_confidence_gate_duck_typed_answer_falls_back_to_str() -> None:
 
 
 def test_confidence_gate_rejects_noul_answers() -> None:
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match=r"carries no confidence"):
         confidence_gate(NoulAnswer(0.9), threshold=0.5)
 
 
@@ -288,19 +288,19 @@ def test_route_dispatches_to_matching_handler() -> None:
 
 
 def test_route_rejects_answers_without_choice() -> None:
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match=r"has no 'choice'"):
         route(_score_answer({"0": 1.0}), {"calm": lambda: "calm-path"})
 
 
 def test_route_low_confidence_without_fallback_raises() -> None:
     answer = _choice_answer("calm", 0.1)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"not at least min_confidence"):
         route(answer, {"calm": lambda: "calm-path"}, min_confidence=0.5)
 
 
 def test_route_unmapped_choice_without_fallback_raises() -> None:
     answer = _choice_answer("sarcastic", 0.99)
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match=r"no handler registered"):
         route(answer, {"calm": lambda: "calm-path"})
 
 
@@ -327,7 +327,7 @@ def test_route_nan_confidence_fails_closed() -> None:
         route(answer, handlers, min_confidence=0.5, fallback=lambda: "fallback-path")
         == "fallback-path"
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"not at least min_confidence"):
         route(answer, handlers, min_confidence=0.5)
 
 
@@ -387,19 +387,19 @@ def test_tiered_gate_custom_thresholds_and_labels() -> None:
 
 
 def test_tiered_gate_rejects_inverted_thresholds() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must not exceed high"):
         tiered_gate(_choice_answer("calm", 0.7), high=0.6, low=0.9)
 
 
 def test_tiered_gate_rejects_empty_labels() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"labels must be non-empty"):
         tiered_gate(_choice_answer("calm", 0.7), high_label="")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"labels must be non-empty"):
         tiered_gate(_choice_answer("calm", 0.7), low_label="")
 
 
 def test_tiered_gate_rejects_answers_without_confidence() -> None:
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match=r"carries no confidence"):
         tiered_gate(NoulAnswer(0.9))
 
 

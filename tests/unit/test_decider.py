@@ -219,9 +219,9 @@ def test_confidence_gate_missing_answer_and_validation() -> None:
     assert gate({"other": answer}) == "missing answer 'route'"
     assert gate({"route": NoulAnswer(noul=0.8)}) is None
     assert gate({"route": answer}) is None
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"threshold must be in \[0, 1\], got 1\.5"):
         ConfidenceGate("route", 1.5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"threshold must be in \[0, 1\], got -0\.1"):
         ConfidenceGate("route", -0.1)
 
 
@@ -425,15 +425,15 @@ def test_usage_snapshot_passthrough(stub) -> None:
 
 
 def test_construction_validation(stub) -> None:
-    with pytest.raises(ValueError):  # client and client_factory together
+    with pytest.raises(ValueError, match=r"mutually exclusive"):  # client and client_factory together
         _decider(stub, client_factory=lambda: None)
-    with pytest.raises(ValueError):  # cache without cache_key
+    with pytest.raises(ValueError, match=r"cache and cache_key must be given together"):  # cache without cache_key
         _decider(stub, cache={})
-    with pytest.raises(ValueError):  # cache_key without cache
+    with pytest.raises(ValueError, match=r"cache and cache_key must be given together"):  # cache_key without cache
         _decider(stub, cache_key=lambda state: state)
-    with pytest.raises(ValueError):  # no thresholds
+    with pytest.raises(ValueError, match=r"Budget requires at least one threshold"):  # no thresholds
         Budget()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"max_consecutive_failures must be at least 1"):
         _decider(stub, max_consecutive_failures=0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"timeout must be positive"):
         _decider(stub, timeout=0.0)

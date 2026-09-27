@@ -28,19 +28,19 @@ CARDS = [
 
 
 def test_empty_cards_raise() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"nonempty sequence"):
         pick_model([])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"nonempty sequence"):
         pick_model([], contains="jev")
 
 
 def test_contains_no_match_raises() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"no model name contains"):
         pick_model(CARDS, contains="opus")
 
 
 def test_unknown_prefer_raises() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"unknown prefer"):
         pick_model(CARDS, prefer="cheapest")
 
 
