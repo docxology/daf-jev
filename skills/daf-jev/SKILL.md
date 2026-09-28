@@ -161,6 +161,20 @@ never be committed, printed, or read by tests.
   modal-state match — plus per-variable soft multiclass Brier scores);
   `row_sum_deviations(sidecar)` reports per-variable `|sum(row) - 1|`.
   Surfaced as `daf-jev posteriors-load` and MCP `jev_posteriors_load`.
+- **Re-ask policy** (`daf_jev.reask`) — max-entropy re-ask policy over
+  posterior sidecars (pure compute, no I/O):
+  `entropy_bits(row)` (Shannon entropy in BITS; empty rows 0.0;
+  negative/non-finite probabilities raise; drifting rows are never
+  renormalized — the deviation is raised against the
+  `ROW_SUM_TOLERANCE` budget), `reask_plan(sidecar, asked=...) ->
+  ReAskPlan` / `next_question(sidecar, asked=...)` (next variable =
+  max entropy among not-yet-asked posterior rows, ties by sidecar
+  insertion order, `None` when exhausted; `dafjev.bayesnet-posteriors/1`
+  sidecars only — `gnn.marginals/1` is rejected with both format
+  strings named since it carries no evidence to replay). The plan
+  carries the sidecar's `evidence` verbatim; the Jev-ask wiring lives
+  in `examples/reask_policy.py`. Surfaced as `daf-jev
+  posteriors-reask` and MCP `jev_reask_plan`.
 
 - **Questions** (`daf_jev.questions`) — `question_from_mapping(value, *,
   context="question")` builds a `NoulQuestion` / `ChoiceQuestion` /
@@ -192,7 +206,8 @@ never be committed, printed, or read by tests.
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
 decider, decider resilience, async evaluation, calibration walkthrough,
-retry policies, provider dispatch, Asia Bayes net); each skips cleanly
+retry policies, provider dispatch, Asia Bayes net, re-ask policy); each
+skips cleanly
 without a key.
 
 ## Jev to RxInfer.jl pipeline (quick reference)

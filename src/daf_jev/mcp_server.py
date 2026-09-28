@@ -3,9 +3,10 @@
 Exposes the TypeSafe Jev (System One) client and decision toolkit as MCP
 tools over the official SDK (:mod:`mcp.server.fastmcp`). Every tool
 returns a JSON-safe dict/list/float/str; every tool but
-``jev_posteriors_load`` (sidecar ingest, no API call) takes an optional
-``provider`` argument (default ``jev``) validated against
-:mod:`daf_jev.providers`; keys, base URL and default model resolve once
+``jev_posteriors_load`` (sidecar ingest, no API call) and
+``jev_reask_plan`` (posteriors sidecar re-ask plan, no API call) takes
+an optional ``provider`` argument (default ``jev``) validated against
+``daf_jev.providers``; keys, base URL and default model resolve once
 per call via :func:`daf_jev.config.load_settings` for that provider (a
 missing API key raises ``ValueError``, which MCP surfaces as a tool
 error). Client,
@@ -32,6 +33,7 @@ from daf_jev import config
 from daf_jev._types import JSONContent
 from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
+from daf_jev.reask import reask_plan
 
 __all__ = [
     "build_server",
@@ -42,6 +44,7 @@ __all__ = [
     "jev_evaluate",
     "jev_models",
     "jev_posteriors_load",
+    "jev_reask_plan",
     "jev_tiered_gate",
     "main",
 ]
@@ -407,6 +410,34 @@ async def jev_posteriors_load(
         "max_row_sum_deviation": max(deviations, default=0.0),
     }
 
+async def jev_reask_plan(
+    path: str, graphspec_path: str | None = None, asked: list[str] | None = None
+) -> dict:
+    """Build the max-entropy re-ask plan from a posteriors sidecar.
+    ``path`` selects the sidecar JSON file; ``graphspec_path`` optionally
+    supplies a ``dafjev.bayesnet/1`` GraphSpec document to cross-check
+    the sidecar's variables and states against; ``asked`` lists
+    variables already asked (excluded from the plan).
+
+    Same policy as the ``daf-jev posteriors-reask`` CLI command
+    (:mod:`daf_jev.reask`): next variable = max entropy among
+    not-yet-asked posterior rows, ties broken by the sidecar's
+    insertion order. Only ``dafjev.bayesnet-posteriors/1`` sidecars are
+    accepted. On success returns ``{next_question, entropy, queue,
+    evidence}``; when the document fails validation, returns
+    ``{error, message, ok: false}`` instead.
+    """
+    try:
+        sidecar = load_posteriors(path, graphspec=graphspec_path)
+        plan = reask_plan(sidecar, asked=asked or ())
+    except ValueError as exc:
+        return {"error": type(exc).__name__, "message": str(exc), "ok": False}
+    return {
+        "next_question": plan.next_question,
+        "entropy": plan.entropy,
+        "queue": [list(entry) for entry in plan.queue],
+        "evidence": dict(plan.evidence),
+    }
 
 # ------------------------------------------------------------- server setup
 
@@ -448,6 +479,7 @@ def build_server() -> FastMCP:
     mcp.tool()(jev_tiered_gate)
     mcp.tool()(jev_docs_verify)
     mcp.tool()(jev_posteriors_load)
+    mcp.tool()(jev_reask_plan)
     mcp.resource("jev://docs/snapshot")(_docs_snapshot)
     return mcp
 

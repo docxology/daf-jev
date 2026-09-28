@@ -72,6 +72,7 @@ from daf_jev.providers import (
     list_providers,
     register_provider,
 )
+from daf_jev.reask import ReAskPlan, entropy_bits, next_question, reask_plan
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
 __version__ = "0.6.0"
@@ -111,6 +112,7 @@ __all__ = [
     "Question",
     "QuestionSet",
     "RateLimitError",
+    "ReAskPlan",
     "RetryPolicy",
     "ScoreAnswer",
     "ScoreQuestion",
@@ -129,11 +131,13 @@ __all__ = [
     "confidence_gate",
     "decompose_single_parent",
     "elicit_cpts",
+    "entropy_bits",
     "get_provider",
     "list_providers",
     "load_posteriors",
     "load_settings",
     "max_streak",
+    "next_question",
     "noul",
     "noul_choice_delta",
     "open_async_client",
@@ -143,6 +147,7 @@ __all__ = [
     "pick_model",
     "position_slope",
     "propose_structure",
+    "reask_plan",
     "register_provider",
     "resolve_retry",
     "resolve_timeout",

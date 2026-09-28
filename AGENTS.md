@@ -88,18 +88,23 @@ restate them here; there is no `../AGENTS.md` in this location.
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
     (`--transport stdio` — the only choice), `posteriors-load` (FILE +
     optional `--graphspec`; validates a `dafjev.bayesnet-posteriors/1` or
-    `gnn.marginals/1` sidecar, keyless), `providers` (registry listing;
+    `gnn.marginals/1` sidecar, keyless), `posteriors-reask` (FILE +
+    optional `--graphspec` + repeatable `--asked VAR`; prints the
+    max-entropy re-ask plan JSON, `dafjev.bayesnet-posteriors/1` sidecars
+    only, keyless), `providers` (registry listing;
     global `--provider` flag); JSON to stdout, exit 0/1/2.
   - `mcp_server.py` — FastMCP server (`build_server` / `main`): tools
     `jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
     `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`,
-    `jev_posteriors_load` + the `jev://docs/snapshot` resource; stdio
-    transport only; `jev_evaluate` / `jev_models` / `jev_posteriors_load`
-    are async; `jev_composite_score` validates finite non-negative
-    probabilities (`ValueError`); imports `mcp` at module import
-    (optional `mcp` extra — never import from core modules); every tool
-    but `jev_posteriors_load` (sidecar ingest, no API call) takes an
-    optional `provider` argument (default `jev`).
+    `jev_posteriors_load`, `jev_reask_plan` + the `jev://docs/snapshot`
+    resource; stdio transport only; `jev_evaluate` / `jev_models` /
+    `jev_posteriors_load` / `jev_reask_plan` are async;
+    `jev_composite_score` validates finite non-negative probabilities
+    (`ValueError`); imports `mcp` at module import (optional `mcp` extra
+    — never import from core modules); every tool but
+    `jev_posteriors_load` (sidecar ingest, no API call) and
+    `jev_reask_plan` (posteriors sidecar re-ask plan, no API call) takes
+    an optional `provider` argument (default `jev`).
   - `questions.py` — shared native question-mapping builder (no I/O):
     `question_from_mapping(value, *, context="question")` builds
     `NoulQuestion` / `ChoiceQuestion` / `ScoreQuestion` from a
@@ -175,13 +180,28 @@ restate them here; there is no `../AGENTS.md` in this location.
     Brier scores); `row_sum_deviations(sidecar)`. Exported at package
     root; surfaced as `daf-jev posteriors-load` and MCP
     `jev_posteriors_load`.
+  - `reask.py` — max-entropy re-ask policy over posterior sidecars (pure
+    compute, no I/O): `entropy_bits` (Shannon entropy in BITS/log2;
+    negative or non-finite probabilities raise; rows drifting beyond the
+    `ROW_SUM_TOLERANCE` budget raise with the deviation in the message
+    and are never renormalized), `reask_plan` / `next_question`
+    (max-entropy not-yet-asked variable over a
+    `dafjev.bayesnet-posteriors/1` sidecar's posterior rows, ties by
+    sidecar insertion order, `None` when exhausted; variant-B
+    `gnn.marginals/1` sidecars rejected with both format strings named —
+    no evidence to replay). The `ReAskPlan` frozen dataclass carries the
+    sidecar's `evidence` verbatim; it never constructs Jev calls — the
+    example layer (`examples/reask_policy.py`) wires the plan into the
+    ask. Exported at package root; surfaced as `daf-jev
+    posteriors-reask` and MCP `jev_reask_plan`.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
   manuscript_variables, calibration, and mcp_server modules, plus
   test_graphical.py, test_graphical_elicitation.py,
   test_graphical_viz.py, test_graphical_methods.py,
-  test_graphical_animation.py, and test_bayesnet_posteriors.py),
+  test_graphical_animation.py, test_bayesnet_posteriors.py, and
+  test_reask.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).
@@ -216,11 +236,12 @@ restate them here; there is no `../AGENTS.md` in this location.
   `network.png`, `posterior_trajectory.png`, `mermaid.txt`, and
   `receipts.json` (per-run provenance: provider/model, proposed edges,
   elicited CPTs, posterior trajectory); keyless SKIP.
-- `examples/` — twelve runnable walkthroughs (`quickstart.py`,
+- `examples/` — thirteen runnable walkthroughs (`quickstart.py`,
   `triage_router.py`, `composite_scoring.py`, `evaluate_corpus.py`,
   `gated_fallback.py`, `decider_loop.py`, `providers_example.py`,
   `asia_bayes.py`, `decider_resilience.py`, `evaluate_async.py`,
-  `calibration_walkthrough.py`, `retry_policies.py`) + `README.md`; each
+  `calibration_walkthrough.py`, `retry_policies.py`, `reask_policy.py`) +
+  `README.md`; each
   prints `SKIP: JEV_API_KEY not set`
   and exits 0 without a key (see invariants); `providers_example.py` makes
   no network call even with a key (injected transport); `asia_bayes.py`
