@@ -46,6 +46,7 @@ from typing import Any
 
 from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
+from daf_jev.reask import reask_plan
 
 __all__ = ["main", "parse_question_spec"]
 
@@ -511,6 +512,24 @@ def _cmd_posteriors_load(args: argparse.Namespace) -> int:
     )
     return 0
 
+def _cmd_posteriors_reask(args: argparse.Namespace) -> int:
+    try:
+        sidecar = load_posteriors(args.file, graphspec=args.graphspec)
+        plan = reask_plan(sidecar, asked=args.asked or ())
+    except ValueError as exc:
+        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        return 1
+    _emit(
+        {
+            "next_question": plan.next_question,
+            "entropy": plan.entropy,
+            "queue": [list(entry) for entry in plan.queue],
+            "evidence": dict(plan.evidence),
+        },
+        args.pretty,
+    )
+    return 0
+
 
 def _cmd_serve(args: argparse.Namespace) -> int:
     try:
@@ -693,6 +712,30 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_common(p_posteriors, base_url=False)
     p_posteriors.set_defaults(func=_cmd_posteriors_load)
+    p_reask = sub.add_parser(
+        "posteriors-reask",
+        help="max-entropy re-ask plan from a posteriors sidecar",
+    )
+    p_reask.add_argument(
+        "file",
+        metavar="FILE",
+        help="path to a dafjev.bayesnet-posteriors/1 document",
+    )
+    p_reask.add_argument(
+        "--graphspec",
+        default=None,
+        metavar="FILE",
+        help="optional dafjev.bayesnet/1 GraphSpec to cross-check against",
+    )
+    p_reask.add_argument(
+        "--asked",
+        action="append",
+        default=None,
+        metavar="VAR",
+        help="variable already asked (repeatable); excluded from the plan",
+    )
+    add_common(p_reask, base_url=False)
+    p_reask.set_defaults(func=_cmd_posteriors_reask)
 
     return parser
 

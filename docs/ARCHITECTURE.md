@@ -369,6 +369,16 @@ wire path is silently coerced.
     variable_count, min_row_sum_deviation, max_row_sum_deviation}`; a
     failed validation exits 1 with `{"error": "ValueError", ...}`.
     Keyless — no API call.
+  - `daf-jev posteriors-reask FILE [--graphspec FILE] [--asked VAR ...]` —
+    max-entropy re-ask plan from a `dafjev.bayesnet-posteriors/1`
+    sidecar (same policy as the MCP `jev_reask_plan` tool;
+    `dafjev.bayesnet-posteriors/1` only — variant B is rejected, exit 1,
+    message naming both format strings). `--graphspec` passes through to
+    the loader for validation parity with `posteriors-load`; repeatable
+    `--asked VAR` excludes already-asked variables. Prints
+    `{next_question, entropy, queue, evidence}` (queue entries are
+    `[variable, entropy_bits]` pairs, descending); a failed validation
+    exits 1 with `{"error": "ValueError", ...}`. Keyless — no API call.
   - `daf-jev serve [--transport stdio]` — runs the MCP server (stdio only);
     a missing `mcp` extra prints a `uv sync --extra mcp` hint (exit 1).
   - `daf-jev providers` — prints the provider registry as a JSON array to
@@ -378,7 +388,7 @@ wire path is silently coerced.
     Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (75 names incl. `__version__`): the wire/client/compose/evaluate/decider/
+  (79 names incl. `__version__`): the wire/client/compose/evaluate/decider/
   provider-dispatch core plus the jaggedness fixtures and statistics
   (`COIN`, `COIN_NOUL`, `D6`, `JaggednessFixture`, `chi2_sf`, `max_streak`,
   `noul`, `noul_choice_delta`, `position_slope`, `run_battery`, `runs_test_z`,
@@ -386,21 +396,24 @@ wire path is silently coerced.
   (`Variable`, `Edge`, `CPT`, `BayesNet`, `elicit_cpts`, `propose_structure`,
   `decompose_single_parent`), and the posteriors-ingest additions
   (`CalibrationPairing`, `PosteriorsSidecar`, `load_posteriors`,
-  `pair_for_calibration`) — i.e.:
+  `pair_for_calibration`), and the re-ask policy additions
+  (`ReAskPlan`, `entropy_bits`, `next_question`, `reask_plan`) — i.e.:
   `COIN, COIN_NOUL, CPT, D6, APIConnectionError, APITimeoutError, Answer,
   AsyncJevClient, BayesNet, Budget, CalibrationPairing, ChoiceAnswer,
   ChoiceQuestion, CircuitBreaker, CircuitOpenError, CircuitState,
   ConfidenceGate, Decider, DecisionEvent, Edge, EvaluationRecord, Evaluator,
   JSONContent, JaggednessFixture, JevClient, ModelCard, NoulAnswer,
   NoulQuestion, OverloadedError, PosteriorsSidecar, ProviderSpec, Question,
-  QuestionSet, RateLimitError, RetryPolicy, ScoreAnswer, ScoreQuestion,
+  QuestionSet, RateLimitError, ReAskPlan, RetryPolicy, ScoreAnswer, ScoreQuestion,
   Settings, SystemOneResponse, TypeSafeError, Usage, UsageLedger,
   UsageSnapshot, Variable, __version__, answer_from_wire, chi2_sf, choice,
   composite_score, confidence_gate, decompose_single_parent, elicit_cpts,
+  entropy_bits,
   get_provider, list_providers, load_posteriors, load_settings, max_streak,
+  next_question,
   noul, noul_choice_delta, open_async_client, open_client,
   pair_for_calibration, parse_response, pick_model, position_slope,
-  propose_structure, register_provider, resolve_retry, resolve_timeout,
+  propose_structure, reask_plan, register_provider, resolve_retry, resolve_timeout,
   route, run_battery, runs_test_z, score, uniform_chi2, uniform_deviation`.
 - `scripts/scrape_docs.py` — standalone (stdlib urllib) re-scraper: reads llms.txt,
   fetches every page into `docs/reference/` preserving `.md` paths, rewrites
@@ -565,6 +578,21 @@ wire path is silently coerced.
   (variant B) documents fail-closed and pairs Jev assignments against
   sidecar rows for calibration. Full contract in the Posteriors sidecar
   ingest section below.
+- `reask.py` — max-entropy re-ask policy over posterior sidecars (pure
+  compute: no I/O, no client, no matplotlib, no network). `entropy_bits`
+  (Shannon entropy in BITS, log2; empty rows 0.0; negative/non-finite
+  probabilities raise; drifting rows are never renormalized — the
+  deviation is raised with the `ROW_SUM_TOLERANCE` budget in the
+  message), `reask_plan` / `next_question` (max-entropy
+  not-yet-asked variable over a `dafjev.bayesnet-posteriors/1`
+  sidecar's posterior rows, ties broken by the sidecar's insertion
+  order; variant B `gnn.marginals/1` is rejected with a message naming
+  both format strings — it carries no `evidence` to replay). The plan
+  is a frozen dataclass with an `evidence` field verbatim from the
+  sidecar; the plan never constructs Jev calls — the ask wiring lives
+  in `examples/reask_policy.py` (pipeline step 5 as a decision-policy
+  input). Surfaced as `daf-jev posteriors-reask` and MCP
+  `jev_reask_plan`.
 
 Shared figures theme: `figures.py` owns the single visual identity — the
 named `COLOR_*` / `FONT_*` / `SIZE_*` constants, `DPI`, `ARROW_STYLE` /
@@ -1085,9 +1113,11 @@ reading the sidecar and optional GraphSpec JSON documents.
 Line receipts against current source: formats/tolerances
 `src/daf_jev/bayesnet_posteriors.py:60-65`, dataclasses `:68-95`,
 `load_posteriors` `:119-155`, `row_sum_deviations` `:399-404`,
-`pair_for_calibration` `:407-521`; CLI `src/daf_jev/cli.py:494-510`
-(handler) and `:680-695` (parser); MCP `src/daf_jev/mcp_server.py:382-410`
-(tool) and `:450` (registration). Pinned by
+`pair_for_calibration` `:407-521`; CLI `src/daf_jev/cli.py:495-513`
+(posteriors-load handler; `:515-531` posteriors-reask) and `:700-714`
+(parser; `:716-738` posteriors-reask); MCP
+`src/daf_jev/mcp_server.py:385-411` (jev_posteriors_load tool;
+`:413-440` jev_reask_plan) and `:481-482` (registrations). Pinned by
 `tests/unit/test_bayesnet_posteriors.py`.
 
 - Formats: `FORMAT_POSTERIORS = "dafjev.bayesnet-posteriors/1"` (variant

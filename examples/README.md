@@ -1,6 +1,6 @@
 # daf-jev examples
 
-Twelve runnable scripts showing the core patterns of the toolkit. Each script:
+Thirteen runnable scripts showing the core patterns of the toolkit. Each script:
 
 - resolves credentials with [`daf_jev.load_settings()`](../src/daf_jev/config.py) — from
   `JEV_API_KEY` or `TYPESAFE_API_KEY` (env or a `.env` file in the current
@@ -30,6 +30,7 @@ Twelve runnable scripts showing the core patterns of the toolkit. Each script:
 | [`providers_example.py`](providers_example.py) | Multi-provider dispatch through the [`provider registry`](../src/daf_jev/providers.py) and a canned in-process `Transport`. |
 | [`retry_policies.py`](retry_policies.py) | Pure [`RetryPolicy`](../src/daf_jev/_retry.py) `next_delay` math across configs plus `resolve_retry` env resolution — no network. |
 | [`asia_bayes.py`](asia_bayes.py) | Jev as a factor source for a graphical model: structure proposal, one-ask CPT elicitation, exact inference, GraphSpec export. |
+| [`reask_policy.py`](reask_policy.py) | Pipeline step 5 as a decision-policy input: [`ReAskPlan`](../src/daf_jev/reask.py) max-entropy next-variable from a posterior sidecar, then the choice ask dispatched via [`route`](../src/daf_jev/compose.py) — canned transport, no network. |
 
 ## Scripts
 
@@ -247,17 +248,35 @@ The GraphSpec hand-off continues in the GNN repo's RxInfer bridge
 the end-to-end pipeline. (The bridge repo is a separate checkout; its paths
 are not relative links from here.)
 
+### [`reask_policy.py`](reask_policy.py)
+
+Pipeline step 5 as a decision-policy input: a
+`dafjev.bayesnet-posteriors/1` sidecar (as the GNN bridge's `--out`
+artifact) is ingested through the real loader, [`reask_plan`](../src/daf_jev/reask.py)
+picks the next variable by max Shannon entropy (bits) among
+not-yet-asked rows — ties broken by sidecar insertion order — and that
+variable becomes the `choice` question the ticket loop asks next
+(the ask wiring lives in the example; the plan never constructs calls).
+Answers dispatch through [`route`](../src/daf_jev/compose.py) with a
+confidence fallback; the loop runs to exhaustion. Canned in-process
+transport — no network, keyless SKIP.
+
+```sh
+python examples/reask_policy.py [--model NAME]
+```
+
 ## Notes
 
 - Optional helpers are imported defensively, so a checkout mid-build that
   lacks them fails with a clear message instead of a raw traceback.
 - Network calls go to the selected provider's base URL (for the default
   `jev` provider: `JEV_BASE_URL` / `TYPESAFE_BASE_URL`, default
-  `https://api.typesafe.ai`). All twelve scripts are offline-safe:
+  `https://api.typesafe.ai`). All thirteen scripts are offline-safe:
   without a key they do nothing but print the SKIP line;
   [`providers_example.py`](providers_example.py),
   [`decider_resilience.py`](decider_resilience.py),
   [`evaluate_async.py`](evaluate_async.py),
-  [`calibration_walkthrough.py`](calibration_walkthrough.py), and
-  [`retry_policies.py`](retry_policies.py) make no network call even
+  [`calibration_walkthrough.py`](calibration_walkthrough.py),
+  [`retry_policies.py`](retry_policies.py), and
+  [`reask_policy.py`](reask_policy.py) make no network call even
   with one (injected transports or pure computation).
