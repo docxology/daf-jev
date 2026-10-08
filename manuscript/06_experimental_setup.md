@@ -57,7 +57,10 @@ A hosted plan freezes endpoint, requested model, provider preferences, schema, t
 The prospective expansion freezes complete validation and official-test obligations separately from the retained failed pilot. Figure [@fig:hosted_admission] distinguishes static task incompatibility, unavailable liability bounds and tariff-admissible candidates whose execution remains unverified. Its declaration of a large cohort does not establish completed samples, quality or an expected bill. The original unknown charge continues to stop admission; a new run's empty ledger cannot import that debt merely through descriptive metadata. Future execution needs a reviewed shared-allocation guard as well as independent billing evidence.
 
 \begin{landscape}
-
-![Prospective hosted admission matrix. Categories concern frozen task and accounting contracts, not observed model quality or endpoint acceptance. Every new request remains blocked by the prior unresolved charge; the matrix is retained with exact plan and figure-source hashes.](../output/reports/hosted-expansion-20261008/admission-matrix.png){#fig:hosted_admission width="100%"}
-
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{../output/reports/hosted-expansion-20261008/admission-matrix.pdf}
+\caption{Prospective hosted admission matrix. Categories concern frozen task and accounting contracts, not observed model quality or endpoint acceptance. Every new request remains blocked by the prior unresolved charge; the matrix is retained with exact plan and figure-source hashes.}
+\label{fig:hosted_admission}
+\end{figure}
 \end{landscape}
