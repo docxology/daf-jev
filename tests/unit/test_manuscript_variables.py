@@ -14,6 +14,7 @@ The stale/fresh coverage fixtures build real ``.coverage`` state via
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -171,6 +172,8 @@ def _write_analysis_outputs(root: Path) -> None:
     (bench_dir / "batching_20260916.json").write_text(json.dumps(_BATCHING_JSON), encoding="utf-8")
     (bench_dir / "patterns_20260916.json").write_text(json.dumps(_PATTERNS_JSON), encoding="utf-8")
     (bench_dir / "calibration_20260916.json").write_text(json.dumps(_CALIBRATION_JSON), encoding="utf-8")
+    selected = {p.stem.split("_")[0]: {"path": str(p.relative_to(root)), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in bench_dir.glob("*.json")}
+    (root / "manuscript" / "evidence.json").write_text(json.dumps({"format": "dafjev.publication-evidence/1", "historical_benchmarks": selected}))
     figures_dir = root / "output" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     registry = {"fig:b": {"filename": "b.png"}, "fig:a": {"filename": "a.png"}}

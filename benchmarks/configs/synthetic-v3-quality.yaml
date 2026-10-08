@@ -1,0 +1,30 @@
+# Independent v3 synthetic truth and complete categorical cyclic-order controls.
+# Ordinary suites use 150 fixtures each; matched categorical uses 35 base fixtures.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '0'
+sampling: all
+capability_probes: true
+graphical_experiments: false
+execution_selection:
+  phase: quality
+timeout_s: 60
+local_time_limit_s: 7200
+backends:
+- id: uniform
+  kind: uniform
+  hosted: false
+- id: exact-rule
+  kind: rule
+  hosted: false
+datasets:
+- id: synthetic-binary-v3
+  path: ../../.benchmarks/full-study-inputs/synthetic-binary-v3.json
+- id: synthetic-categorical-v3
+  path: ../../.benchmarks/full-study-inputs/synthetic-categorical-v3.json
+- id: synthetic-ordinal-v3
+  path: ../../.benchmarks/full-study-inputs/synthetic-ordinal-v3.json
+- id: synthetic-bayes-v3
+  path: ../../.benchmarks/full-study-inputs/synthetic-bayes-v3.json
+- id: synthetic-categorical-matched-v3
+  path: ../../.benchmarks/full-study-inputs/synthetic-categorical-matched-v3.json

@@ -1,9 +1,9 @@
 # AGENTS.md — daf-jev
 
 Agent-facing notes. For the human-facing overview see `README.md`; for the
-authoritative design contract see `docs/ARCHITECTURE.md` (v1, 2026-09-16 —
-single source of truth; workers must match its signatures exactly and report
-any contradiction rather than silently deviating).
+authoritative design contract see `docs/ARCHITECTURE.md` (single source of
+truth; workers must match its current signatures exactly and report any
+contradiction rather than silently deviating).
 
 This is a **self-versioned** git repo at
 `projects/platform/hum-docxology/repos/public/daf-jev` — a managed Docxology
@@ -23,6 +23,16 @@ restate them here; there is no `../AGENTS.md` in this location.
     `error_from_status`).
   - `_retry.py` — `RetryPolicy` (429/529, exponential backoff + jitter,
     `Retry-After` aware); pure `next_delay`, sleeping happens in the client.
+  - `_json.py` — `strict_json_loads`: preserves insertion order, rejects
+    duplicate object keys at every depth, nonstandard NaN/Infinity literals and
+    numbers overflowing the selected float/Decimal parser. Finite Decimal
+    currency values retain their exact digits; consumers enforce numeric bounds.
+    Decoder recursion failures become `ValueError` for the malformed-response
+    path; no fixed nesting limit is imposed by this helper.
+  - `_yaml.py` — `strict_yaml_loads`: a private safe loader for literal frozen
+    benchmark/manuscript configuration. Duplicate mapping keys, including
+    collisions after merge expansion, aliases, unsafe tags and nonfinite numbers
+    fail before planning or generation; global PyYAML behavior is unchanged.
   - `_http.py` — `Transport` / `AsyncTransport` protocols +
     `HttpxTransport` / `AsyncHttpxTransport`.
   - `client.py` — `JevClient` / `AsyncJevClient` (`ask`, `models`, `close`,
@@ -31,7 +41,9 @@ restate them here; there is no `../AGENTS.md` in this location.
     timeout resolve from env (`config.resolve_retry` / `resolve_timeout`)
     unless passed explicitly. Provider dispatch: `for_provider`
     classmethods + `open_client` / `open_async_client` (see
-    `providers.py`).
+    `providers.py`). Strict decoder failures on successful HTTP responses
+    propagate as `ValueError`; malformed error bodies retain raw text (or None
+    when empty) and the HTTP status exception taxonomy.
   - `primitives.py` — `noul()` / `choice()` / `score()` builders and
     `QuestionSet` (no I/O).
   - `compose.py` — `composite_score`, `confidence_gate`, `route`,
@@ -40,22 +52,29 @@ restate them here; there is no `../AGENTS.md` in this location.
     of a fixed question set over many states (thread pool for the sync
     client, `asyncio.Semaphore` for the async client); per-state failures
     captured in `EvaluationRecord.error`, never aborting the batch.
-    `evaluate()` / `summary()` / `to_json()`; an `AsyncJevClient` is
-    single-use through `evaluate()` — the async session is closed at batch
-    end.
+    `evaluate()` / `summary()` / `to_json()`; `evaluate_async()` awaits on the
+    caller's loop. Both evaluation entry points close an async client at batch
+    end, including cancellation; this legacy single-use lifecycle is intentional.
   - `models.py` — `pick_model(cards, *, contains=None, prefer="latest")`;
     pure selection over the models listing (no I/O); `ValueError` on empty
     input, no match after filtering, or unknown `prefer`.
   - `figures.py` — matplotlib figure registry: 7 named figures
     (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
     `calibration`, `graphical_abstract`) + `figure_registry.json` emission;
-    data-driven figures read the newest `output/benchmarks/*.json`.
+    data-driven figures read the exact receipts selected and hash-verified by
+    `manuscript/evidence.json` through `evidence.py`, never an independently
+    chosen newest file.
   - `manuscript_variables.py` — `generate_variables` / `save_variables`: 49
     `{{TOKEN}}` manuscript variables derived from pyproject, docs MANIFEST,
     test counts, benchmark JSONs, and the `manuscript/config.yaml`
     experiment knobs (`BATCHING_RUNS`, `CALIBRATION_STATES`,
     `CALIBRATION_REPEATS`; `CONFIG_BATCHING_N<n>` token names derive from
-    the configured batch widths); zero hardcoded result values.
+    the configured batch widths); zero hardcoded result values. Benchmark inputs
+    use the same explicit `manuscript/evidence.json` selection as figures.
+    Verification inputs must match the source and tests being described; see
+    the coverage and manuscript invariants below. Optional selected native
+    verification exports supply recorded counts/coverage/environment without
+    running pytest collection or reading raw coverage during regeneration.
   - `config.py` — `load_dotenv`, `resolve_api_key` (injected env >
     process env > `.env`; `JEV_API_KEY` then `TYPESAFE_API_KEY`),
     `resolve_base_url`, `resolve_model`, `resolve_retry` /
@@ -72,17 +91,20 @@ restate them here; there is no `../AGENTS.md` in this location.
     else raises `TypeError`), `snapshot()` / `reset()` returning a frozen
     JSON-safe `UsageSnapshot` (incl. `total_tokens`).
   - `resilience.py` — opt-in `CircuitBreaker` (closed/open/half_open);
-    `call()` records a failure on any `BaseException` and always re-raises,
-    so a HALF_OPEN probe cannot wedge the breaker;
+    `call()` and awaited `call_async()` record a failure on any `BaseException`
+    and always re-raise, including cancellation; async success is recorded only
+    after completion, so a HALF_OPEN probe cannot wedge the breaker;
     `CircuitOpenError.remaining_seconds` is always a float >= 0 (`0.0` for
     the probe-rejection race). Not wired into `JevClient` by default.
   - `decider.py` — `Decider` observe -> compose -> ask -> gate -> fail-open
     -> act loop (`decide()` never raises), `DecisionEvent` (JSON-safe
-    `to_dict()`), `ConfidenceGate`, `Budget` (thresholds validated >= 0,
-    `max_calls=0` stays valid); 11-reason closed fallback taxonomy with
+    `to_dict()`), `ConfidenceGate` (finite non-bool thresholds/confidences in
+    `[0,1]`), `Budget` (thresholds validated >= 0, `max_calls=0` stays valid);
+    11-reason closed fallback taxonomy with
     `error` LAST (belt-and-suspenders); a client factory that raises OR
     returns None latches `client_error`; `cache_key` computed once per
-    decide.
+    decide. Paid usage/request IDs survive mapping and gate fallbacks; the
+    mapping-failure latch resets only after a full successful pipeline.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
     `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
@@ -139,7 +161,8 @@ restate them here; there is no `../AGENTS.md` in this location.
     `BayesNet`): graph helpers + deterministic `topological_order`,
     `validate()`, exact inference (`posterior` / `query`, pure-stdlib
     variable elimination, no numpy; zero-probability evidence —
-    including the fully-observed case — raises), decision methods
+    including partially and fully observed impossible evidence — raises),
+    decision methods
     (`most_probable_explanation`, `sample`, `conditional_scenarios`),
     plus public `decompose_single_parent` (joint-preserving aux-chain
     decomposition; single-parent scoped to ORIGINAL nodes — the RxInfer
@@ -150,7 +173,13 @@ restate them here; there is no `../AGENTS.md` in this location.
     in one batched `choice` ask; deterministic ids, chunking via
     `max_questions_per_request`) and `propose_structure` (one batched
     ask over all variable pairs -> DAG proposal, edges only); both take
-    any object with `.ask(state, questions)`.
+    any object with `.ask(state, questions)`. Await `elicit_cpts_async` /
+    `propose_structure_async` on the caller's loop for caller-owned lifecycle;
+    cancellation propagates without closing the client. The sync compatibility
+    bridge closes a fresh async client after use. CPT rows remain as answered
+    and must satisfy strict mass validation; no renormalization occurs. Structure
+    search scores edge log-probability gain against the no-edge baseline; its
+    intentional exact/greedy semantics are specified in the contract.
   - `graphical_viz.py` — `to_mermaid` (zero-dependency `graph TD`
     diagram), `plot_network` (layered topological-layout PNG),
     `plot_posterior_trajectory` (grouped P(true) bars across cumulative
@@ -194,6 +223,62 @@ restate them here; there is no `../AGENTS.md` in this location.
     example layer (`examples/reask_policy.py`) wires the plan into the
     ask. Exported at package root; surfaced as `daf-jev
     posteriors-reask` and MCP `jev_reask_plan`.
+  - `decision_backends.py` — frozen provider-neutral requests, predictions,
+    capabilities and per-attempt receipts; sync/async protocols, explicit native
+    System One/chat/letter HTTP adapters, priors and a threaded async bridge.
+    Caller-owned lifecycle; generated labels have no invented beliefs or
+    confidence. Probability source, meaning and correctness are distinct.
+  - `benchmark_datasets.py` — prepared dataset validation, explicit public
+    fetch/prepare, deterministic synthetic generation, grouped splits and pilot
+    pools. Version-three synthetic inputs bind ordered presentations and
+    complete matched Choice groups; controls are quality-only.
+  - `benchmark_sampling.py` — exact shared timing sample packs, default `cohort`
+    scope and explicit legacy `per_dataset` scope. The timing selector uses no
+    targets conditional on the frozen supplied pools; upstream pilot
+    stratification can use class/grade labels.
+  - `benchmark_models.py` — train-only priors and optional sklearn comparators,
+    plus exact synthetic rule references. Hard rule labels have no one-hot
+    beliefs; analytical Bayes probabilities carry explicit formula provenance.
+  - `benchmark_metrics.py` — quality, calibration, repeatability, grouped
+    uncertainty and dataset audits over supplied rows, retaining all planned
+    outcomes and unknown probability meaning/cost.
+  - `benchmark_policies.py` — validation-only gate fitting, descriptive offline
+    policy replay and bounded synthetic entropy controls. Replay is not an
+    executed cascade or measured end-to-end policy latency.
+  - `benchmark_store.py` — immutable manifests, hash-linked journal/head,
+    executor leases and durable hosted reservation/reconciliation. Unresolved
+    liability blocks admission; copied evidence is inspected read-only.
+  - `benchmark_runner.py` — explicit plan/run/resume/report, catalog snapshots,
+    frozen cohorts/settings and phase barriers. Unresolved starts are never
+    automatically replayed; failed/unsupported/unattempted remain denominators.
+    Graphical summaries use the same journal-derived status as main cells.
+    Reports bind dataset configuration ID/index/prepared SHA separately from the
+    family name and retain all frozen arms, including wholly unavailable arms.
+    Attempted-outcome coverage and planned-decision coverage remain distinct.
+  - `benchmark_workflows.py` — actual weak/gate/strong cascade execution through
+    injected backends and retained child receipts; supplied backends stay
+    caller-owned and enclosing cells measure execution latency.
+  - `benchmark_resources.py` — hardware identity and scoped sampled process RSS
+    and elapsed time. Serving PID/create-time is explicit; no process launch or
+    signal. Sampled RSS is not continuous or true Metal allocator peak memory.
+  - `benchmark_graphical.py` — injected async reference-graph reconstruction,
+    structure proposal and coupled oracle evidence acquisition/re-asks. Genuine
+    beliefs are required; normalized surrogate factors do not establish CPT
+    truth, causal discovery or calibrated probability meaning.
+  - `benchmark_publication.py` — exclusive offline Markdown/PDF exports from
+    frozen benchmark reports, preserving identities and partial outcomes.
+    Export success does not establish execution or publication acceptance.
+  - `benchmark_cli.py` — thin `benchmark` argparse dispatcher for dataset,
+    catalog, plan, run, resume and report commands; no implicit fetch.
+  - `evidence.py` — confined, nonsymlink, SHA-256-bound historical publication
+    input selection shared by figures and manuscript variables. The private
+    helper name `_latest_benchmark` does not mean date-based discovery.
+    `selected_benchmark_bytes` consumes the exact bytes it verifies; path-based
+    compatibility helpers do not provide that single-read guarantee.
+    `verification_inputs`, `VerificationStatistics` and `selected_verification`
+    bind retained unit/JUnit/coverage/live-collection evidence to the exact
+    source/test/script/config inventory; malformed/stale explicit selection
+    fails even in draft mode. Live collection does not execute live tests.
   - `__init__.py` — public exports listed in `docs/ARCHITECTURE.md`.
 - `tests/` — `conftest.py` (stub-server fixtures, see below), `tests/unit/`
   (per module plus CLI, scraper, and the evaluate/models/figures/
@@ -210,7 +295,9 @@ restate them here; there is no `../AGENTS.md` in this location.
   (or positional MANIFEST; `--manifest` requires `--check`), `--timeout`.
   Plain mode prunes snapshot pages the fresh manifest does not list
   (`prune_orphans`; receipt under `"pruned"` in the summary line) — the
-  snapshot dir stays an exact manifest mirror; `--check` stays read-only.
+  snapshot dir stays an exact manifest mirror. `--check` alone fetches remotely
+  and writes nothing; `--check --manifest PATH` (or positional manifest)
+  re-hashes local pages without network or writes.
 - `scripts/generate_figures.py` — thin orchestrator over `figures.py`;
   CLI: `--out-dir DIR` (default `output/figures`), `--only NAME`; needs the
   `figures` extra (`uv sync --extra figures`). Exit 0 ok, 2 unknown
@@ -220,11 +307,18 @@ restate them here; there is no `../AGENTS.md` in this location.
   and (inside the template checkout) substitutes `{{TOKEN}}`s into
   `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
   analysis outputs are missing.
+- `scripts/capture_verification.py` — genuine unit coverage/JUnit + live
+  collection capture into `--out-dir FRESH_INSIDE_ROOT`. Retains native exports,
+  logs, before/after inventories and failed captures; removes only its owned
+  private raw coverage. Does not execute live tests or select publication inputs.
 - `scripts/render_pdf.py` — in-repo PDF render (pandoc --natbib over the
   generated token map; inputs `manuscript/render/{preamble,cover}.tex`);
   runs the render gates (zero unresolved bibtex entries / undefined refs /
-  unloadable images; `SOURCE_DATE_EPOCH` pinned from HEAD); `--install`
-  also replaces the root PDF.
+  unloadable images / overfull vertical boxes; `SOURCE_DATE_EPOCH` pinned from
+  HEAD). `--output FILE` selects a fresh standalone PDF; `--artifacts-dir DIR`
+  exclusively retains intermediate Markdown/TeX/log inputs in a fresh directory.
+  `--install` also replaces the root PDF and requires publication-scope
+  authorization. Inspect all headings/prose and page layout after the gates.
 - `scripts/bayes_experiment.py` — thin orchestrator over `graphical` +
   `graphical_elicitation` + `graphical_viz` + `graphical_animation`;
   CLI: `--provider`, `--model`, `--edge-penalty FLOAT` (default 1.0),
@@ -259,15 +353,15 @@ restate them here; there is no `../AGENTS.md` in this location.
   placeholder (see invariants).
 - `manuscript/render/` — render inputs for the in-repo PDF fallback
   (`preamble.tex`, `cover.tex`), consumed by `scripts/render_pdf.py`.
-- `benchmarks/` — live-API benchmark scripts with their own `README.md`;
-  `_util.py` holds shared SKIP/percentile/JSON-writer helpers.
+- `benchmarks/` — historical/live-API scripts plus explicit frozen benchmark
+  recipes in `configs/`, documented in `benchmarks/README.md`;
+  `_util.py` holds shared SKIP/percentile/JSON-writer helpers. Planning and
+  reporting are inference-free; fetch/catalog and actual execution are explicit.
 - `docs/ARCHITECTURE.md` — contract (see `docs/README.md`); it now covers
-  the newer modules (evaluate, calibration, ledger, resilience, decider,
-  questions, docs_verify, mcp_server, providers, graphical,
-  graphical_elicitation, graphical_viz) and the figure/variables/experiment
-  scripts, plus the manuscript-pipeline module internals (`figures.py`,
-  `manuscript_variables.py`) — the contract now documents both; the map
-  above remains the quick on-disk map for those.
+  clients, composition, provider dispatch, graphical methods, posterior
+  interchange, decision backends, datasets/sampling, accounting, benchmarks
+  and publication/reproduction scripts. The map above is a quick inventory;
+  authoritative signatures and failure semantics live in the contract.
 - `docs/models.md` — sourced model technical reference (see `docs/README.md`).
 - `docs/reference/` — hashed docs snapshot (see `docs/README.md`).
 - `output/` — build artifacts, not documentation: `benchmarks/` (result
@@ -280,9 +374,11 @@ restate them here; there is no `../AGENTS.md` in this location.
   cross-repo artifacts, see Cross-repo pipeline below). `web/` —
   `_combined_manuscript.md`, the template-render combined manuscript
   (tracked in git, not gitignored; verified 2026-09-24).
-- `pyproject.toml` — setuptools build, version 0.6.0, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.7.0, `httpx` + `pyyaml`
+  and conditional `tomli` on Python 3.10
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp,
-  mypy, types-PyYAML, ruff), `figures` (matplotlib), and `mcp` (`mcp>=1.2,<2`, for
+  mypy, types-PyYAML, ruff, pypdf), `figures` (matplotlib/Pillow), `benchmark`
+  (scikit-learn/psutil), and `mcp` (`mcp>=1.2,<2`, for
   `mcp_server.py` / `daf-jev serve`) extras, console script
   `daf-jev = daf_jev.cli:main`, coverage gate config.
 
@@ -434,10 +530,20 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   (`--strict-markers`); live tests are skipped, not failed, without a key.
 - **Coverage gate: >= 90% on `src/`** (`fail_under = 90`, branch coverage,
   `source = ["src"]`; bare `...` protocol-stub lines are excluded from the
-  gate via `exclude_also`). Don't hardcode counts here: generated
-  test_count / coverage live in `output/data/manuscript_variables.json`
-  (refresh via `scripts/z_generate_manuscript_variables.py`). Raw
-  `.coverage` data is not retained on disk.
+  gate via `exclude_also`). Don't hardcode passed-test or coverage results here:
+  bind them to a completed gate for the exact source/test/config inputs and
+  generate `output/data/manuscript_variables.json` through
+  `scripts/z_generate_manuscript_variables.py`. When using the raw-coverage
+  generation path, retain ephemeral `.coverage` until token generation and
+  evidence/render custody close, then remove it. Missing/stale inputs never
+  authorize hand-edited results or reuse as current measurements; an `N/A`
+  sentinel is unavailable evidence. Consult the current architecture and
+  reproduction guide for the accepted verification-input path. Prefer a genuine
+  `scripts/capture_verification.py` capture and explicit hash-bound `verification`
+  selection in `manuscript/evidence.json` for exact offline regeneration from
+  retained native JSON/JUnit/collection outputs. Before, after and current
+  source/test/script/config inventories must agree; no new pytest collection or
+  raw data is needed when reading the selected completed capture.
 - **Render path (no leaf alias).** The former managed lifecycle leaf symlink
   `template/projects/ongoing/daf-jev -> .../Code_Tools/daf-jev` was removed
   2026-09-18 by owner decision. The template's project-path confinement
@@ -454,7 +560,8 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   `latency`, `calibration`, `graphical_abstract`) raise `FileNotFoundError`
   naming the missing benchmark JSON rather than fabricating data;
   `architecture`, `primitives`, and `confidence` are data-free and always
-  render.
+  render. Data-driven inputs must match the explicit `manuscript/evidence.json`
+  selection used by manuscript variables; adding a newer file does not select it.
 - **`{{TOKEN}}` no-hardcode manuscript protocol.** Every measured number in
   `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 49 tokens live in
   `output/data/manuscript_variables.json` (generated by
@@ -463,8 +570,29 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   results in the generator either). After any analysis/benchmark/test-count
   change, re-run the variables script before re-rendering. NEVER hardcode
   results into manuscript prose; strict mode (default) fails on missing
-  inputs instead of fabricating values (`--allow-draft` emits `N/A`
-  sentinels for drafts only).
+  analysis inputs instead of fabricating values (`--allow-draft` emits `N/A`
+  sentinels for drafts only; unavailable verification results are not measurements).
+  A layout/prose-only rerender may reuse an unchanged, already validated token
+  map through the renderer's normal saved-token substitution, without rerunning
+  analysis or coverage. Preserve that map's exact identity and prior PDFs.
+  `GENERATION_TIMESTAMP` is the reproducible build timestamp, not necessarily
+  the actual render time or experiment time.
+- **Render completeness.** Use a fresh `--output` and, for reviewable builds,
+  a fresh `--artifacts-dir`. All four renderer gates must pass, followed by
+  all-page section/prose completeness and layout review against the substituted
+  source. Absence of unresolved markers or out-of-bounds extracted words alone
+  cannot detect missing/clipped content. A successful render is local artifact
+  evidence, not scientific acceptance or permission to publish.
+- **Benchmark acceptance boundaries.** Freeze exact source/config/input/catalog
+  identities before execution; retain every attempt and planned cell status.
+  A start without a terminal cell outcome is `unresolved`, even when its HTTP
+  attempt has a receipt; a never-started cell is `unattempted`. Source tests,
+  declared capabilities, actual runtime probes, model predictions, cost/billing
+  closure and scientific/publication acceptance are separate evidence tiers.
+  A later source gate does not upgrade historical inference receipts. Unknown
+  hosted charge retains liability; unknown local compute cost is not free.
+  The same authorized total allocation and cumulative profile allowance must
+  carry across replacement plans; no automatic retry, refund or cap reset.
 - **`composite_score` weights re-weight the probability distribution** —
   `q_i = p_i * w_i / sum(p_j * w_j)`, expected value `sum(q_i * i)` over
   sorted level indices; scale-invariant (only weight ratios matter); for
@@ -483,9 +611,11 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   `docs/ARCHITECTURE.md`.
 - Score question criteria MUST be a list of >= 2 strings; choice criteria
   non-empty — both raise `ValueError` in `to_wire()`.
-- Python >= 3.10, stdlib + `httpx` (+ `pyyaml`) only; the `.env` loader is
+- Python >= 3.10; core dependencies are `httpx`, `pyyaml` and `tomli` on
+  Python 3.10 (`tomllib` is built in on newer Python). The `.env` loader is
   a tiny built-in in `config.py`, no python-dotenv dependency. `matplotlib`
-  is required only for the `figures` extra.
+  is optional through the `figures` extra; benchmark classifiers/resources use
+  their own optional extra.
 - **MCP tools are JSON-safe across the wire.** Every `mcp_server` tool
   returns plain dict/list/str/float only — dataclasses are converted with
   `dataclasses.asdict` before returning; nothing non-JSON-serializable may
@@ -522,60 +652,77 @@ fallback environment is `src/gnn/execute/rxinfer/`).
 
 ## Verification commands
 
+Prepare the environment through the repository toolchain (`uv sync --extra dev
+--extra figures`, and `--extra benchmark` for optional comparators/resources).
+Dependency resolution can use the network. After preparation, these checkout
+checks need no API key or remote service:
+
 ```bash
-uv sync --extra dev --extra figures
-uv run pytest tests/unit --cov=src          # coverage gate >= 90%; generated counts in
-                                            # output/data/manuscript_variables.json —
-                                            # refresh via scripts/z_generate_manuscript_variables.py
-                                            # (bare `...` protocol stubs excluded via exclude_also)
-JEV_API_KEY=... uv run pytest tests/live    # 2 live tests; skipped without key
+uv run pytest tests/unit --cov=src           # completed source gate; do not hardcode results
 uv run ruff check .
 uv run mypy src/daf_jev
+uv run daf-jev docs-verify                  # local SHA/size/path verification
+uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json
+                                            # offline manifest check; no writes/network
+uv run daf-jev serve --help                 # stdio surface only; does not start serving
+uv run daf-jev benchmark --help             # dispatcher only; no fetch/model call
+```
+
+`docs-verify` defaults to the module-anchored repository snapshot. Wheel installs
+do not include `docs/reference/`; use `docs-verify --manifest PATH` with a supplied
+snapshot outside the checkout rather than claiming the default is installed data.
+The shared verifier also detects URL-to-path drift.
+
+Reproduction builds write artifacts and must use the reviewed evidence selection.
+Capture native verification exports first, then deliberately select the receipt's
+relative path and SHA-256 in `manuscript/evidence.json`; retain historical
+benchmark selections. Captures execute unit tests and only collect live tests.
+With the selection, regeneration reads exact retained outputs without new
+pytest collection/raw coverage. The legacy raw path remains available; retain
+fresh raw data until token/evidence custody closes. A layout-only rerender reuses
+the unchanged validated map and needs no new test/model run:
+
+```bash
+uv run python scripts/generate_figures.py   # selected inputs + figure_registry.json
+uv run python scripts/capture_verification.py --out-dir .benchmarks/verification-new
+# Select verification.json path/hash deliberately before regeneration.
+uv run python scripts/z_generate_manuscript_variables.py
+uv run python scripts/render_pdf.py --output output/pdf/reproduction-new.pdf \
+    --artifacts-dir .benchmarks/reproduction-build-new
+```
+
+Choose fresh paths for each build. The renderer uses Pandoc/TeX and the saved
+map; zero unresolved citations, undefined references, unloadable images and
+overfull vertical boxes are required. Review every heading/prose section and
+page layout too. `SOURCE_DATE_EPOCH` pins the reproducible build timestamp from
+HEAD. `--install` additionally replaces the root PDF and is a separately
+scope-authorized action. The external template path remains subject to the
+render-path invariant above; do not recreate aliases to bypass it.
+
+The following commands can contact live services or models when credentials
+resolve. Execute them only within the authorized experiment/network scope;
+keyless SKIP is not a runtime acceptance result:
+
+```bash
+uv run pytest tests/live                    # process-env key; otherwise skipped
 uv run python benchmarks/bench_batching.py --runs 3
 uv run python benchmarks/bench_patterns.py --runs 10
-uv run python benchmarks/bench_calibration.py   # live; SKIP + exit 0 without a key
-uv run python benchmarks/bench_jaggedness.py    # live; per-provider SKIP lines; global
-                                                # "SKIP: no provider keys set" + exit 0 when
-                                                # none of JEV/JEFF/KEV_API_KEY is set
-                                                # flags: --providers 'jeff,kev,jev', --fixtures,
-                                                # --repeats 50, --concurrent 32, --timeout, --model
-uv run daf-jev docs-verify                  # snapshot drift check, exit 1 on mismatch
-                                            # repo-checkout only: docs/reference/ is not
-                                            # packaged into wheels (module-anchored
-                                            # manifest path); installed copies fail
-uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json  # --check re-fetches every linked page (live network, NOT offline); exit 1 on drift
-uv run daf-jev serve --help                     # serve subcommand smoke; --transport stdio only
-uv sync --extra figures
-uv run python scripts/generate_figures.py   # 7 PNGs + figure_registry.json -> output/figures/
-uv run python scripts/z_generate_manuscript_variables.py   # 49 tokens + injection
-uv run python scripts/bayes_experiment.py --animate   # keyless: prints SKIP and
-                                                      # exits 0 before any network
-                                                      # use (no artifacts written);
-                                                      # with a key: the five
-                                                      # artifacts +
-                                                      # posterior_animation.gif +
-                                                      # network_animation.gif
-
-# Render the PDF manually (the template checkout render is currently
-# blocked: the leaf symlink was removed 2026-09-18 — see the render-path
-# invariant above). The in-repo fallback reproduces the template render via
-# pandoc --natbib; inputs are manuscript/render/{preamble,cover}.tex and the
-# generated token map; gates: zero unresolved bibtex entries / undefined
-# refs / unloadable images; SOURCE_DATE_EPOCH pinned from HEAD.
-uv run python scripts/render_pdf.py            # render + gates
-uv run python scripts/render_pdf.py --install  # also replace the root PDF
-
-# Template-pipeline path (for reference; currently blocked):
-cd /Volumes/external_drive/Git/template && \
-  uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
-cd /Volumes/external_drive/Git/template && \
-  uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
-# -> output/pdf/daf-jev_combined.pdf; 9 validation checks
-
-# MCP server full handshake needs the mcp extra (mcp>=1.2,<2 — already
-# carried by the `dev` extra, so `uv sync --extra dev` suffices; the
-# separate `mcp` extra only matters for a minimal env): connect any MCP
-# client to `daf-jev serve` over stdio.
-uv run python examples/quickstart.py   # keyless check: prints SKIP: JEV_API_KEY not set, exit 0
-uv run python examples/providers_example.py   # keyless check: SKIP + exit 0; no network even with a key
+uv run python benchmarks/bench_calibration.py
+uv run python benchmarks/bench_jaggedness.py
+uv run python scripts/bayes_experiment.py --animate
+uv run python examples/quickstart.py
+uv run python scripts/scrape_docs.py --check # remote fetch, read-only disk comparison
 ```
+
+Plain `scripts/scrape_docs.py` additionally rewrites the snapshot and prunes
+orphans. Benchmark `dataset fetch` / `catalog` are explicit network operations;
+`plan` and `report` are inference-free; `run` / `resume` execute the frozen arms.
+Read `docs/decision_benchmarking.md`, `docs/local_serving.md` and the relevant
+`benchmarks/configs/` recipe before execution. Preparation examples and declared
+capabilities are not accepted model runtimes. Preserve credential, budget,
+resident-model ownership, source/custody and unresolved-attempt boundaries.
+
+MCP full handshake needs the optional `mcp` package (also in `dev`); connect a
+client to `daf-jev serve` over stdio. `examples/providers_example.py` uses an
+injected transport and makes no network call even with a key. Other examples
+keep the keyless SKIP contract described above.

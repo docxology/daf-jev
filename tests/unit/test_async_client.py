@@ -13,7 +13,13 @@ import httpx
 import pytest
 
 import daf_jev
-from daf_jev import AsyncJevClient, NoulQuestion, RetryPolicy
+from daf_jev import (
+    AsyncJevClient,
+    ChoiceQuestion,
+    NoulQuestion,
+    RetryPolicy,
+    ScoreQuestion,
+)
 from daf_jev._errors import (
     APIConnectionError,
     APITimeoutError,
@@ -26,6 +32,8 @@ from daf_jev._errors import (
 def _questions() -> dict:
     return {
         "billing": NoulQuestion(instructions="Is this about billing?"),
+        "tone": ChoiceQuestion(instructions="What is the tone?", criteria={"calm": None, "angry": "hostile"}),
+        "severity": ScoreQuestion(instructions="Rate severity", criteria=["low", "high"]),
     }
 
 

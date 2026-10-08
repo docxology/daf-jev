@@ -154,8 +154,8 @@ def test_composite_score_rejects_non_integer_keys() -> None:
 def test_composite_score_canonicalizes_duplicate_level_spellings() -> None:
     # '1' and '01' are the same integer level: their probabilities accumulate
     # onto one level instead of counting twice.
-    answer = _score_answer({"1": 0.9, "01": 0.05})
-    assert composite_score(answer) == pytest.approx(0.95)
+    answer = _score_answer({"1": 0.9, "01": 0.1})
+    assert composite_score(answer) == pytest.approx(1.0)
     # One canonical level: a single weight is accepted; two distinct levels
     # would fail the weights-length check. The reweighted path concentrates
     # all mass on level 1, so the expected value is exactly 1.
@@ -419,3 +419,36 @@ def test_tiered_gate_rejects_non_finite_thresholds() -> None:
 def test_tiered_gate_nan_confidence_escalates() -> None:
     # A NaN confidence fails both >= comparisons and escalates (fail closed).
     assert tiered_gate(_choice_answer("calm", float("nan"))) == "escalate"
+
+
+@pytest.mark.parametrize("confidence", [float("inf"), -float("inf"), float("nan"), -0.1, 1.1, True, "0.9"])
+def test_all_gates_fail_closed_on_invalid_confidence(confidence) -> None:
+    answer = ChoiceAnswer("act", {"act": 1.0}, confidence)
+    assert confidence_gate(answer, threshold=0.5) == "review"
+    assert tiered_gate(answer) == "escalate"
+    assert route(answer, {"act": lambda: "acted"}, fallback=lambda: "held") == "held"
+    with pytest.raises(ValueError):
+        route(answer, {"act": lambda: "acted"})
+
+
+@pytest.mark.parametrize("threshold", [-0.1, 1.1, float("nan"), float("inf"), True])
+def test_gates_reject_invalid_thresholds(threshold) -> None:
+    answer = _choice_answer("act", 0.9)
+    with pytest.raises(ValueError):
+        confidence_gate(answer, threshold=threshold)
+    with pytest.raises(ValueError):
+        route(answer, {"act": lambda: "acted"}, min_confidence=threshold)
+    with pytest.raises(ValueError):
+        tiered_gate(answer, high=threshold)
+
+
+@pytest.mark.parametrize("weights", [None, [1.0, 1.0]])
+def test_composite_score_rejects_malformed_mass(weights) -> None:
+    with pytest.raises(ValueError, match="sum"):
+        composite_score(_score_answer({"0": 0.2, "1": 0.2}), weights=weights)
+
+
+def test_composite_score_rounded_row_expected_value_preserves_probabilities() -> None:
+    answer = _score_answer({"1": 0.33, "2": 0.33, "3": 0.33})
+    assert composite_score(answer) == pytest.approx(2.0)
+    assert answer.probabilities == {"1": 0.33, "2": 0.33, "3": 0.33}

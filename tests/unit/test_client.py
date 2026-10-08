@@ -106,7 +106,7 @@ def test_ask_retry_then_success_after_429(stub) -> None:
 
     sleeps: list[float] = []
     client = _make_client(stub, sleep=sleeps.append)
-    resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+    resp = client.ask("state", _questions())
     client.close()
 
     assert len(stub.hits) == 2  # exactly one 429, then the 200
@@ -121,7 +121,7 @@ def test_ask_exhausted_retries_raises_rate_limit(stub) -> None:
     with _make_client(stub) as client, pytest.raises(
         RateLimitError, match=r"rate limit error \(HTTP 429\)"
     ):
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
 
     assert len(stub.hits) == 3
 
@@ -129,7 +129,7 @@ def test_ask_exhausted_retries_raises_rate_limit(stub) -> None:
 def test_ask_401_maps_to_authentication_error(stub) -> None:
     stub.enqueue(status=401, body={"error": {"message": "bad key"}})
     with _make_client(stub) as client, pytest.raises(AuthenticationError) as excinfo:
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert excinfo.value.status_code == 401
 
 
@@ -138,7 +138,7 @@ def test_ask_422_maps_to_unprocessable_entity_error(stub) -> None:
     with _make_client(stub) as client, pytest.raises(
         UnprocessableEntityError, match=r"unprocessable entity error \(HTTP 422\)"
     ):
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
 
 
 @pytest.mark.parametrize(
@@ -148,7 +148,7 @@ def test_ask_422_maps_to_unprocessable_entity_error(stub) -> None:
 def test_ask_maps_exact_status_errors(stub, status: int, expected: type) -> None:
     stub.enqueue(status=status, body={"error": {"message": "nope"}})
     with _make_client(stub) as client, pytest.raises(expected) as excinfo:
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert excinfo.value.status_code == status
     assert excinfo.value.request_id is None  # no x-typesafe-request-id header
 
@@ -156,7 +156,7 @@ def test_ask_maps_exact_status_errors(stub, status: int, expected: type) -> None
 def test_ask_unmapped_418_raises_generic_api_status_error(stub) -> None:
     stub.enqueue(status=418, body={"error": "teapot"})
     with _make_client(stub) as client, pytest.raises(APIStatusError) as excinfo:
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert type(excinfo.value) is APIStatusError  # not a status-specific subclass
     assert excinfo.value.status_code == 418
     assert excinfo.value.body == {"error": "teapot"}
@@ -167,7 +167,7 @@ def test_ask_500_with_text_body_maps_to_internal_server_error(stub) -> None:
     # it in .body instead of losing it.
     stub.enqueue(status=500, text="upstream exploded", content_type="text/plain")
     with _make_client(stub) as client, pytest.raises(InternalServerError) as excinfo:
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert excinfo.value.status_code == 500
     assert excinfo.value.body == "upstream exploded"
     assert "upstream exploded" in str(excinfo.value)
@@ -182,7 +182,7 @@ def test_connection_refused_maps_to_api_connection_error() -> None:
     )
     try:
         with pytest.raises(APIConnectionError, match=r"connection error"):
-            client.ask("state", {"billing": NoulQuestion(instructions="q")})
+            client.ask("state", _questions())
     finally:
         client.close()
 
@@ -194,7 +194,7 @@ def test_ask_529_maps_to_overloaded_error(stub) -> None:
     with _make_client(stub) as client, pytest.raises(
         OverloadedError, match=r"overloaded error \(HTTP 529\)"
     ):
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert len(stub.hits) == 3
 
 
@@ -207,7 +207,7 @@ def test_ask_529_retries_then_succeeds(stub) -> None:
     )
     sleeps: list[float] = []
     client = _make_client(stub, sleep=sleeps.append)
-    resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+    resp = client.ask("state", _questions())
     client.close()
     assert len(stub.hits) == 2
     assert sleeps == [0.5]  # exponential backoff, jitter disabled
@@ -225,7 +225,7 @@ def test_retry_after_http_date_falls_back_to_exponential_backoff(stub) -> None:
     stub.enqueue(body=_answers_body())
     sleeps: list[float] = []
     client = _make_client(stub, sleep=sleeps.append)
-    resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+    resp = client.ask("state", _questions())
     client.close()
     assert len(stub.hits) == 2
     assert sleeps == [0.5]
@@ -241,7 +241,7 @@ def test_retry_after_ms_header_wins_in_seconds(stub) -> None:
     stub.enqueue(body=_answers_body())
     sleeps: list[float] = []
     client = _make_client(stub, sleep=sleeps.append)
-    client.ask("state", {"billing": NoulQuestion(instructions="q")})
+    client.ask("state", _questions())
     client.close()
     assert len(stub.hits) == 2
     assert sleeps == [0.25]  # 250 ms converted to seconds
@@ -254,7 +254,7 @@ def test_retry_after_hostile_value_capped_at_300(stub) -> None:
     stub.enqueue(body=_answers_body())
     sleeps: list[float] = []
     client = _make_client(stub, sleep=sleeps.append)
-    client.ask("state", {"billing": NoulQuestion(instructions="q")})
+    client.ask("state", _questions())
     client.close()
     assert len(stub.hits) == 2
     assert sleeps == [300.0]  # clamped to [0, 300] seconds
@@ -267,7 +267,7 @@ def test_tiny_timeout_raises_api_timeout_error(stub) -> None:
     )
     try:
         with pytest.raises(APITimeoutError, match=r"timed out"):
-            client.ask("state", {"billing": NoulQuestion(instructions="q")})
+            client.ask("state", _questions())
     finally:
         client.close()
 
@@ -282,7 +282,7 @@ def test_ask_per_call_timeout_none_keeps_constructor_default(stub) -> None:
     ):
         client.ask(
             "state",
-            {"billing": NoulQuestion(instructions="q")},
+            _questions(),
             timeout=None,
         )
     assert excinfo.value.timeout == 0.05
@@ -442,7 +442,7 @@ def test_models_requires_get_json_capable_transport(stub) -> None:
             client.models()
         assert "get_json" in str(excinfo.value)
         stub.enqueue(body=_answers_body())
-        resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        resp = client.ask("state", _questions())
     finally:
         client.close()
     assert "billing" in resp.answers
@@ -461,7 +461,7 @@ def test_context_manager_support(stub) -> None:
         body=_answers_body(), headers={"x-typesafe-request-id": "req-ctx"}
     )
     with _make_client(stub) as client:
-        resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        resp = client.ask("state", _questions())
     assert resp.request_id == "req-ctx"
 
 
@@ -501,7 +501,7 @@ def test_double_close_is_idempotent_and_guarded_afterwards(stub) -> None:
     client.close()
     client.close()  # second close is a no-op, never an exception
     with pytest.raises(TypeSafeError, match=r"closed") as excinfo:
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     assert "closed" in str(excinfo.value)
     assert len(stub.hits) == 0
 
@@ -566,14 +566,14 @@ def test_ask_per_call_timeout_tightens_default(stub) -> None:
         with pytest.raises(APITimeoutError, match=r"timed out"):
             client.ask(
                 "state",
-                {"billing": NoulQuestion(instructions="q")},
+                _questions(),
                 timeout=0.05,
             )
         stub.reset()  # clears the delay; the next call finishes well within 5.0s
         stub.enqueue(body=_answers_body())
         resp = client.ask(
             "state",
-            {"billing": NoulQuestion(instructions="q")},
+            _questions(),
             timeout=5.0,
         )
     assert resp.nouls["billing"].noul == pytest.approx(0.87)
@@ -585,12 +585,12 @@ def test_ask_per_call_timeout_loosens_default(stub) -> None:
     stub.set_delay(0.5)
     with _make_client(stub, timeout=0.05) as client:
         with pytest.raises(APITimeoutError, match=r"timed out"):
-            client.ask("state", {"billing": NoulQuestion(instructions="q")})
+            client.ask("state", _questions())
         stub.reset()
         stub.enqueue(body=_answers_body())
         resp = client.ask(
             "state",
-            {"billing": NoulQuestion(instructions="q")},
+            _questions(),
             timeout=5.0,
         )
     assert "billing" in resp.answers
@@ -636,14 +636,14 @@ def test_async_ask_per_call_timeout_and_headers(stub) -> None:
             with pytest.raises(APITimeoutError, match=r"timed out"):
                 await client.ask(
                     "state",
-                    {"billing": NoulQuestion(instructions="q")},
+                    _questions(),
                     timeout=0.05,
                 )
             stub.reset()  # clears the delay for the comfortable second call
             stub.enqueue(body=_answers_body())
             return await client.ask(
                 "state",
-                {"billing": NoulQuestion(instructions="q")},
+                _questions(),
                 timeout=5.0,
                 request_headers={"X-Experiment": "async"},
             )
@@ -699,7 +699,7 @@ def test_timeout_resolved_from_env_when_not_explicit(stub, monkeypatch) -> None:
     stub.set_delay(0.5)
     client = _make_client(stub, timeout=None)  # timeout=None -> resolve_timeout(env)
     with pytest.raises(APITimeoutError, match=r"timed out"):
-        client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        client.ask("state", _questions())
     client.close()
 
 
@@ -712,3 +712,79 @@ def test_explicit_timeout_beats_env(stub, monkeypatch) -> None:
     client.close()
     assert "billing" in resp.answers
 
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize("case", [
+    "missing_id", "extra_id", "wrong_type", "missing_option", "extra_option",
+    "unknown_choice", "missing_level", "wrong_legend", "score_below", "score_above",
+    "nonfinite_confidence", "negative_usage", "malformed_mass",
+])
+def test_ask_rejects_invalid_response_without_retry(stub, async_mode, case) -> None:
+    body = _answers_body()
+    if case == "missing_id":
+        del body["answers"]["billing"]
+    elif case == "extra_id":
+        body["answers"]["extra"] = {"type": "noul", "noul": 0.5}
+    elif case == "wrong_type":
+        body["answers"]["tone"] = {"type": "noul", "noul": 0.5}
+    elif case == "missing_option":
+        body["answers"]["tone"]["probabilities"] = {"angry": 1.0}
+    elif case == "extra_option":
+        body["answers"]["tone"]["probabilities"] = {"calm": 0.2, "angry": 0.7, "unknown": 0.1}
+    elif case == "unknown_choice":
+        body["answers"]["tone"]["choice"] = "unknown"
+    elif case == "missing_level":
+        body["answers"]["severity"]["probabilities"] = {"0": 1.0}
+    elif case == "wrong_legend":
+        body["answers"]["severity"]["legend"]["1"] = "different scale"
+    elif case == "score_below":
+        body["answers"]["severity"]["score"] = -0.1
+    elif case == "score_above":
+        body["answers"]["severity"]["score"] = 1.1
+    elif case == "nonfinite_confidence":
+        body["answers"]["tone"]["confidence"] = float("inf")
+    elif case == "negative_usage":
+        body["usage"]["input_tokens"] = -1
+    else:
+        body["answers"]["tone"]["probabilities"] = {"calm": 0.2, "angry": 0.2}
+    stub.enqueue(body=body)
+    kwargs = {"api_key": "test-key", "base_url": stub.base_url, "model": "jev-latest", "timeout": 5.0, "retry": RetryPolicy(max_attempts=3)}
+    if async_mode:
+        async def run():
+            async with daf_jev.AsyncJevClient(**kwargs) as client:
+                with pytest.raises(ValueError):
+                    await client.ask("state", _questions())
+        asyncio.run(run())
+    else:
+        with daf_jev.JevClient(**kwargs) as client, pytest.raises(ValueError):
+            client.ask("state", _questions())
+    assert len(stub.hits) == 1
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize("digits", [2, None])
+def test_ask_rounding_policy_is_explicit_and_rows_are_unchanged(stub, async_mode, digits) -> None:
+    row = {"a": 0.33, "b": 0.33, "c": 0.33}
+    questions = {"q": ChoiceQuestion("Choose", dict.fromkeys(row))}
+    stub.enqueue(body={"model": "jev-latest", "usage": {}, "answers": {"q": {"type": "choice", "choice": "a", "probabilities": row, "confidence": 0.8}}})
+    kwargs = {"api_key": "test-key", "base_url": stub.base_url, "model": "jev-latest", "timeout": 5.0, "retry": RetryPolicy(max_attempts=1), "probability_rounding_digits": digits}
+    if async_mode:
+        async def run():
+            async with daf_jev.AsyncJevClient(**kwargs) as client:
+                if digits is None:
+                    with pytest.raises(ValueError, match="allowed deviation"):
+                        await client.ask("state", questions)
+                    return None
+                return await client.ask("state", questions)
+        response = asyncio.run(run())
+    else:
+        with daf_jev.JevClient(**kwargs) as client:
+            if digits is None:
+                with pytest.raises(ValueError, match="allowed deviation"):
+                    client.ask("state", questions)
+                response = None
+            else:
+                response = client.ask("state", questions)
+    if response is not None:
+        assert response.answers["q"].probabilities == row
+    assert len(stub.hits) == 1

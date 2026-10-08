@@ -8,15 +8,18 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from daf_jev.benchmark_metrics import nearest_rank_percentile  # noqa: E402
 from daf_jev.config import load_dotenv, load_settings  # noqa: E402
 
 SKIP_MESSAGE = "SKIP: JEV_API_KEY not set"
@@ -38,14 +41,8 @@ def settings_or_skip():
 
 
 def percentile(values: list[float], pct: float) -> float:
-    """Linear-interpolated percentile of a non-empty list (pct in [0, 100])."""
-    ordered = sorted(values)
-    if not ordered:
-        raise ValueError("percentile of an empty list")
-    rank = (len(ordered) - 1) * pct / 100.0
-    lo = int(rank)
-    hi = min(lo + 1, len(ordered) - 1)
-    return ordered[lo] + (ordered[hi] - ordered[lo]) * (rank - lo)
+    """Nearest-rank percentile matching the documented evaluator protocol."""
+    return nearest_rank_percentile(values, pct)
 
 
 def latency_summary(walls: list[float]) -> dict:
@@ -58,10 +55,18 @@ def latency_summary(walls: list[float]) -> dict:
     }
 
 
-def write_result(name: str, payload: dict) -> Path:
-    """Write JSON to output/benchmarks/<name>_<YYYYMMDD>.json; return the path."""
-    out_dir = ROOT / "output" / "benchmarks"
+def write_result(name: str, payload: dict, *, out_dir: Path | None = None) -> Path:
+    """Write a unique UTC receipt, exclusively, with strict JSON numbers."""
+    if not re.fullmatch(r"[a-z][a-z0-9_-]*", name):
+        raise ValueError("benchmark name must contain lowercase letters, digits, underscores or hyphens")
+    now = datetime.now(timezone.utc)
+    receipt_id = f"{now.strftime('%Y%m%dT%H%M%S%fZ')}_{uuid4().hex}"
+    encoded = json.dumps({**payload, "receipt_id": receipt_id,
+                          "generated_utc": now.isoformat(),
+                          "percentile_method": "nearest_rank"}, indent=2, allow_nan=False) + "\n"
+    out_dir = out_dir if out_dir is not None else ROOT / "output" / "benchmarks"
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{name}_{date.today().strftime('%Y%m%d')}.json"
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    path = out_dir / f"{name}_{receipt_id}.json"
+    with path.open("x", encoding="utf-8") as handle:
+        handle.write(encoded)
     return path

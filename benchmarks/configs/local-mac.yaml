@@ -1,0 +1,40 @@
+# Replace artifact placeholders with the recorded loopback server profile.
+# Run a single resident model per configuration.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '0'
+capability_probes: true
+timing_samples: 100
+timing_repetitions: 5
+timeout_s: 60
+local_time_limit_s: 7200
+datasets:
+  - {id: banking77, path: ../../.benchmarks/data/banking77-canonical.json}
+  - {id: clinc150, path: ../../.benchmarks/data/clinc150-canonical.json}
+  - {id: wine, path: ../../.benchmarks/data/wine-canonical.json}
+backends:
+  - id: jeff-mps
+    kind: http
+    hosted: false
+    endpoint: http://127.0.0.1:8101/v1/systemone
+    model: knowledgator/gliformer-large-v1
+    mode: systemone
+    capabilities:
+      max_options: 64
+      max_questions: 64
+      max_context_chars: 20000
+      probability_rounding_digits: 4
+      probability_source: native
+      confidence_semantics: chance_adjusted_peakedness_choice_mode_dispersion_score
+      evidence: replace_with_capability_receipt_hash
+    artifact:
+      status: preparation_example_replace_before_acceptance
+      server_revision: REPLACE_WITH_REVISION
+      weights_sha256: REPLACE_WITH_WEIGHT_MANIFEST
+      tokenizer_sha256: REPLACE_WITH_TOKENIZER_MANIFEST
+      license: REPLACE_WITH_MODEL_LICENSE
+      precision: float32
+      quantization: none
+      runtime: REPLACE_WITH_RUNTIME_VERSIONS
+      launch_arguments: REPLACE_WITH_LOOPBACK_LAUNCH
+      extraction: native_systemone

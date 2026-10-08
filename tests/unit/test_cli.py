@@ -101,14 +101,14 @@ def test_cli_ask_with_all_three_spec_forms(stub, monkeypatch, capsys) -> None:
                 "tone": {
                     "type": "choice",
                     "choice": "calm",
-                    "probabilities": {"calm": 1.0},
+                    "probabilities": {"calm": 1.0, "angry": 0.0},
                     "confidence": 0.9,
                 },
                 "severity": {
                     "type": "score",
                     "score": 1.0,
-                    "legend": {"0": "low", "1": "high"},
-                    "probabilities": {"0": 0.5, "1": 0.5},
+                    "legend": {"0": "low", "1": "high", "2": "critical"},
+                    "probabilities": {"0": 0.25, "1": 0.5, "2": 0.25},
                     "confidence": 0.9,
                 },
             },
@@ -832,7 +832,13 @@ def test_cli_ask_zero_questions_exits_two(stub, monkeypatch, capsys) -> None:
 def test_cli_ask_escaped_colon_in_option_description(
     stub, monkeypatch, capsys
 ) -> None:
-    stub.enqueue(body=_minimal_ask_body())
+    body = _minimal_ask_body()
+    body["answers"] = {
+        "tone": {"type": "choice", "choice": "k1", "probabilities": {"k1": 1.0}, "confidence": .9},
+        "severity": {"type": "score", "score": .5, "legend": {"0": "low", "1": "high"},
+                     "probabilities": {"0": .5, "1": .5}, "confidence": .9},
+    }
+    stub.enqueue(body=body)
     monkeypatch.setenv("JEV_API_KEY", "cli-key")
     code = run_cli(
         [

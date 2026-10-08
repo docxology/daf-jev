@@ -20,17 +20,21 @@ Inputs (all in-repo):
   manuscript/references.bib               bibliography
 
 Usage:
-  uv run python scripts/render_pdf.py            # render to a temp dir, gates
+  uv run python scripts/render_pdf.py --output output/pdf/new-report.pdf
   uv run python scripts/render_pdf.py --install  # also replace the repo-root
                                                  # daf-jev_combined.pdf
 
 Render gates (fail with exit 2): zero unresolved bibtex entries, zero
-undefined LaTeX references, zero unloadable images. bibtex's exit code is
+undefined LaTeX references, zero unloadable images, zero overfull vertical
+boxes. Use --artifacts-dir with a fresh directory to retain TeX/log inputs
+for content-completeness review. bibtex's exit code is
 tolerated when it still wrote out.bbl (its 3 known header-comment parse
 errors and unknown-@online-type warnings are pre-existing and benign); the
 gate counters above are the real contract. SOURCE_DATE_EPOCH is pinned from
 HEAD so identical inputs render byte-identical PDFs.
 """
+import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -53,7 +57,18 @@ PANDOC = ['pandoc', 'combined.md', '-o', 'out.tex', '--standalone', '--natbib',
           '--pdf-engine=xelatex']
 
 
-def build(install: bool) -> int:
+def build(install: bool, output: pathlib.Path | None = None,
+          artifacts_dir: pathlib.Path | None = None) -> int:
+    output = output or REPO / 'output/pdf/daf-jev_combined.pdf'
+    output = output.resolve()
+    if output.exists():
+        print(f'FAIL: output already exists: {output}; select a fresh --output path')
+        return 1
+    if artifacts_dir is not None:
+        artifacts_dir = artifacts_dir.resolve()
+        if artifacts_dir.exists():
+            print(f'FAIL: artifacts directory already exists: {artifacts_dir}')
+            return 1
     with (REPO / 'output/data/manuscript_variables.json').open() as fh:
         vars = json.load(fh)
     parts = []
@@ -78,12 +93,18 @@ def build(install: bool) -> int:
 
     combined += '\n\n\\bibliography{' + str((REPO / 'manuscript' / 'references').resolve()) + '}\n'
 
-    build_dir = pathlib.Path(tempfile.mkdtemp(prefix='dafjev_render_'))
+    build_dir = artifacts_dir or pathlib.Path(tempfile.mkdtemp(prefix='dafjev_render_'))
+    if artifacts_dir is not None:
+        build_dir.mkdir(parents=True, exist_ok=False)
     man = build_dir / 'manuscript'
     man.mkdir()
     (man / 'combined.md').write_text(combined)
     shutil.copy(REPO / 'manuscript/render/preamble.tex', man / 'preamble.tex')
-    shutil.copy(REPO / 'manuscript/render/cover.tex', man / 'cover.tex')
+    cover = (REPO / 'manuscript/render/cover.tex').read_text()
+    for key, value in vars.items():
+        cover = cover.replace('{{' + key + '}}', value)
+    assert '{{' not in cover, 'unresolved cover token'
+    (man / 'cover.tex').write_text(cover)
     (build_dir / 'output').symlink_to(REPO / 'output')
 
     epoch = subprocess.run(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=REPO,
@@ -100,7 +121,10 @@ def build(install: bool) -> int:
         if r.returncode != 0 and not benign:
             print(f"FAIL ({r.returncode}): {' '.join(argv[:3])}...")
             print(((r.stdout or '') + (r.stderr or ''))[-1200:])
-            shutil.rmtree(build_dir, ignore_errors=True)
+            if artifacts_dir is None:
+                shutil.rmtree(build_dir, ignore_errors=True)
+            else:
+                print(f'artifacts kept in {build_dir}')
             return 1
 
     blg = (man / 'out.blg').read_text()
@@ -108,22 +132,40 @@ def build(install: bool) -> int:
     missing = blg.count("didn't find a database entry")
     undef = len(re.findall(r'Reference .* undefined', log))
     noload = log.count('Unable to load picture')
+    overfull_vboxes = log.count('Overfull \\vbox')
     pages = re.search(r'\((\d+) pages', log)
     print(f'GATE bibtex-missing={missing} (must be 0)')
     print(f'GATE undefined-refs={undef} (must be 0)')
     print(f'GATE unloadable-images={noload} (must be 0)')
+    print(f'GATE overfull-vboxes={overfull_vboxes} (must be 0)')
     print(f'pages={pages.group(1) if pages else "?"}')
-    if missing or undef or noload:
+    if missing or undef or noload or overfull_vboxes:
         print(f'artifacts kept in {build_dir}')
         return 2
 
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with (man / 'out.pdf').open('rb') as source, output.open('xb') as destination:
+        shutil.copyfileobj(source, destination)
+    print(f'rendered -> {output}')
+    print(f'PDF SHA256={hashlib.sha256(output.read_bytes()).hexdigest()}')
     if install:
         dest = REPO / 'daf-jev_combined.pdf'
         shutil.copy(man / 'out.pdf', dest)
         print(f'installed -> {dest}')
-    shutil.rmtree(build_dir, ignore_errors=True)
+    if artifacts_dir is None:
+        shutil.rmtree(build_dir, ignore_errors=True)
+    else:
+        print(f'artifacts kept in {build_dir}')
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(build('--install' in sys.argv))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=pathlib.Path,
+                        help='fresh standalone PDF path; existing output is preserved')
+    parser.add_argument('--install', action='store_true',
+                        help='also replace the repository-root PDF')
+    parser.add_argument('--artifacts-dir', type=pathlib.Path,
+                        help='fresh directory retaining intermediate TeX and logs')
+    args = parser.parse_args()
+    sys.exit(build(args.install, args.output, args.artifacts_dir))

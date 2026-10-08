@@ -1,0 +1,17 @@
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '0'
+sampling: pilot
+capability_probes: true
+timing_samples: 100
+timing_repetitions: 5
+timeout_s: 60
+local_time_limit_s: 7200
+datasets:
+  - {id: banking77, path: ../../.benchmarks/data/banking77-canonical.json}
+  - {id: clinc150, path: ../../.benchmarks/data/clinc150-canonical.json}
+  - {id: wine, path: ../../.benchmarks/data/wine-canonical.json}
+backends:
+  - {id: training-prior, kind: prior, hosted: false}
+  - {id: tfidf-logistic, kind: sklearn_text, hosted: false, datasets: [banking77, clinc150]}
+  - {id: wine-gradient-boosting, kind: sklearn_structured, hosted: false, datasets: [wine]}

@@ -8,6 +8,7 @@ to the conftest stub HTTP server.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 
@@ -50,6 +51,112 @@ def _breaker(
 
 def _fail() -> None:
     raise _SentinelError("boom")
+
+
+def test_async_success_is_recorded_only_after_await_completes() -> None:
+    breaker = _breaker(FakeClock(), threshold=2)
+    breaker.record_failure()
+
+    async def run() -> None:
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        async def operation(value: str, *, suffix: str) -> str:
+            entered.set()
+            await release.wait()
+            return value + suffix
+
+        task = asyncio.create_task(breaker.call_async(operation, "ok", suffix="!"))
+        await entered.wait()
+        assert breaker.consecutive_failures == 1
+        release.set()
+        assert await task == "ok!"
+        assert breaker.consecutive_failures == 0
+
+    asyncio.run(run())
+
+
+class _AsyncProbeAbort(BaseException):
+    pass
+
+
+@pytest.mark.parametrize("failure", [_SentinelError("boom"), _AsyncProbeAbort()])
+def test_async_probe_base_exception_reopens_and_propagates(failure) -> None:
+    clock = FakeClock()
+    breaker = _breaker(clock, threshold=1, cooldown=10)
+    breaker.record_failure()
+    clock.advance(11)
+
+    async def operation() -> None:
+        await asyncio.sleep(0)
+        raise failure
+
+    with pytest.raises(type(failure)):
+        asyncio.run(breaker.call_async(operation))
+    assert breaker.state is CircuitState.OPEN
+    assert breaker.to_dict()["open_remaining_s"] == 10.0
+
+
+def test_async_probe_cancellation_releases_shared_probe_reservation() -> None:
+    clock = FakeClock()
+    breaker = _breaker(clock, threshold=1, cooldown=10)
+    breaker.record_failure()
+    clock.advance(10)
+
+    async def run() -> None:
+        entered = asyncio.Event()
+
+        async def probe() -> None:
+            entered.set()
+            await asyncio.Event().wait()
+
+        task = asyncio.create_task(breaker.call_async(probe))
+        await entered.wait()
+        assert breaker.state is CircuitState.HALF_OPEN
+        with pytest.raises(CircuitOpenError) as rejection:
+            await breaker.call_async(probe)
+        assert rejection.value.remaining_seconds == 0.0
+        with pytest.raises(CircuitOpenError):
+            breaker.call(lambda: "second probe")
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert breaker.state is CircuitState.OPEN
+        clock.advance(10)
+
+        async def recover() -> str:
+            return "recovered"
+
+        assert await breaker.call_async(recover) == "recovered"
+        assert breaker.state is CircuitState.CLOSED
+
+    asyncio.run(run())
+
+
+def test_async_breaker_wraps_real_persistent_http_client(stub) -> None:
+    from daf_jev.client import AsyncJevClient
+
+    stub.enqueue(status=500, body={"error": "unavailable"})
+    stub.enqueue(body={
+        "model": "jev-latest", "usage": {"input_tokens": 5, "output_tokens": 1},
+        "answers": {"q": {"type": "noul", "noul": 0.9}},
+    })
+    breaker = _breaker(FakeClock(), threshold=1, cooldown=0)
+
+    async def run() -> None:
+        async with AsyncJevClient(
+            api_key="test", base_url=stub.base_url, retry=RetryPolicy(max_attempts=1)
+        ) as client:
+            with pytest.raises(InternalServerError):
+                await breaker.call_async(client.ask, "state", {"q": NoulQuestion("test")})
+            assert breaker.state is CircuitState.OPEN
+            response = await breaker.call_async(
+                client.ask, "state", {"q": NoulQuestion("test")}
+            )
+            assert response.nouls["q"].noul == 0.9
+            assert breaker.state is CircuitState.CLOSED
+
+    asyncio.run(run())
+    assert len(stub.hits) == 2
 
 
 def test_passthrough_return_value_and_kwargs() -> None:

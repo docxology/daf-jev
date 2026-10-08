@@ -519,3 +519,27 @@ def test_run_battery_noul_path(stub) -> None:
     }
     # The leftover program proves exactly 6 asks were issued (7 enqueued).
     assert len(stub.hits) == 6
+
+
+@pytest.mark.parametrize("case", ["probability", "confidence", "noul"])
+def test_battery_counts_invalid_numeric_responses_as_errors(stub, case) -> None:
+    if case == "noul":
+        body = _noul_body(float("nan"))
+        fixture = COIN_NOUL
+        expected_errors = 1
+    else:
+        body = _coin_body(0.5, "heads")
+        fixture = COIN
+        expected_errors = 3  # sequential ask and both option-order asks
+        if case == "probability":
+            body["answers"]["flip"]["probabilities"] = {"heads": -0.1, "tails": 1.1}
+        else:
+            body["answers"]["flip"]["confidence"] = float("inf")
+    for _ in range(expected_errors):
+        stub.enqueue(body=body)
+    with _battery_client(stub) as client:
+        battery = run_battery(client, fixture, repeats=1, concurrent=1)[fixture.name]
+    assert battery["n_errors"] == expected_errors
+    assert "prob_mean" not in battery
+    assert "noul_mean" not in battery
+    assert "concurrent" not in battery

@@ -121,7 +121,11 @@ class ConfidenceGate:
     threshold: float
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.threshold <= 1.0:
+        if (
+            isinstance(self.threshold, bool)
+            or not isinstance(self.threshold, (int, float))
+            or not 0.0 <= self.threshold <= 1.0
+        ):
             raise ValueError(f"threshold must be in [0, 1], got {self.threshold}")
 
     def __call__(self, answers: Mapping[str, Answer]) -> str | None:
@@ -131,11 +135,15 @@ class ConfidenceGate:
         confidence = getattr(answer, "confidence", None)
         if confidence is None:
             return None
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            return f"confidence {confidence!r} must be a number in [0, 1]"
         if not math.isfinite(confidence):
             return (
                 f"confidence {confidence!r} is not finite, "
                 f"below threshold {self.threshold:.3f}"
             )
+        if not 0.0 <= confidence <= 1.0:
+            return f"confidence {confidence!r} must be in [0, 1]"
         if confidence < self.threshold:
             return f"confidence {confidence:.3f} < threshold {self.threshold:.3f}"
         return None
@@ -384,9 +392,22 @@ class Decider(Generic[S, T]):
         except Exception as exc:
             self._note_failure(_error_text(exc))
             return self._fallback(state, "ask_error", _error_text(exc), t0)
-        # 7. Success: record usage and reset the consecutive-failure counter.
-        self._ledger.record(response)
-        self._consecutive_failures = 0
+        # 7. A completed ask is chargeable even if a later policy step fails.
+        try:
+            self._ledger.record(response)
+            return self._finish_decision(state, t0, response, cache_pair, key)
+        except Exception as exc:
+            return self._fallback(state, "error", _error_text(exc), t0, response)
+
+    def _finish_decision(
+        self,
+        state: S,
+        t0: float,
+        response: SystemOneResponse,
+        cache_pair: tuple[MutableMapping[Any, T], Callable[[S], Any]] | None,
+        key: Any,
+    ) -> T:
+        """Complete policy/mapping while retaining the paid ask's receipt."""
         # 8. Gate the answers.
         if self._gate is not None:
             gate_reason = self._gate(response.answers)
@@ -396,18 +417,22 @@ class Decider(Generic[S, T]):
                 if confidence is not None:
                     self._calibration.append((confidence, gate_reason is None))
             if gate_reason is not None:
-                return self._fallback(state, "gate", gate_reason, t0)
+                return self._fallback(state, "gate", gate_reason, t0, response)
         # 9. Map the answers to the typed action.
         try:
             action = self._map_answers(state, response)
         except Exception as exc:
             self._note_failure(_error_text(exc))
-            return self._fallback(state, "mapping_error", _error_text(exc), t0)
+            return self._fallback(
+                state, "mapping_error", _error_text(exc), t0, response
+            )
         # 10. Cache the action and emit the model event. The key is the one
         # computed at step 1 (cache_key runs once per decide).
         if cache_pair is not None:
             cache, _ = cache_pair
             cache[key] = action
+        # Mapping failures accumulate until the full decision succeeds.
+        self._consecutive_failures = 0
         self._emit("model", None, None, t0, response.usage, response.request_id)
         return action
 
@@ -473,11 +498,20 @@ class Decider(Generic[S, T]):
         self._latch_error = error
 
     def _fallback(
-        self, state: S, reason: str | None, error: str | None, t0: float
+        self,
+        state: S,
+        reason: str | None,
+        error: str | None,
+        t0: float,
+        response: SystemOneResponse | None = None,
     ) -> T:
         """Produce the floor action and emit a fallback event."""
         action = self._fallback_fn(state)
-        self._emit("fallback", reason, error, t0, None, None)
+        self._emit(
+            "fallback", reason, error, t0,
+            response.usage if response is not None else None,
+            response.request_id if response is not None else None,
+        )
         return action
 
     def _emit(

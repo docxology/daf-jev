@@ -1,0 +1,43 @@
+# Public catalog GET/prepare do not infer. Hosted run needs OPENROUTER_API_KEY
+# in the process environment. This $25 budget includes probes and retries.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '25'
+capability_probes: true
+backends_from_catalog: ../../.benchmarks/catalogs/decisions-20261007.json
+hosted_concurrency: 4
+timeout_s: 60
+timing_samples: 100
+timing_repetitions: 5
+datasets:
+  - {id: banking77, path: ../../.benchmarks/data/banking77-canonical.json}
+  - {id: clinc150, path: ../../.benchmarks/data/clinc150-canonical.json}
+  - {id: wine, path: ../../.benchmarks/data/wine-canonical.json}
+backends:
+  - id: qwen3.5-9b-chat
+    kind: http
+    hosted: true
+    endpoint: https://openrouter.ai/api/v1/chat/completions
+    model: qwen/qwen3.5-9b
+    api_key_env: OPENROUTER_API_KEY
+    mode: chat
+    context_length: 262144
+    options:
+      temperature: 0
+      max_tokens: 512
+      provider: {allow_fallbacks: false}
+    capabilities:
+      probability_source: null
+      probability_rounding_digits: null
+      confidence_semantics: unavailable
+      evidence: catalog_only
+    pricing:
+      source: https://openrouter.ai/api/v1/models
+      snapshot_at: '2026-10-07'
+      rates: {prompt: '0.0000001', completion: '0.00000015'}
+    artifact:
+      canonical_slug: qwen/qwen3.5-9b-20260310
+      license: Apache-2.0
+      extraction: frozen_typed_json_prompt
+      weights_sha256: provider_opaque_unknown
+      tokenizer_sha256: provider_opaque_unknown

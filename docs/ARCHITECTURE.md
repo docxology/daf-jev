@@ -1,8 +1,8 @@
-# daf-jev — Architecture Contract (v1, 2026-09-16)
+# daf-jev — Architecture Contract
 
 Single source of truth for the package build. All workers MUST match these signatures
 exactly. Wire facts below are verified against the local docs snapshot
-(`docs/reference/`, snapshot `b79c9cd6008489f1`); per-module workers MUST also read
+(`docs/reference/`, snapshot `708902db9820d9d8`); per-module workers MUST also read
 their listed snapshot pages for details and keep this contract accurate if they find
 contradictions (report the delta; do not silently deviate).
 
@@ -82,7 +82,8 @@ wire path is silently coerced.
   - `SystemOneResponse(model: str, answers: dict[str, Answer], usage: Usage,
     request_id: Optional[str] = None)` with cached `nouls` / `choices` / `scores`
     dict views filtered by answer type.
-  - `parse_response(payload: dict, request_id: Optional[str] = None) -> SystemOneResponse`
+  - `parse_response(payload: dict, request_id: Optional[str] = None, *,
+    probability_rounding_digits: int | None = 2) -> SystemOneResponse`
     (strict: unknown answer type or missing keys raise `ValueError`).
   - Strict parsing (hardened): numeric wire fields reject `bool` and numeric strings
     (int/float only); `choice`/`model` require an actual `str`; malformed
@@ -92,7 +93,20 @@ wire path is silently coerced.
     integral (`100.0` -> `100`), and numeric strings raise `ValueError`
     ("input_tokens must be an integer number"). `legend` values must already be
     strings (`ValueError` "legend values must be strings" — `None`/bool/int are
-    never `str()`-coerced; level keys stay stringified).
+    never `str()`-coerced; level keys stay stringified). All probabilities,
+    noul and confidence values must be finite in `[0,1]`; token counts must
+    be nonnegative. `validate_probability_row(probabilities, *,
+    rounding_digits=None, context="probabilities") -> None` checks positive
+    mass within `1e-6`, adding half a decimal rounding quantum per entry only
+    when all entries match an explicitly declared precision. Native parsing
+    defaults to two digits; full-precision rows use `None`. Values are
+    retained verbatim, never normalized; CPT and posterior-sidecar tolerances
+    remain independent.
+  - `validate_response(response, questions, *, probability_rounding_digits=2)
+    -> None` binds a parsed response to exactly the requested IDs/types,
+    complete choice vocabulary and score legend/range. Both clients invoke
+    it before returning success. Malformed successful HTTP payloads raise
+    `ValueError`; they do not become successful downstream observations.
 - `_errors.py` — exception hierarchy (mirror the JS SDK classes):
   `TypeSafeError` base; `APIConnectionError`, `APITimeoutError`;
   `APIStatusError` (carries `status_code`, `body`, `request_id`) with subclasses
@@ -121,6 +135,11 @@ wire path is silently coerced.
   httpx's own 5-second default; `_normalize_base_url` ensures a base URL with a
   path component ends with `/`.
 - `client.py` —
+  - Both clients preserve strict JSON decoder failures on successful HTTP
+    responses, including duplicate keys, numeric overflow and malformed syntax.
+    For unsuccessful HTTP responses, decoding failure falls back to raw text
+    (or `None` for an empty body) so the status-specific exception still carries
+    the original body and request ID.
   - `JevClient(api_key=None, *, base_url=None, model=None, transport=None,
     retry=None, sleep=time.sleep, timeout=None, env=None)`:
     resolves key via `config.resolve_api_key(env)`; `model=None` resolves via
@@ -181,15 +200,17 @@ wire path is silently coerced.
     — returns the primary value when confidence >= threshold else `below`;
     a Score answer's level maps via `round` (nearest, ties to even) clamped
     to the probable level range; a non-finite score raises `ValueError`.
+    Thresholds must be finite nonboolean numbers in `[0,1]`; malformed
+    confidence (bool, nonfinite or outside `[0,1]`) returns `below`.
   - `route(answer: ChoiceAnswer, handlers: Mapping[str, Callable[[], T]],
     *, min_confidence: float = 0.0, fallback: Callable[[], T] | None = None) -> T`
-    — NaN confidence fails the `>= min_confidence` comparison and routes to
+    — invalid numeric confidence routes to
     the fallback (fail-closed; `ValueError` when no fallback is provided).
   - `tiered_gate(answer, *, high=0.85, low=0.6, high_label="automate",
     middle_label="review", low_label="escalate") -> str` — two-threshold
     routing: confidence >= high → high_label, >= low → middle_label, else
-    low_label; non-finite thresholds, `low > high`, or empty labels raise
-    `ValueError`; a NaN confidence compares False against both thresholds and
+    low_label; thresholds outside `[0,1]`, booleans, non-finite thresholds,
+    `low > high`, or empty labels raise `ValueError`; malformed confidence
     escalates; answers without a `confidence` field raise `TypeError`.
   - `pick(actions: Mapping[str, Callable], choices: Mapping[str, ChoiceAnswer | Answer])`
     convenience wrapper; isinstance-narrows to `ChoiceAnswer` and silently
@@ -275,7 +296,8 @@ wire path is silently coerced.
   `CircuitState` (closed / open / half_open), `CircuitOpenError(TypeSafeError)`
   (carries `remaining_seconds`), `CircuitBreaker(failure_threshold=5,
   cooldown_seconds=30.0, clock=time.monotonic)` with `call(fn, *args,
-  **kwargs)`, `record_success()` / `record_failure()`, pure-read `state` /
+  **kwargs)`, `async call_async(fn, *args, **kwargs)`,
+  `record_success()` / `record_failure()`, pure-read `state` /
   `consecutive_failures`, and a JSON-safe `to_dict()`. N consecutive
   failures open the circuit for the cooldown; a single probe is admitted
   after it (probe failure reopens with a fresh stamp). `call()` records a
@@ -285,7 +307,10 @@ wire path is silently coerced.
   float >= 0 (`0.0` for the probe-rejection race). The wrapped callable
   always runs outside the lock and the breaker never sleeps — the same
   pure-computation philosophy as `RetryPolicy`. Default OFF: `JevClient`
-  is not wired to it.
+  is not wired to it. `call_async` awaits the callable before recording
+  success; failure/cancellation records failure and re-raises, reopening a
+  half-open probe. Returning a coroutine to synchronous `call` does not make
+  it an async wrapper; use the awaited surface.
 - `decider.py` — decision-point decider: the observe -> compose -> ask ->
   gate -> fail-open -> act loop as one reusable class. Pure orchestration
   over injected I/O; `decide()` never raises (the fallback hook is the
@@ -302,8 +327,10 @@ wire path is silently coerced.
     a raising `cache_key`, a raising cache mapping operation, or a raising
     `should_ask`/gate hook).
   - `ConfidenceGate(answer_id, threshold)` — frozen; threshold validated
-    in [0, 1] else `ValueError`. Returns None to accept, a rejection
-    reason otherwise; noul answers (no confidence attr) are not gated.
+    in [0, 1] else `ValueError`; booleans are rejected. Returns None to
+    accept, a rejection reason otherwise. Confidence must be a finite
+    nonboolean number in `[0,1]`; malformed confidence is rejected. Noul
+    answers (no confidence attr) are not gated.
   - `Budget(max_calls=None, max_input_tokens=None, max_output_tokens=None,
     max_total_tokens=None, attempts=0)` — at least one threshold required, and
     every provided threshold must be >= 0 (`max_calls=0` stays valid — a
@@ -327,9 +354,12 @@ wire path is silently coerced.
     attempt per ask so worst-case blocking is one timeout) -> budget gate
     -> compose (`compose_error`) -> one ask behind the optional breaker
     (`CircuitOpenError` -> `breaker`; other exceptions count toward the
-    latch, reason `ask_error`) -> ledger record + failure-counter reset ->
+    latch, reason `ask_error`) -> ledger record ->
     gate (`gate`) -> map (`mapping_error`, counts toward the latch) ->
-    cache store + `"model"` event. Extra surface: `last_event`,
+    cache store -> failure-counter reset + `"model"` event. Transport success
+    does not clear a mapping-failure latch. Gate/mapping/hook/cache fallbacks
+    after a successful ask retain response usage and request ID in the event;
+    the ledger records that response once. Extra surface: `last_event`,
     `usage_snapshot()`, `calibration_pairs()` (declared-confidence /
     gate-accepted pairs when the gate is a `ConfidenceGate` — a
     self-consistency proxy, NOT correctness), `dead` property.
@@ -388,16 +418,21 @@ wire path is silently coerced.
     Provider dispatch section.
   - All output JSON to stdout; exit 0 ok, 2 usage, 1 runtime error.
 - `__init__.py` — eager imports only (no ImportError guards). Public exports
-  (79 names incl. `__version__`): the wire/client/compose/evaluate/decider/
+  (listed in `src/daf_jev/__init__.py`, including `__version__`): the wire/client/compose/evaluate/decider/
   provider-dispatch core plus the jaggedness fixtures and statistics
   (`COIN`, `COIN_NOUL`, `D6`, `JaggednessFixture`, `chi2_sf`, `max_streak`,
   `noul`, `noul_choice_delta`, `position_slope`, `run_battery`, `runs_test_z`,
   `uniform_chi2`, `uniform_deviation`), the graphical-model additions
-  (`Variable`, `Edge`, `CPT`, `BayesNet`, `elicit_cpts`, `propose_structure`,
+  (`Variable`, `Edge`, `CPT`, `BayesNet`, `elicit_cpts`, `elicit_cpts_async`,
+  `propose_structure`, `propose_structure_async`,
   `decompose_single_parent`), and the posteriors-ingest additions
   (`CalibrationPairing`, `PosteriorsSidecar`, `load_posteriors`,
   `pair_for_calibration`), and the re-ask policy additions
-  (`ReAskPlan`, `entropy_bits`, `next_question`, `reask_plan`) — i.e.:
+  (`ReAskPlan`, `entropy_bits`, `next_question`, `reask_plan`), plus
+  `AsyncDecisionBackend`, `AsyncHTTPDecisionBackend`, `BackendCapabilities`,
+  `CallReceipt`, `DecisionBackend`, `DecisionPrediction`, `DecisionRequest`,
+  `DecisionResult`, `HTTPDecisionBackend`, `PriorBackend` and
+  `ThreadedAsyncBackend`. The legacy exports remain:
   `COIN, COIN_NOUL, CPT, D6, APIConnectionError, APITimeoutError, Answer,
   AsyncJevClient, BayesNet, Budget, CalibrationPairing, ChoiceAnswer,
   ChoiceQuestion, CircuitBreaker, CircuitOpenError, CircuitState,
@@ -429,7 +464,9 @@ wire path is silently coerced.
   sibling `architecture.mmd` (byte-deterministic mermaid source emitted by
   the pure `figures.architecture_mermaid()`; deliberately NOT a registry
   entry); exit 1 on unexpected error (missing benchmark data names the
-  file), 0 on success.
+  file), 0 on success. `--include-study` appends the six explicitly selected
+  empirical figures from `study_figures.py`, with per-figure data JSON and
+  deterministic vector PDF companions; legacy invocation retains seven figures.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`: writes `output/data/manuscript_variables.json`
   and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
@@ -438,21 +475,38 @@ wire path is silently coerced.
   `output/figures/figure_registry.json` (the `FIGURES` token derives from
   that registry, never a raw PNG glob) — rather than fabricating values;
   `--allow-draft` emits `N/A` sentinels instead.
+- `scripts/capture_verification.py` — `capture(root: Path, out_dir: Path) -> int`
+  runs genuine unit pytest with branch coverage/JUnit and collects live tests
+  without executing them. CLI: `--out-dir FRESH_INSIDE_ROOT`. It inventories
+  verification inputs before/after, retains native exports and command logs in
+  a fresh confined nonsymlink directory, and writes
+  `dafjev.verification-evidence/1` even for a failed capture. Only its owned
+  private raw coverage files are removed. Capture does not change the
+  publication selection or publish results; live collection is not live acceptance.
+- `scripts/render_pdf.py` — standalone saved-token substitution and
+  Pandoc/XeLaTeX renderer. `--output FILE` requires a fresh PDF path;
+  `--artifacts-dir DIR` optionally retains intermediate Markdown, TeX and logs
+  in a fresh directory. `--install` separately replaces the root PDF.
+  Bibliography misses, undefined references, unloadable images and overfull
+  vertical boxes must all be zero. The preamble flushes pending pages before
+  longtables. These gates complement section/prose completeness and page-layout
+  review; they do not establish model execution or publication acceptance.
 - `figures.py` — the manuscript figure registry (matplotlib imported at
   module level, headless `Agg`; NEVER import from core modules). One
   `generate_<name>()` per manuscript figure — `graphical_abstract`,
   `architecture`, `primitives`, `batching`, `latency`, `confidence`,
-  `calibration` (7 figures in `_REGISTRY`; `generate_one(name, ...)`
+  `calibration` (7 figures in `_REGISTRY`; `generate_one(name, out_dir, project_root=None, *, include_study=False)`
   raises `ValueError` naming the valid choices on an unknown name) —
-  orchestrated by `generate_all(out_dir, project_root)`: renders in
+  orchestrated by `generate_all(out_dir, project_root, *, include_study=False)`: renders in
   registry order and ALWAYS writes `figure_registry.json` after the
-  PNGs via `write_figure_registry` (one entry per `fig:*` label:
+  PNGs via `write_figure_registry(out_dir, project_root, *, include_study=False)` (one entry per `fig:*` label:
   `figure_id` `figure_NNN`, filename, caption, section, width,
   `placement: "h"`, `metadata.alt_text` — static metadata, no measured
   statistics; template validation consumes it). Data-driven figures
   (`batching`, `latency`, `calibration`, `graphical_abstract`) read the
-  newest benchmark JSONs under `output/benchmarks/` via
-  `_latest_benchmark` and raise `FileNotFoundError` naming the missing
+  exact benchmark JSONs selected by `manuscript/evidence.json` and verified
+  through `evidence.selected_benchmark_bytes` in one verified consumption (the private compatibility helper
+  keeps the name `_latest_benchmark`) and raise `FileNotFoundError` naming the missing
   file; `architecture`, `primitives`, and `confidence` are data-free
   and always renderable. `architecture_mermaid() -> str` re-renders the
   architecture diagram as byte-deterministic mermaid from the same
@@ -465,6 +519,27 @@ wire path is silently coerced.
   DejaVu Sans, palette, light gridlines; every generator calls it
   first) and `_ROLE_FACECOLORS` (`main` / `side` / `external` role ->
   facecolor; side modules draw dashed).
+  Study mode replaces the cover with a modular workflow and separate retained
+  evidence counts; the legacy default cover remains available. Registry caption
+  and alt text follow the chosen cover. Both modes write vector PDF companions.
+- `study_evidence.py` — pure selected aggregate consumption, no model execution
+  or plotting. `load_studies(project_root) -> StudyEvidence` consumes SHA-bound
+  `study_summaries.cpu` and `.hosted` through `evidence.selected_study_bytes`.
+  It rejects malformed formats, duplicate arm identities, invalid metrics,
+  inconsistent status/attempt/gate denominators and non-finite currency.
+  `arm(...)` requires a unique declared cohort; `limits(...)` consumes retained
+  grouped percentile intervals without refitting. `tokens()` emits optional
+  `STUDY_*` measured variables. It preserves null risk for ineligible gates.
+- `study_figures.py` — optional headless matplotlib figures `cpu_quality`,
+  `wine_ordinal`, `cohort_sensitivity`, `validation_folds`, `selective_validation`
+  and `execution_coverage`. `generate(name, out_dir, project_root)` reads selected
+  aggregates, writes PNG/PDF and `dafjev.study-figure-data/1` JSON with exact
+  source hashes and plotted values. No bootstrap, fit, probability reconstruction,
+  or inference occurs. Intervals describe fixed predictions; Wine error units
+  are bin indices; changed-cohort sensitivities lack paired change intervals;
+  adaptive validation bounds lack simultaneous or refit-transfer guarantees.
+  A complete isolated rc context is applied before creating figures so full and
+  standalone entry points render identically under the same runtime and inputs.
 - `manuscript_variables.py` — the `{{TOKEN}}` map generator (no
   matplotlib): `generate_variables(project_root, *,
   require_analysis_outputs=True) -> dict[str, str]` returns the flat
@@ -473,8 +548,10 @@ wire path is silently coerced.
   `FileNotFoundError` naming the missing analysis output — manuscript
   config, docs snapshot manifest, benchmark JSONs, or
   `output/figures/figure_registry.json`; draft mode (`--allow-draft`)
-  emits `"N/A"` sentinels; test counts and coverage degrade to `"N/A"`
-  in both modes. FIGURES derivation: the registry JSON is consumed
+  emits `"N/A"` sentinels. With an explicit verification selection, malformed,
+  stale or incomplete verification fails in both modes. Without that selection,
+  the legacy collection/raw-coverage path can return `"N/A"` for unavailable
+  verification. FIGURES derivation: the registry JSON is consumed
   entry-by-entry — every entry must be a dict with a string `filename`
   (`ValueError` naming the label otherwise), and `FIGURES` is the
   sorted filenames joined with ", " (empty registry -> `"N/A"`). The
@@ -485,9 +562,20 @@ wire path is silently coerced.
   loader shape (strict-raise vs draft-empty). The 49-token set derives
   from manuscript/config.yaml (`CONFIG_*`; batch-width token NAMES
   derive from the configured widths, canonical 5/10/20 fallback),
-  pyproject metadata, AST-derived code stats, pytest collection +
-  coverage, benchmark JSONs, and provenance — no hardcoded results.
-  Coverage freshness: ``TEST_COVERAGE_PCT`` re-reports an existing
+  pyproject metadata, AST-derived code stats, selected verification (or legacy
+  collection/coverage), benchmark JSONs, and provenance — no hardcoded results.
+  A present `study_summaries` map adds 17 `STUDY_*` tokens from selected aggregate
+  bytes; absent maps preserve the legacy token set. Malformed or changed selected
+  studies fail in both strict and draft mode. These retained study values preserve
+  their original execution/source identity rather than acquiring the current
+  software-verification identity.
+  Optional `manuscript/evidence.json` `verification={path,sha256}` selects a
+  completed capture through `evidence.selected_verification`. Unit/live counts,
+  coverage and Python/platform then derive from those retained outputs; variable
+  regeneration runs no pytest collection and reads no raw coverage. Live count
+  means tests collected, not executed. Source/test/script/config identity must
+  equal both retained boundary inventories. Legacy coverage freshness:
+  ``TEST_COVERAGE_PCT`` re-reports an existing
   ``.coverage`` only when it is not older than the newest source/test
   ``.py`` mtime (recursive, ``__pycache__`` skipped); stale data raises
   ``FileNotFoundError`` naming both timestamps and the fix
@@ -624,14 +712,15 @@ modules.
 
 ## Provider dispatch
 
-One shared wire contract (`POST /v1/systemone`, `GET /v1/models`), many
-providers => a provider REGISTRY that parameterizes config resolution,
-client construction, and CLI/MCP dispatch. No wire adapters:
-`_types.parse_response` stays untouched — unknown top-level response fields
+The legacy provider registry parameterizes configuration, client construction
+and CLI/MCP dispatch for the shared System One client contract
+(`POST /v1/systemone`, TypeSafe-shaped `GET /v1/models`). Unknown response fields
 (kev's `latency_ms`, OpenRouter's `id` / `provider` / `usage.cost` extras)
-already parse fine and are ignored (documented in its docstring). The
-pure-logic layers (compose / evaluate / decider / calibration / resilience)
-stay provider-agnostic and untouched.
+are ignored by the legacy dataclasses. Explicit cross-provider benchmark
+adapters below retain those accounting/model fields and use full endpoint URLs;
+they do not silently alter the stable registry keys or defaults. Compose and
+calibration are pure; evaluator/decider orchestrate injected I/O. Both kinds
+of layer remain provider-agnostic.
 
 Registry (`providers.py`):
 
@@ -849,11 +938,12 @@ Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
     multi-parent stall is upstream ReactiveMP) — a bridge can lower the
     degenerate deterministic aux CPTs outside the graphical model.
 
-Elicitation (`src/daf_jev/graphical_elicitation.py` — pure orchestration
-over an injected client; no I/O of its own):
+Elicitation (`src/daf_jev/graphical_elicitation.py` — orchestration over an
+injected client, including its network I/O):
 
 - `elicit_cpts(variables, edges, *, client, instructions: str | None = None,
-  max_questions_per_request: int | None = None) -> BayesNet` —
+  max_questions_per_request: int | None = None,
+  state: JSONContent | None = None) -> BayesNet` —
   `variables: Sequence[Variable]`; `edges` define the DAG (validated
   acyclic). For every child and EVERY parent assignment: one `choice()`
   question whose options are the child's states IN ORDER. Question id
@@ -869,24 +959,41 @@ over an injected client; no I/O of its own):
   row raises `ValueError` naming the question id; non-finite
   /out-of-order probabilities follow the repo's fail-closed rules.
 - `propose_structure(variables, *, client, instructions: str | None = None,
-  edge_penalty: float = 1.0, exact_limit: int = 8) -> BayesNet` — one
+  edge_penalty: float = 1.0, exact_limit: int = 8,
+  state: JSONContent | None = None) -> BayesNet` — one
   batched ask over ALL unordered variable pairs (n(n-1)/2 questions); per
   pair `(a, b)` the options IN ORDER are `f"{a}->{b}"`, `f"{b}->{a}"`,
   `"no-edge"`; shared base instructions say to judge DIRECT dependency
   accounting for mediation through the other variables (the experiment's
-  framing). Edge score = log(probability of the chosen edge option). DAG
+  framing). Candidate edge gain = `log(p_edge) - log(p_no_edge)` for a
+  pair whose chosen option is a direction. DAG
   assembly: enumerate topological orderings (exact when n <=
   `exact_limit`; an n! search like the experiment — documented
   complexity; n > `exact_limit` uses the greedy fallback: start empty,
-  repeatedly add the highest-scoring edge that keeps the graph acyclic
-  while its log-prob gain exceeds `edge_penalty`). Exact search score for
-  an ordering = sum of log p over edges consistent with the ordering
+  add positive penalized-gain candidates ordered by chosen-edge log
+  probability while keeping the graph acyclic). Exact search score for
+  an ordering = sum of gains over chosen edges consistent with the ordering
   MINUS `edge_penalty` * number of those edges; the best ordering wins
-  (deterministic tiebreak: lexicographic ordering tuple). Returns a
+  (deterministic tiebreak: lexicographic ordering tuple). This is an ordering
+  search: every compatible candidate is included for a scored ordering,
+  rather than independently searching all edge subsets. The greedy branch
+  has a different search space. Returns a
   `BayesNet` with edges only (the `cpts` mapping is EMPTY; `validate()`
   is NOT yet satisfied) — the two-step flow is explicit:
   `propose_structure`, then `elicit_cpts` fills the CPTs.
-- Both functions accept `client` as any object with `.ask(state,
+- `async elicit_cpts_async(variables, edges, *, client,
+  instructions: str | None = None, max_questions_per_request: int | None = None,
+  state: JSONContent | None = None) -> BayesNet` and
+  `async propose_structure_async(variables, *, client,
+  instructions: str | None = None, edge_penalty: float = 1.0,
+  exact_limit: int = 8, state: JSONContent | None = None) -> BayesNet` have the
+  same construction/search semantics, await sequential requests on the caller's
+  loop, and never close the client. The caller owns its async context/lifecycle.
+- Sync functions preserve sync-client ownership. A fresh async client can be
+  used through a single-use compatibility bridge; the bridge closes it on its
+  own loop after success or failure and rejects use inside a running event
+  loop. Reusable async workflows use the explicit async functions.
+- Both families accept `client` as any object with `.ask(state,
   questions)` / `.ask(state, questions_dict) -> SystemOneResponse` (the
   real `JevClient` / `AsyncJevClient` or a test stand-in) — the PUBLIC
   client API only; provider choice happened upstream (`open_client`
@@ -1217,7 +1324,8 @@ Line receipts against current source: formats/tolerances
   questions vs N calls with 1 question (N in {5, 10, 20}); report wall time, tokens,
   and speedup to stdout and `output/benchmarks/batching_<date>.json`.
 - `bench_patterns.py` — latency of composite-score pipeline and confidence routing
-  decisions end-to-end (1 call each); report p50/p95 over >= 10 runs.
+  decisions end-to-end (1 call each); report p50/p95 with the actual run count
+  (default 10; historical committed receipt used fewer).
 - `bench_calibration.py` — self-consistency confidence calibration: for N
   short states, the same three-option choice question is asked R times
   (modal choice across repeats = self-consistency proxy, NOT ground
@@ -1234,9 +1342,611 @@ Line receipts against current source: formats/tolerances
   Multi-provider: `--providers 'jeff,kev,jev'`; a provider without its key
   prints `SKIP[<provider>]` and the run continues.
 
+## Decision backends and benchmark contracts
+
+The following additive modules preserve the legacy client/provider/Evaluator
+surface. User documentation lives in [providers.md](providers.md),
+[decision_benchmarking.md](decision_benchmarking.md), [datasets.md](datasets.md)
+and [reproducibility.md](reproducibility.md).
+
+### `decision_backends.py`
+
+- Frozen `BackendCapabilities(primitives=("noul", "choice", "score"),
+  modalities=("text", "json"), max_options=None, max_questions=None,
+  max_context_chars=None, batching=True, authentication="none", probability_source="native",
+  confidence_semantics="provider_defined", probability_rounding_digits=2,
+  evidence="declared_unverified", probability_semantics=None)` declares eligibility and provenance;
+  capability declarations do not establish runtime acceptance.
+  HTTP adapters bind effective authentication to `bearer` for hosted requests
+  and `none` for loopback; frozen HTTP profiles record that effective mode.
+- Frozen `DecisionRequest(state, questions, model=None, timeout=60.0,
+  settings={}, observer=None)` carries semantic inputs, explicit effective
+  settings and a per-request observer (avoids shared observer races).
+  Frozen `DecisionPrediction(type, value, probabilities=None, confidence=None,
+  probability_source=None, confidence_semantics=None,
+  probability_rounding_digits=None, probability_semantics=None)` does not require fake
+  distributions for generated labels. `DecisionResult(predictions,
+  receipts=(), workflow=None)` retains predictions, transport receipts and
+  executed workflow metadata separately. A native noul scalar supplies its
+  binary complement distribution while keeping absent confidence as `None`.
+  `probability_source` identifies origin; `probability_semantics` separately
+  declares a supported meaning. Generic native rows default to unknown meaning.
+  Numerical validity, normalization and native transport do not establish
+  calibrated class probabilities or conditional factors.
+- Frozen `CallReceipt(attempt_id, timestamp, endpoint, requested_model,
+  resolved_model, provider, response_id, request_hash, elapsed_s, status_code,
+  input_tokens, output_tokens, cost_usd, cost_status, error=None,
+  response_diagnostics=None)` has JSON-safe
+  `to_dict()`. USD is a validated decimal string or unknown, never an implicit
+  zero. `request_hash` is the semantic canonical JSON SHA-256, not captured
+  transport bytes or standalone wire-order attestation. Native canonical hashes
+  alone do not distinguish option permutations; ordered corpus/question hashes,
+  cell/example identity and held source custody bind that presentation.
+  A receipt is retained before semantic decoding, including paid malformed
+  successful responses. Transport/accounting evidence is not model correctness.
+- Frozen `HTTPResponseDiagnostics(body_sha256, body_bytes_observed,
+  body_complete, digest_scope, media_type, classification,
+  body_limit_bytes=1048576)` records only bounded decoded-response observations.
+  It contains no raw response body, arbitrary header, error excerpt or URL.
+  `digest_scope` is `complete_decoded_body` after normal EOF and
+  `observed_decoded_prefix` otherwise. `classification` is one of `json_object`,
+  `json_other`, `invalid_json`, `empty`, `incomplete`, or `body_limit_exceeded`.
+  Media types are fixed allowlisted values, `other`, or absent; content-type
+  parameters are discarded. Response model/provider/ID fields are bounded ASCII
+  identifiers with reflected supplied credentials and request strings rejected;
+  these untrusted labels do not establish provider identity. The only retained
+  header-derived identifier is the similarly checked `x-typesafe-request-id`.
+  Credentials and request strings themselves are never copied into diagnostics.
+- `DecisionBackend` protocol: `capabilities`, `model`,
+  `predict(request: DecisionRequest) -> DecisionResult`, `close() -> None`.
+  `AsyncDecisionBackend` has awaited `predict` and `close`; the caller owns the
+  lifecycle. `AttemptObserver.before(request_hash, model, endpoint) -> str`
+  records durable intent and `after(receipt) -> None` records the outcome.
+- `HTTPDecisionBackend` / `AsyncHTTPDecisionBackend` accept keyword
+  `endpoint`, `model`, `api_key=None`, `hosted=False`, `mode="systemone"`,
+  `capabilities=None`, `observer=None`, `options=None`. One predict performs one
+  HTTP attempt; retry policy belongs to the orchestrator. Modes are native
+  System One, generated JSON values through chat, and choice-only letters
+  through chat (at most 24 options). Chat defaults to a per-request strict JSON
+  schema generated from the typed questions: required complete answer IDs and
+  value fields, no additional properties, full choice enum and bounded numeric
+  noul/score values. Explicit `response_format` overrides remain frozen in
+  execution settings. Chat user content preserves question and choice insertion
+  order with an unsorted JSON serializer; canonical request hashing still sorts
+  mapping keys. Order-sensitive presentation evidence therefore needs its own
+  digest. Full vocabulary/IDs/types are validated;
+  unknown labels, incomplete completions and unsupported capacity fail.
+  Responses are read as decoded bytes in 16 KiB chunks, retaining at most
+  `MAX_RESPONSE_BODY_BYTES = 1048576` bytes. The digest/count includes the
+  first chunk crossing that cap (at most 16 KiB extra observed bytes), then
+  reading stops and no prefix is parsed for answers or billing. The cap applies
+  after HTTP content decoding; it is not a bound on compressed wire bytes,
+  HTTPX decompression/intermediate allocations or process RSS. A complete digest
+  includes every decoded byte at EOF; a partial digest/count includes only
+  chunks delivered to the adapter, excluding undelivered decoder/chunker buffers.
+  Complete JSON
+  within the cap uses the strict decoder. Partial, oversized or ambiguous outer
+  JSON cannot establish reported billing. A valid exact cost remains available
+  independently of malformed token counts or answer decoding. If cancellation
+  or interruption occurs, the original exception propagates even when receipt
+  finalization also fails; failed persistence does not manufacture an outcome
+  or authorize retry. Durable financial stop/reservation behavior remains the
+  `SpendLedger` observer's responsibility.
+- `validate_endpoint(endpoint, *, hosted)` rejects URL credentials/query/fragment,
+  restricts local endpoints to loopback and hosted endpoints to HTTPS OpenRouter.
+  Adapters disable redirects and environment proxies. Local adapters reject
+  supplied credentials. Hosted adapter options admit only the supported frozen
+  provider/token/temperature/top-p/seed/response-format/stop controls; unbounded
+  plugin/alternate routing settings fail. Request settings cannot override
+  state/questions/model/messages/stream semantic fields.
+- `PriorBackend(priors=None)` supplies uniform or declared training-prior
+  distributions. `ThreadedAsyncBackend(backend)` explicitly adapts sync predict
+  through `asyncio.to_thread`; task cancellation does not stop the worker
+  thread. Native, generated, training-prior and classifier probability sources
+  and confidence semantics remain distinct throughout scoring. Uniform,
+  training-prior, fitted-classifier and analytical controls declare their
+  respective meanings; this metadata is not an empirical calibration result.
+
+### `_json.py`
+
+`strict_json_loads(value: str | bytes | bytearray, *, parse_float=float) -> Any`
+preserves insertion order while rejecting duplicate object keys at every depth,
+nonstandard NaN/Infinity constants and nonfinite float/Decimal callback results.
+Decimal precision/overflow failures become `ValueError`; finite Decimal values
+retain their exact digits even when they exceed floating-point range, while
+consumer schemas still enforce their own numeric bounds. Decoder `RecursionError` becomes
+`ValueError` so recursion failures follow the malformed-response receipt path;
+there is no fixed depth limit and accepted nesting depends on the interpreter.
+Decimal parsing is
+available for charges; schema-specific bounds remain with the consuming parser.
+Native response, generated answer and prepared benchmark ingestion use this
+decoder. A malformed paid response retains its attempt receipt before semantic
+failure; ambiguous answers or charges never select the last duplicate value.
+
+### `_yaml.py`
+
+`strict_yaml_loads(value: str | bytes) -> Any` uses a private `SafeLoader` for
+benchmark configuration and manuscript experiment knobs. It preserves literal
+mapping order and rejects duplicate keys, including collisions after merge
+expansion, aliases, unsafe tags, nonfinite numbers and malformed input. Global
+PyYAML constructors and `safe_load` behavior are unchanged. Configuration-specific
+types, bounds and supported keys remain the consumer's responsibility; errors
+do not echo input keys or values. The runner and manuscript generator use this
+loader before freezing or using configuration.
+
+### `benchmark_datasets.py`
+
+- Frozen `DatasetManifest`, `BenchmarkExample` and `BenchmarkDataset` validate
+  inline `dafjev.benchmark-dataset/1` and opt-in packed
+  `dafjev.benchmark-dataset/2`, unique example IDs, complete labels, typed
+  questions/targets and finite JSON. Group/split separation is strict except
+  explicitly declared overlap identities in canonical BANKING77/CLINC150
+  manifests. `to_dict()` is JSON-safe. A source hash and canonical example hash
+  identify different stages.
+- `make_synthetic_dataset(kind="binary", *, seed=0, n=120,
+  matched_option_permutations=False) -> BenchmarkDataset`
+  supports binary, categorical, ordinal and analytical Bayesian controls.
+  New ordinary examples use generator version three, preserving the seeded
+  rules and recording an order-sensitive example digest. With
+  `matched_option_permutations=True`, categorical and Bayes Choice fixtures
+  expand into complete cyclic rotations, retaining each base state, truth,
+  instructions, meanings, group and deterministic split. `n` counts base
+  fixtures, not evaluation rows; training members remain training members.
+  Matched metadata declares `control_design="matched_cyclic_choice_order"`,
+  `control_role="quality_control"` and `timing_eligible=False`. Loading verifies
+  actual option order, ordered-question and semantic fixture hashes, complete
+  permutation indices and unchanged group semantics. All version-three
+  synthetic cohorts verify `order_sensitive_examples_sha256` in addition to
+  the canonical example digest. Historical version-two files remain unchanged.
+  `save_dataset(dataset, path, *, packed=False) -> Path` exclusively creates
+  prepared files; default format-one bytes are unchanged. Format two shares
+  ordered native `question_sets` definitions and requires each example's
+  nonboolean integer `questions_ref` in range, with no mixed inline questions.
+  Every definition validates even if unused. Its required
+  `expanded_examples_sha256` and `order_sensitive_examples_sha256` bind the
+  canonical and insertion-order-preserving expanded examples. The public
+  `load_prepared_dataset(path) -> BenchmarkDataset` validates and expands either
+  encoding; `to_dict()` still returns format one and native request bytes are
+  identical. Dataset CLI `prepare`, `synthetic` and `view` expose `--packed`.
+- `fetch_dataset(kind, destination, *, timeout=30.0) -> Path` is an explicit
+  network action over pinned BANKING77, CLINC150/OOS and Wine official sources.
+  Exact upstream hashes/license/revision are retained, and different existing
+  bytes fail rather than being replaced.
+- `load_dataset(path, *, kind, seed=0, expected_sha256=None) -> BenchmarkDataset`
+  prepares local source files and records normalized duplicate/overlap/conflict
+  identities. Canonical intent cohorts retain official rows and declare leakage;
+  sensitivity flags identify separate filtered cohorts. Wine Quality uses red
+  and white files, 11 features/type, five explicit ordinal bins and grouped
+  folds; original grades remain audit metadata. Official acquisition and
+  fixture/unverified data are marked separately. `pilot_samples(dataset, *,
+  per_class=5, oos=100, wine_per_type=100, seed=0)` retains the full vocabulary,
+  caps intent classes/OOS per split, and caps Wine per split/type with proportional
+  bin allocation.
+- Real preparation additionally preserves `official_split` per row and
+  `fold_index` for BANKING official training and all Wine rows, plus split seed,
+  algorithm/version/dependency metadata. Default roles remain unchanged.
+  `dataset_fold_pack(dataset) -> dict[str, Any]` binds the complete original
+  assignment inventory, canonical/ordered example digests and source identity;
+  it never reconstructs missing folds from sample IDs. Legacy prepared files
+  remain loadable but require fresh original-byte preparation before rotation.
+- `dataset_view(dataset, *, view="evaluation", validation_fold=None,
+  test_fold=0, cohort="canonical") -> BenchmarkDataset` accepts complete
+  freshly prepared real sources only. `selection` omits designated test;
+  `evaluation` retains it; `final_train` merges all non-test training/validation
+  rows into train, retaining test for scoring and no validation policy fitting.
+  BANKING defaults validation fold 0; Wine defaults validation 1/test 0 and
+  requires distinct roles; CLINC retains its published partitions. Each view
+  has a new projection/source hash and rejects re-projection of derived views.
+  Optional `leakage_clean` excludes view-specific cross-split/conflicting-target
+  groups from all splits before fitting, preserving full vocabularies and
+  canonical companion evidence. Metadata discloses input/target participation,
+  exclusions and parent custody; this is not test-blind model selection.
+  Dataset CLI `folds --source --output` and `view --source --view
+  --validation-fold --test-fold --cohort --output` are offline exclusive writes.
+
+### `benchmark_sampling.py`
+
+`timing_sample_pack(cohorts: Sequence[Sequence[BenchmarkExample]], *, seed: int,
+samples: int, scope: str="cohort") -> dict[str, Any]` is target-free and performs
+no fitting, model calls or capability filtering. This describes the timing
+selector conditional on its supplied cohorts: upstream pilot preparation can
+use class/OOS counts and Wine bins for declared stratified sampling.
+It considers only test rows
+whose `timing_eligible` metadata is not false. The default `cohort` scope chooses
+exactly `samples` physical examples overall, one deterministic representative
+per `(dataset index, input group)`. Groups crossing native task types fail.
+Seeded hash ranking and balanced round-robin selection over dataset/task strata
+redistribute exhausted capacity; insufficient eligible groups raise before a
+run is created. Explicit `per_dataset` retains the legacy capped hash-ranked
+selection within each dataset.
+
+The returned `dafjev.benchmark-timing-sample/1` pack records scope, seed,
+requested/selected example and base-group counts, sampling unit/method,
+`selection_labels_used=False`, excluded test quality-control count and ordered
+`examples` entries `{dataset, example_id, group_id, task_types}`. `sha256` hashes
+the pack without that field. Dataset indices bind to the exact ordered prepared
+input inventory in the run manifest; they are not interchangeable across a
+reordered inventory. Matched controls remain a separate quality cohort and do
+not inflate timing counts. The exclusion count considers test members only;
+it is not the total validation/test quality-control physical row count.
+
+### `benchmark_models.py`
+
+- `RuleDecisionBackend(kind: str)` accepts `binary`, `categorical`, `ordinal`
+  or `bayes`. `predict(request: DecisionRequest) -> DecisionResult` evaluates
+  the exact synthetic grammar using authoritative state fields and the frozen
+  question contract; neither the constructor nor predict receives targets.
+  Text records are anchored before explicitly untrusted/context suffixes;
+  Bayes JSON rejects duplicate, missing, unknown and invalid fields. Negation,
+  quoted distractors, context padding and choice rotation preserve semantics.
+  Hard rule labels/levels have no probability vector or confidence; Bayes emits
+  a genuine formula distribution with `analytical_bayes_rule` provenance and
+  no correctness confidence. `close()` does no work. The runner's `kind: rule`
+  derives kind from a declared legacy `dafjev.synthetic/1`, current
+  `dafjev.synthetic/3` or matched `dafjev.synthetic-matched-options/3` manifest and rejects real
+  datasets. No model loading or network call occurs.
+- `fit_prior(dataset) -> PriorBackend` uses training labels only with additive
+  smoothing; soft-target prior fitting requires a separately specified method.
+- `SklearnDecisionBackend(dataset, *, structured=False, seed=20261007)` fits a
+  fixed TF-IDF/logistic text pipeline or dictionary-vectorized histogram gradient
+  boosting. Optional scikit-learn imports occur on fit. Predict returns complete
+  fitted-vocabulary classifier distributions; train time/seed/settings are
+  recorded separately. Test rows never fit or tune the estimator.
+
+### `benchmark_metrics.py` and `benchmark_policies.py`
+
+- `nearest_rank_percentile(values, pct)`, `validate_probabilities(values, *,
+  labels=None, rounding_digits=None)` and
+  `grouped_bootstrap(values, *, samples=2000, seed=0)` are pure.
+  `score_predictions(rows, *, labels=None, label_kind=None, n_buckets=10,
+  wall_s=None, bootstrap_samples=2000, seed=0, planned_rows=None) -> dict` retains attempted,
+  successful, error and abstention denominators. Hard labels support accuracy,
+  macro-F1/confusion/selective risk; ordinal values support MAE/RMSE; proper
+  distributions support Brier/natural-log loss/reliability/ECE. Soft targets do
+  not invent hard correctness. Zero target probability yields explicit infinite
+  loss status; missing cost remains unknown. Throughput needs measured `wall_s`.
+  Currency aggregates and ratios are decimal strings, calculated in a fresh
+  precision-50, round-half-even context independent of caller traps/precision.
+  They describe supplied request billing; local compute expense is separate.
+  `usd` validates individual admission/receipt amounts below `1E10` USD;
+  `usd_total` validates derived allocations/replay totals below `1E20` USD.
+  Both require finite nonnegative decimals with at most 18 fractional digits.
+  The reduction domain does not alter admission limits.
+- `repeatability(rows, *, labels=None, label_kind=None) -> dict` compares planned
+  quality and warm-repeat predictions by example/question, without using targets.
+  It retains planned/completed/failed denominators, pairwise label agreement,
+  modal share and pairwise half-L1 variation of supplied valid distributions.
+  Missing/invalid beliefs are counted; rows are neither imputed nor normalized.
+  Primary-only or fewer than two valid observations yields unavailable estimates.
+  Scoring retains `probability_meaning_summary` with declared meanings and
+  unknown-distribution count; repeatability also reports declared meanings and
+  unknown meaning counts. Proper losses and half-L1 distances over supplied
+  numerical rows remain descriptive when their probabilistic meaning is unknown.
+- `audit_dataset(dataset, *, selected_example_ids=None) -> dict` retains full
+  and frozen selected source/split counts, independent input groups, duplicate
+  rows, overlap/conflict counts and leakage-clean counts. Wine audits include
+  original-grade histograms by bin/type and empirical conditional grade entropy
+  lost by binning, distinct from prediction error. Selection is independent of
+  execution completion.
+- Frozen `GateCalibration` and `calibrate_gate(rows, *, max_risk=.05)` consume
+  hard validation labels only. Threshold search maximizes admitted group
+  coverage subject to a grouped Wilson upper error bound. This is a descriptive
+  selected-validation rule, not an independent risk guarantee.
+- `replay_policy(rows, *, policy="direct", threshold=None, gate=None,
+  strong_rows=None) -> list[dict]` supports direct/gate/cascade, validates aligned
+  target/group identities and marks offline replay. Summed observed latency is
+  not measured end-to-end policy execution.
+- `entropy_reask(posteriors, oracle, *, asked=(), max_reveals=3) -> dict` is a
+  bounded independent-variable synthetic oracle simulation. It does no model
+  I/O or coupled posterior propagation. Existing sidecar `reask_plan` remains
+  the pure planner for evidence-bearing posterior ingestion.
+
+### `benchmark_comparisons.py`
+
+- `comparison_cohort_hash(rows: Sequence[Mapping[str, Any]]) -> str` hashes
+  complete planned input/target/group identities in canonical example/question
+  order and rejects duplicate identities. Each row's `input_sha256` must bind
+  the full state and ordered question material; custody of that external input
+  remains the caller's responsibility.
+- `compare_predictions(left_rows: Sequence[Mapping[str, Any]],
+  right_rows: Sequence[Mapping[str, Any]], *, left_binding: Mapping[str, Any],
+  right_binding: Mapping[str, Any], labels: Sequence[str], label_kind: str,
+  bootstrap_samples: int = 2000, seed: int = 0) -> dict[str, Any]` is pure,
+  offline paired reduction. Bindings retain separate backend/inference-source
+  identities and require identical dataset ID/index, prepared input hash,
+  split, primary quality phase and complete cohort hash. Complete planned rows
+  carry example/question/group/input identity, target, status, frozen boolean
+  applicability and primary repeat zero; missing, duplicate, mismatched or
+  malformed rows fail closed. Noncompleted partial values do not enter scoring.
+- Every planned status and independent-group denominator remains visible.
+  Accuracy, macro-F1, sum-form Brier and raw ordinal MAE use joint measurements
+  with separate conditional denominators. Differences are right minus left.
+  Shared group draws preserve matched controls; additive metrics use paired
+  row-weighted differences, and macro-F1 recomputes full-vocabulary confusion
+  totals on every draw, retaining absent classes. Empty measurements are
+  unavailable; one group has no interval. Missing beliefs stay absent, soft
+  targets receive no hard accuracy and native rounded rows are not normalized.
+- Declared hard prediction rules must match for accuracy/F1 comparisons; native
+  ordinal probability argmax and generated exact scalar accuracy are distinct.
+  Argmax ties preserve the consumed probability key order of existing metrics;
+  canonical cohort hashes do not reorder outcome distributions before scoring.
+  Raw scalar MAE retains declared bin coordinates. Unknown probability meaning
+  remains descriptive. Percentile intervals over fixed predictions do not
+  establish refit uncertainty, sequential validity, multiple-comparison control
+  or selected-gate risk guarantees. No costs/latency frontier is inferred.
+  Detailed row/binding contracts live in [benchmark comparisons](benchmark_comparisons.md).
+
+### `benchmark_store.py` and `benchmark_runner.py`
+
+- `RunStore.create(root, manifest) -> RunStore` creates a UUID run;
+  `RunStore(path, *, read_only=False)`
+  verifies immutable manifest bytes and a complete hash-linked journal/head.
+  `lease()` exclusively admits one Unix executor; `append(event)` fsyncs an
+  event and atomically advances the independently saved head. Mutation,
+  truncation, symlinks and identity changes fail closed. Execution freezes
+  original lock device/inode identities; copied artifacts are inspectable with
+  `read_only=True`, not executable/resumable under substituted locks.
+- `SpendLedger(store, *, limit="25")` reserves each hosted attempt before I/O,
+  reconciles reported charges after it, retains unresolved liability on unknown
+  cost and stops admission on uncertainty/overage. `snapshot()` is JSON-safe.
+  The default pilot ceiling is an admission limit, not a provider billing
+  guarantee; configuration can lower it. Hosted profiles freeze actual sent
+  `provider.max_price` ceilings in USD per million tokens, disable provider
+  fallback and require supported parameters. For chat, the reservation uses
+  advertised context and the frozen output-token limit, conditional on those
+  limits and tariffs being enforced. A catalog context window does not establish
+  an aggregate billable-token bound for a native request's state, questions and
+  options. Paid native input therefore has unavailable liability with
+  `admission_reason="native_aggregate_billing_unverified"`; nonzero native output
+  tariffs also remain unbounded. No independently verified native aggregate
+  guarantee is currently supported, and caller-declared numeric bounds cannot
+  enable admission. All-zero admitted native tariffs and surcharge ceilings
+  still yield zero liability. Execution rechecks these contracts and refuses
+  older stored numeric reservations that no longer have a supported bound,
+  preserving their immutable manifests. Every hosted HTTP mode additionally
+  requires recomputed liability to equal its frozen value and the recomputed
+  provider settings to equal the settings actually sent. Defaults added only
+  to a working copy cannot establish a route bound. Such mismatches refuse
+  direct and strong-cascade admission before backend creation/weak work, with
+  `frozen_liability_mismatch` or `frozen_execution_settings_unbounded`.
+  Missing/unsupported charge bounds
+  prevent admission; actual reported charges remain evidence rather than a
+  prediction of provider billing. Local compute price remains unknown.
+- `snapshot_catalog(path) -> dict` performs an explicit public model GET and
+  saves `dafjev.model-catalog/1`; `catalog_profiles(path) -> list[dict]` derives
+  unverified candidates. `plan_run(config_path, output_root) -> RunStore` freezes
+  explicit prepared datasets, source/config/catalog identities, cohort and
+  randomized cell order without inference. Format: `dafjev.benchmark-run/1`.
+  Optional frozen `execution_selection` selects `all`, `quality`, `warm_repeat`
+  with one positive `repeat` bounded by `timing_repetitions`, or `graphical`.
+  Passes retain their validation probes and exact logical cell/sample IDs.
+  Configuration defaults `timing_sampling_scope="cohort"`,
+  `timing_samples=100` and `timing_repetitions=5`; the manifest protocol freezes
+  the complete `timing_sample_pack`. `sampling` must be `pilot` (default) or
+  `all`; unknown values fail before creating a run. Quality-only and
+  graphical-only plans without an explicit timing pack freeze an empty pack
+  and `timing_enabled=False`: validation selection needs no held-out timing
+  examples. All/warm plans and quality plans with an explicit shared pack retain
+  the exact timing cohort requirements. Optional configuration
+  `timing_sample_pack` must exactly match deterministic recomputation. The pack
+  is selected before model execution and shared by every backend. Quality cells
+  can include separately declared controls and validation fixtures; they are
+  not additional timing examples. Legacy read-only reports interpret an absent
+  sampling scope as `per_dataset` and retain the saved cells.
+  `study_id`, `pass_id` and `prior_quality` are evidence metadata, never an
+  authorization or automatic prior-run verification mechanism.
+- `execute_run(directory, *, through_phase=None) -> dict` takes the lease and runs/resumes bounded
+  local/hosted arms, closing its adapters. Complete cells are not repeated;
+  unresolved starts are not automatically replayed. Unsupported/unattempted
+  cells and exceptions remain visible. Refused budget admission before any
+  per-cell `attempt_started` intent leaves the cell unattempted. If an earlier
+  request was admitted, such as a charged transient error before a refused
+  retry, the cell is failed with
+  `BudgetStopped`; its original attempt receipts and accounting remain intact.
+  An intent does not prove provider receipt, but cannot establish that no work
+  was attempted. A `cell_started` event alone is not an admitted request.
+  Source/input hashes are rechecked after consumption.
+  `report_run(store_or_path) -> dict` reduces the exact journal
+  offline into `dafjev.benchmark-report/1`; `save_report(report, path)` refuses
+  overwrite. Quality and timing-repeat phases are separate cohorts.
+  Optional `through_phase` is `capability_probe`, `quality`, `warm_repeat` or
+  `graphical`; unknown values fail before opening the run. This runtime boundary
+  is journaled on every execution and filters only pending cells. The immutable
+  manifest, original denominators and spend ledger remain the same. Later cells
+  remain unattempted with `execution_phase_boundary` as their report reason when
+  no prior refusal explains them. Reporting retains the most recent boundary;
+  legacy executions without it mean all phases. Resume with a later boundary or
+  no boundary continues demonstrably unattempted work without repeating probes,
+  completed cells or unresolved starts. Warm boundary includes all frozen rounds.
+  Probes can therefore be inspected for capability and billing before quality
+  admission without opening another allocation.
+  Local resident-profile execution and hosted batches await barriers in order:
+  probes, primary quality, warm rounds one through five, then graphical work.
+  Unresolved primaries block warm admission; known primary failures retain their
+  planned denominator. Separate warm passes require an external coordinator to
+  verify primary custody, rotate resident profiles and account for all startup
+  time against the cumulative limit. Their reports defer repeatability until
+  primary and warm observations are reduced together.
+  `repeatability`, `dataset_audits`, `resources`, `capability_probes` and
+  `graphical_experiments` retain their own evidence/denominators. CLINC OOS
+  detection is a separate binary reduction over unchanged official labels;
+  planned OOS failures remain visible alongside valid-outcome precision/recall.
+  Cohort, gate, policy, probe, repeatability and audit records retain `dataset`
+  as the family name, `dataset_id` as the frozen configuration ID,
+  `dataset_index` as its inventory position and `prepared_dataset_sha256` as
+  exact input identity. New plans reject empty or duplicate dataset IDs; legacy
+  reports remain disambiguated by index. Metrics retain `planned_cells`,
+  `planned_decisions`, `planned_cell_status_counts`, `planned_status_counts`
+  and `planned_coverage` over every frozen decision. Existing `coverage` uses
+  attempted outcomes. Entirely unsupported, unresolved or unattempted arms
+  remain present with empty outcome rows and unavailable accuracy, proper loss
+  and throughput rather than disappearing from comparisons.
+- CLI: `benchmark dataset synthetic|fetch|prepare`, `benchmark catalog`,
+  `benchmark plan --config YAML --out-dir ROOT`, `benchmark run RUN_DIRECTORY`,
+  `benchmark resume RUN_DIRECTORY` (both execution commands accept
+  `--through-phase capability_probe|quality|warm_repeat|graphical`), and
+  `benchmark report RUN_DIRECTORY [--output FILE] [--markdown FILE]
+  [--pdf FILE] [--gates-output FILE]`. Dataset fetch and catalog
+  are explicit network operations. Planning/reporting are inference-free.
+  Exact argument recipes and config files are in the user protocol.
+- `graphical_experiments: true` or a selected profile-ID list adds dedicated
+  graphical cells. The manifest freezes the reference graph, CPT chunk/search
+  parameters, seed and bounded observation costs. The report retains separate
+  graphical status/workflow records and excludes them from dataset quality
+  cohorts. Graphical summary status uses the same journal-derived status as the
+  main cell table: a started cell without a terminal cell outcome is
+  `unresolved`; a cell that never started is `unattempted`. An attempt receipt
+  alone does not establish a terminal prediction or graphical outcome. Missing
+  genuine beliefs or a declared Choice primitive are explicitly unsupported
+  before any graphical cell start or HTTP request.
+- Capability probes use one selected validation fixture per profile/dataset,
+  report primitive/question/option counts and retained success, and gate related
+  quality cells. They do not establish maximum context/options/batch boundary
+  support. Resource observations retain scoped memory/time availability instead
+  of assigning local monetary cost.
+
+### `benchmark_workflows.py`, `benchmark_publication.py`, `benchmark_cli.py`
+
+- `CascadeDecisionBackend(weak, strong, *, gate: GateCalibration, observers)`
+  exposes async `predict` and `close`. It validates complete child predictions,
+  accepts weak only when every confidence clears the frozen gate, otherwise
+  invokes strong with its own observer. Strong retries preserve the weak result.
+  Supplied backends remain caller-owned. `DecisionResult.workflow` marks actual
+  execution and selected child; enclosing cells measure end-to-end latency.
+  Original `BudgetStopped` or cancellation exceptions re-raise. If a child
+  attempt was admitted or weak prediction completed, the exception carries
+  `dafjev_workflow` with child statuses, attempt IDs, observed receipts and any
+  completed weak predictions. A refusal before any child work carries no
+  fabricated partial result. Strong API invocation and actual transport admission
+  are distinguished by the retained attempt IDs/receipts.
+- Executed `kind: cascade` profiles name `weak`, `strong` and `gate_file`.
+  `dafjev.policy-gates/1` evidence contains source manifest hash and validation
+  identity binding exact prepared bytes/weak profile/source files/training seed.
+  The runner requires a local weak arm, hosted HTTP strong arm and one resident
+  local weak profile per run. `gate_from_dict(value) -> GateCalibration` restores
+  the frozen calibration record. Selected-validation risk remains descriptive.
+  The runner charges cascades to the weak profile's cumulative local window,
+  sharing consumed time with its direct-local work and previous runs. That
+  window includes hosted interleaving and is not isolated weak-model latency.
+  A stop before any child work leaves the cell unattempted; a strong admission
+  stop after weak work records a failed partial workflow. Local deadline
+  cancellation retains child evidence and cannot implicitly retry paid work.
+- `markdown_report(report) -> str` accepts `dafjev.benchmark-report/1` and retains
+  identities, denominators, accounting, uncertainty and evidence limits.
+  `write_publication(report, path)` exclusively emits `.md` or optional
+  matplotlib `.pdf` offline. Fixed PDF metadata avoids generation-time drift;
+  the report remains distinct from historical manuscript tokens and release.
+- `register_benchmark_parser(parser) -> None` defines the thin argparse surface;
+  `main(args) -> int` delegates to datasets, runner and publication. Run/resume
+  may save `--output FILE`; report may additionally export Markdown/PDF/gates.
+  Partial run/resume returns exit 1 while offline partial-report export succeeds
+  with its explicit partial status. No automatic catalog/data fetch occurs.
+
+### `evidence.py`
+
+`selected_benchmark(project_root: Path, prefix: str) -> Path` reads the explicit
+`manuscript/evidence.json` selection (`dafjev.publication-evidence/1`), verifies
+the named input's SHA-256, confinement and absence of symlinks, and fails on
+missing/changed data. `selected_benchmark_bytes(project_root: Path, prefix: str)
+-> bytes` performs a single read and returns the same bytes whose hash it
+verifies. Figures and manuscript variables consume these verified bytes;
+the compatibility helper name `_latest_benchmark` no longer means date-based
+discovery. Historical environment gaps remain unknown. Model/date/protocol
+compatibility across selected receipts still needs review; hashing alone does
+not make unrelated arms comparable.
+
+`bound_input(project_root: Path, item) -> Path` validates relative confined
+nonsymlink paths and SHA-256 identities for path-based compatibility callers;
+subsequent caller reads have their own consumption boundary. `bound_bytes(project_root: Path, item) ->
+bytes` returns the verified bytes used by benchmark and retained-verification
+parsers, without a second read.
+Publication selection JSON uses the shared strict decoder; duplicate keys and
+nonstandard constants fail.
+`verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]`
+inventories every `.py` file under `src/daf_jev`, `tests`, `scripts`, `benchmarks`
+and `examples`, excluding `__pycache__`; static `.md`, `.json`, `.yaml`, `.yml`,
+`.bib` and `.tex` files under `docs`, `skills` and `manuscript`; and
+`pyproject.toml`, `uv.lock`, `AGENTS.md`, `.github/workflows/ci.yml`, `README.md`,
+`CITATION.cff`, `.zenodo.json` and the package `py.typed` marker when present.
+This binds consumed documentation, the reference snapshot manifest, benchmark
+and example code, and render inputs alongside the SDK. Their additions/removals
+affect identity. `manuscript/evidence.json` is explicitly excluded so selecting
+a capture does not invalidate its tested inputs. Generated output and private
+run evidence are not static verification inputs.
+
+Frozen `VerificationStatistics(unit_count: int, live_count: int,
+coverage_percent: float, python_version: str, platform: str)` records unit
+execution and live collection. `selected_verification(project_root: Path) ->
+VerificationStatistics | None` reads an optional selected
+`dafjev.verification-evidence/1` record and its hash-bound native coverage JSON,
+JUnit and live collection output. It requires successful command statuses,
+passing/unskipped unit outcomes and count agreement, valid branch-coverage totals,
+environment metadata and exact `before == after == current` input inventories.
+Missing/stale/malformed explicit selections fail even in draft mode; `None`
+means no verification selection and preserves the legacy generator path.
+These are retained offline check results, not new test execution, continuous
+file-access attestation, hosted/model acceptance or publication permission.
+
+### `benchmark_resources.py`
+
+- `hardware_identity() -> dict[str, Any]` reads machine/OS identity and, on
+  macOS, CPU/model/physical memory through argument-array `sysctl` commands.
+- `ResourceSampler(process: dict | None = None)` samples the runner and its
+  descendants plus an explicitly identified server PID/create-time when
+  supplied. `sample()` observes RSS; `await monitor()` samples every 0.1 seconds;
+  `finish() -> dict` stops monitoring and reports wall time, observed peak RSS,
+  sample count and root PIDs. Optional `psutil` imports occur at construction.
+  Reused serving PIDs fail before sampling. It never starts/signals a process.
+  Aggregate RSS includes runner overhead; Metal allocations may exceed RSS.
+  `local_expense_usd` remains unknown.
+
+### `benchmark_graphical.py`
+
+- `reference_graph() -> BayesNet` builds a fixed three-node cloudy → rain → wet
+  binary network with five strictly positive analytical CPT rows.
+- `acquire_evidence(net, oracle, *, max_reveals=3, observation_costs=None) -> dict`
+  selects the unobserved variable with highest current entropy, reveals its
+  supplied assignment and recomputes the full coupled posterior. Ties follow
+  variable order; reveal count is bounded to `[0,3]`. Fixed costs default to one
+  synthetic observation unit per variable, never USD or inference cost.
+- `await run_graphical_experiment(backend: AsyncDecisionBackend, *,
+  seed=20261007, max_reveals=3, observation_costs=None, observer=None,
+  timeout=60.0, model_reask=True) -> dict` adapts the supplied backend to async elicitation,
+  using CPT chunk size 32 and structure exact limit 8/edge penalty 1.
+  The prompt discloses the generative graph/probabilities, while the independent
+  seeded reference sample remains hidden from model requests. It reports soft
+  CPT Brier rows/mean, proposed edges, revealed assignments, coupled/reference
+  trajectories and exact call receipts under `dafjev.graphical-experiment/1`.
+  With default `model_reask=True`, each reveal triggers an actual posterior
+  question for the highest-entropy remaining variable, with updated observed
+  evidence; returned beliefs are compared to analytical posterior truth. Full
+  exhaustion triggers no extra question. `model_reask=False` retains the pure
+  coupled observation control.
+  The experiment measures reconstruction and synthetic evidence propagation,
+  not undisclosed causal discovery or real-world accuracy.
+  It records the declared `probability_semantics` and
+  `factor_interpretation="normalized_surrogate_factor_under_disclosed_reference_protocol"`.
+  Graph inference is conditional on the supplied factors; native provenance
+  does not attest posterior meaning, calibration or CPT truth.
+- Conversion requires genuine complete choice probabilities and actual finite
+  confidence for the existing `ChoiceAnswer` contract. Generated labels,
+  incomplete vocabulary and rows outside the strict CPT mass tolerance fail
+  without one-hot construction or renormalization. Structure/posterior re-ask
+  rows honor only matching declared adapter precision; CPTs remain strict.
+  Accounting uses original receipts; a private answers-only factor response
+  invents no usage fields. A recording observer delegates caller admission and
+  retains receipts even when result parsing or an after-hook fails. Backend
+  lifecycle is caller-owned. `BudgetStopped` before any call/intent/receipt
+  propagates as unattempted; after prior work, `GraphicalExperimentError.record`
+  retains failed phase, beliefs, calls and original transport evidence.
+  Cancellation propagates without closing the backend.
+
 ## Conventions (template_code_project)
 
 - uv-managed; thin scripts; logic in src; >= 90% coverage gate on src.
-- Python >= 3.10, stdlib + httpx (+ pyyaml) only.
+- Python >= 3.10, httpx + pyyaml core, with tomli on Python 3.10 and standard-library
+  tomllib on newer Python; optional benchmark classifiers
+  and grouped splits use scikit-learn, and figures use matplotlib/Pillow.
 - Every source dir carries README.md/AGENTS.md accurate to disk (docs pass later).
-- Workers: NO linting/formatting/test-running/gate-running. Edit only.
+- Verification follows the active task's ownership and repository checks;
+  do not overwrite or broadly stage concurrent work.

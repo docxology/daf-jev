@@ -2,7 +2,8 @@
 %
 % How to cite: these keys are the canonical cite keys for the manuscript prose.
 % docs/models.md documents the crosswalk (key -> source -> used-for) and uses
-% the same keys. All URLs were accessed 2026-09-16 (see urldate). Web sources
+% the same historical keys. Original access dates and snapshot notes are retained;
+% additional primary research and current interface sources were checked 2026-10-08. Web sources
 % use @online (biblatex) with url/urldate; fall back to @misc with the same
 % fields if your toolchain does not support @online.
 %
@@ -36,7 +37,7 @@
   year         = {2026},
   url          = {https://docs.typesafe.ai/concepts/system-one.md},
   urldate      = {2026-09-16},
-  note         = {Verified against the local snapshot docs/reference/concepts/system-one.md
+  note         = {Historical verification metadata: earlier local snapshot docs/reference/concepts/system-one.md
                   (snapshot id b79c9cd6008489f1, scraped 2026-09-16T21:19:06Z).},
 }
 
@@ -48,7 +49,7 @@
   url          = {https://docs.typesafe.ai/api.md},
   urldate      = {2026-09-16},
   note         = {HTTP API for POST /v1/systemone: request/response shapes, the three
-                  answer types, usage tokens, and error/retry semantics. Verified against
+                  answer types, usage tokens, and error/retry semantics. Historical verification metadata: earlier
                   local snapshot docs/reference/api.md (snapshot id b79c9cd6008489f1).},
 }
 
@@ -61,7 +62,7 @@
   urldate      = {2026-09-16},
   note         = {How confidence is derived from the probability distribution; the
                   three-band act/caution/escalate pattern; risk-scaled thresholds.
-                  Verified against local snapshot docs/reference/confidence.md
+                  Historical verification metadata: earlier local snapshot docs/reference/confidence.md
                   (snapshot id b79c9cd6008489f1).},
 }
 
@@ -74,7 +75,7 @@
   url          = {https://docs.typesafe.ai/patterns.md},
   urldate      = {2026-09-16},
   note         = {Composable patterns for building systems on System One models,
-                  e.g. confidence routing and composite scoring. Verified against
+                  e.g. confidence routing and composite scoring. Historical verification metadata: earlier
                   local snapshot docs/reference/patterns/ (snapshot id b79c9cd6008489f1).},
 }
 
@@ -87,7 +88,7 @@
   urldate      = {2026-09-16},
   note         = {The three question primitives, their typed answers, parallel isolated
                   evaluation, and the ~32,000-token (~150,000-character) shared request
-                  budget. Verified against local snapshot docs/reference/primitives.md
+                  budget. Historical verification metadata: earlier local snapshot docs/reference/primitives.md
                   (snapshot id b79c9cd6008489f1).},
 }
 
@@ -100,7 +101,7 @@
   urldate      = {2026-09-16},
   note         = {Contrasts RLHF, RLVR, and RLCD as post-training approaches; defines
                   calibration (0.2 -> ~20\% of outcomes, etc.); notes RLHF co-inventor
-                  Diogo Almeida. Verified against local snapshot
+                  Diogo Almeida. Historical verification metadata: earlier local snapshot
                   docs/reference/introduction/machine-learning-primer.md
                   (snapshot id b79c9cd6008489f1).},
 }
@@ -191,4 +192,168 @@
   note         = {Independent hands-on evaluation: 777 judgments across 37 documents in
                   under 0.7s for about a quarter of a cent; 12-passage defect test vs
                   Claude Fable 5.1 (6 of 7 defects caught); ~25x faster, ~580x cheaper.},
+}
+
+% ---------------------------------------------------------------- Primary methodological research
+
+@article{brier1950verification,
+  author = {Brier, Glenn W.},
+  title = {Verification of Forecasts Expressed in Terms of Probability},
+  journal = {Monthly Weather Review},
+  volume = {78}, number = {1}, pages = {1--3}, year = {1950},
+  doi = {10.1175/1520-0493(1950)078<0001:VOFEIT>2.0.CO;2}
+}
+@article{gneiting2007proper,
+  author = {Gneiting, Tilmann and Raftery, Adrian E.},
+  title = {Strictly Proper Scoring Rules, Prediction, and Estimation},
+  journal = {Journal of the American Statistical Association},
+  volume = {102}, number = {477}, pages = {359--378}, year = {2007},
+  doi = {10.1198/016214506000001437},
+  url = {https://sites.stat.washington.edu/people/raftery/Research/PDF/Gneiting2007jasa.pdf}
+}
+@inproceedings{guo2017calibration,
+  author = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  title = {On Calibration of Modern Neural Networks},
+  booktitle = {Proceedings of the 34th International Conference on Machine Learning},
+  series = {Proceedings of Machine Learning Research}, volume = {70},
+  pages = {1321--1330}, year = {2017}, publisher = {PMLR},
+  url = {https://proceedings.mlr.press/v70/guo17a.html}
+}
+@inproceedings{geifman2017selective,
+  author = {Geifman, Yonatan and El-Yaniv, Ran},
+  title = {Selective Classification for Deep Neural Networks},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume = {30}, year = {2017},
+  url = {https://proceedings.neurips.cc/paper/2017/hash/4a8423d5e91fda00bb7e46540e2b0cf1-Abstract.html}
+}
+@article{bengio2004variance,
+  author = {Bengio, Yoshua and Grandvalet, Yves},
+  title = {No Unbiased Estimator of the Variance of {K}-Fold Cross-Validation},
+  journal = {Journal of Machine Learning Research},
+  volume = {5}, pages = {1089--1105}, year = {2004},
+  url = {https://www.jmlr.org/papers/v5/grandvalet04a.html}
+}
+
+@misc{willard2023guided,
+  author       = {Willard, Brandon T. and Louf, R{\'e}mi},
+  title        = {Efficient Guided Generation for Large Language Models},
+  year         = {2023},
+  eprint       = {2307.09702},
+  archivePrefix = {arXiv},
+  url          = {https://arxiv.org/abs/2307.09702},
+  urldate      = {2026-10-08},
+}
+
+@article{chen2024frugalgpt,
+  author       = {Chen, Lingjiao and Zaharia, Matei and Zou, James},
+  title        = {{FrugalGPT}: How to Use Large Language Models While Reducing Cost and Improving Performance},
+  journal      = {Transactions on Machine Learning Research},
+  year         = {2024},
+  url          = {https://lingjiaochen.com/papers/2024_FrugalGPT_TMLR.pdf},
+  urldate      = {2026-10-08},
+  note         = {Author-hosted published article; original preprint arXiv:2305.05176.},
+}
+
+@article{liang2023helm,
+  author       = {Liang, Percy and Bommasani, Rishi and Lee, Tony and Tsipras, Dimitris and Soylu, Dilara and Yasunaga, Michihiro and others},
+  title        = {Holistic Evaluation of Language Models},
+  journal      = {Transactions on Machine Learning Research},
+  year         = {2023},
+  url          = {https://openreview.net/pdf/1882e7aa18c29c4487d64455658f6498456bc0dc.pdf},
+  urldate      = {2026-10-08},
+  note         = {Published article; original preprint arXiv:2211.09110.},
+}
+
+@article{dechter1999bucket,
+  author       = {Dechter, Rina},
+  title        = {Bucket elimination: A unifying framework for reasoning},
+  journal      = {Artificial Intelligence},
+  volume       = {113},
+  number       = {1--2},
+  pages        = {41--85},
+  year         = {1999},
+  doi          = {10.1016/S0004-3702(99)00059-4},
+  url          = {https://ics.uci.edu/~csp/r48b.pdf},
+  urldate      = {2026-10-08},
+}
+
+@article{mackay1992active,
+  author       = {MacKay, David J. C.},
+  title        = {Information-Based Objective Functions for Active Data Selection},
+  journal      = {Neural Computation},
+  volume       = {4},
+  number       = {4},
+  pages        = {590--604},
+  year         = {1992},
+  doi          = {10.1162/neco.1992.4.4.590},
+  url          = {https://authors.library.caltech.edu/records/efefp-2j353},
+  urldate      = {2026-10-08},
+}
+
+% ---------------------------------------------------------------- Primary dataset and overlap research
+
+@inproceedings{casanueva2020intent,
+  author       = {Casanueva, I{\~n}igo and Tem{\v{c}}inas, Tadas and Gerz, Daniela and Henderson, Matthew and Vuli{\'c}, Ivan},
+  title        = {Efficient Intent Detection with Dual Sentence Encoders},
+  booktitle    = {Proceedings of the 2nd Workshop on Natural Language Processing for Conversational AI},
+  publisher    = {Association for Computational Linguistics},
+  pages        = {38--45},
+  year         = {2020},
+  doi          = {10.18653/v1/2020.nlp4convai-1.5},
+  url          = {https://aclanthology.org/2020.nlp4convai-1.5/},
+  urldate      = {2026-10-08},
+}
+
+@inproceedings{larson2019oos,
+  author       = {Larson, Stefan and Mahendran, Anish and Peper, Joseph J. and Clarke, Christopher and Lee, Andrew and Hill, Parker and Kummerfeld, Jonathan K. and Leach, Kevin and Laurenzano, Michael A. and Tang, Lingjia and Mars, Jason},
+  title        = {An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction},
+  booktitle    = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  publisher    = {Association for Computational Linguistics},
+  pages        = {1311--1316},
+  year         = {2019},
+  doi          = {10.18653/v1/D19-1131},
+  url          = {https://aclanthology.org/D19-1131/},
+  urldate      = {2026-10-08},
+}
+
+@article{cortez2009wine,
+  author       = {Cortez, Paulo and Cerdeira, Ant{\'o}nio and Almeida, Fernando and Matos, Telmo and Reis, Jos{\'e}},
+  title        = {Modeling wine preferences by data mining from physicochemical properties},
+  journal      = {Decision Support Systems},
+  volume       = {47},
+  number       = {4},
+  pages        = {547--553},
+  year         = {2009},
+  doi          = {10.1016/j.dss.2009.05.016},
+  url          = {https://www.sciencedirect.com/science/article/pii/S0167923609001377},
+  urldate      = {2026-10-08},
+}
+
+@inproceedings{oren2024contamination,
+  author       = {Oren, Yonatan and Meister, Nicole and Chatterji, Niladri and Ladhak, Faisal and Hashimoto, Tatsunori B.},
+  title        = {Proving Test Set Contamination in Black-Box Language Models},
+  booktitle    = {The Twelfth International Conference on Learning Representations},
+  year         = {2024},
+  url          = {https://proceedings.iclr.cc/paper_files/paper/2024/hash/46e624c244cff669223d488defd4e835-Abstract-Conference.html},
+  urldate      = {2026-10-08},
+}
+
+% ---------------------------------------------------------------- Current primary interface documentation
+
+@online{openrouter2026decisions,
+  author       = {{OpenRouter}},
+  title        = {Submit a Decisions request},
+  year         = {2026},
+  url          = {https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request},
+  urldate      = {2026-10-08},
+  note         = {Documented native POST interface; documentation availability does not establish successful access or model execution.},
+}
+
+@online{openrouter2026structured,
+  author       = {{OpenRouter}},
+  title        = {Structured Outputs},
+  year         = {2026},
+  url          = {https://openrouter.ai/docs/guides/features/structured-outputs},
+  urldate      = {2026-10-08},
+  note         = {Schema support and enforcement are endpoint-specific; empirical capability verification is separate.},
 }

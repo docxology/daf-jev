@@ -6,14 +6,19 @@
 
 % Document layout
 \usepackage{geometry}
-\geometry{margin=0.25in}
+\geometry{margin=0.7in}
 \usepackage{float}
 \usepackage{graphicx}
+\usepackage{pdflscape}
 
 % Tables
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{etoolbox}
+% Flush pending figures before longtable takes over the output routine.
+% Otherwise text can overflow the page and disappear from the rendered PDF.
+\BeforeBeginEnvironment{longtable}{\clearpage}
 
 % Algorithm typesetting (for pseudocode in §2 Methodology)
 
@@ -29,7 +34,7 @@
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
-    allcolors=red
+    allcolors=blue!45!black
 }
 \usepackage[capitalise,noabbrev]{cleveref}
 \usepackage{natbib}

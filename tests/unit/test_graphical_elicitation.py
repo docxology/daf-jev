@@ -31,6 +31,7 @@ test visibly at fold.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import math
@@ -256,6 +257,131 @@ def _open_client(stub):
     )
 
 
+def _small_variables():
+    graphical = _graphical()
+    return (
+        graphical.Variable("a", "First variable", STATES),
+        graphical.Variable("b", "Second variable", STATES),
+    )
+
+
+def _small_cpt_answers() -> dict[str, dict[str, float]]:
+    return {
+        "cpt::a|": {"false": 0.6, "true": 0.4},
+        "cpt::b|a=false": {"false": 0.8, "true": 0.2},
+        "cpt::b|a=true": {"false": 0.3, "true": 0.7},
+    }
+
+
+def _small_structure_answers() -> dict[str, dict[str, float]]:
+    return {"edge::a->b": {"a->b": 0.9, "b->a": 0.05, "no-edge": 0.05}}
+
+
+def test_async_elicitation_reuses_persistent_client_on_caller_loop(stub, clean_provider_env):
+    from daf_jev.client import AsyncJevClient
+
+    elicitation = _elicitation_module()
+    stub.enqueue(body=_choice_body(_small_structure_answers()))
+    for qid, probabilities in _small_cpt_answers().items():
+        stub.enqueue(body=_choice_body({qid: probabilities}))
+    stub.enqueue(body=_choice_body({}))
+    stub.enqueue(body=_choice_body(_small_structure_answers()))
+
+    async def run() -> None:
+        async with AsyncJevClient(api_key="test", base_url=stub.base_url) as client:
+            proposed = await elicitation.propose_structure_async(
+                _small_variables(), client=client
+            )
+            net = await elicitation.elicit_cpts_async(
+                proposed.variables, proposed.edges, client=client,
+                max_questions_per_request=1,
+            )
+            net.validate()
+            assert net.query("b") == pytest.approx((0.6, 0.4))
+            with pytest.raises(ValueError, match="missing"):
+                await elicitation.propose_structure_async(_small_variables(), client=client)
+            again = await elicitation.propose_structure_async(_small_variables(), client=client)
+            assert again == proposed
+
+    asyncio.run(run())
+    assert len(stub.hits) == 6
+    assert [list(hit["json"]["questions"]) for hit in stub.hits[1:4]] == [
+        [qid] for qid in _small_cpt_answers()
+    ]
+
+
+@pytest.mark.parametrize("operation", ["cpts", "structure"])
+@pytest.mark.parametrize("failed", [False, True])
+def test_legacy_async_bridge_closes_on_its_loop(stub, clean_provider_env, operation, failed):
+    from daf_jev import RetryPolicy, TypeSafeError
+    from daf_jev.client import AsyncJevClient
+
+    elicitation = _elicitation_module()
+    answers = (
+        {"cpt::a|": {"false": 0.6, "true": 0.4},
+         "cpt::b|": {"false": 0.3, "true": 0.7}}
+        if operation == "cpts" else _small_structure_answers()
+    )
+    stub.enqueue(body=_choice_body({} if failed else answers))
+    client = AsyncJevClient(
+        api_key="test", base_url=stub.base_url, retry=RetryPolicy(max_attempts=1)
+    )
+    def invoke():
+        if operation == "cpts":
+            return elicitation.elicit_cpts(_small_variables(), (), client=client)
+        return elicitation.propose_structure(_small_variables(), client=client)
+    if failed:
+        with pytest.raises(ValueError, match="missing"):
+            invoke()
+    else:
+        invoke()
+    async def verify_closed() -> None:
+        from daf_jev import choice
+        with pytest.raises(TypeSafeError, match="client is closed"):
+            await client.ask("state", {"q": choice("Choose", {"a": None, "b": None})})
+        await client.close()
+    asyncio.run(verify_closed())
+    assert len(stub.hits) == 1
+
+
+def test_sync_async_bridge_rejects_running_loop_without_consuming_client(stub, clean_provider_env):
+    from daf_jev.client import AsyncJevClient
+
+    elicitation = _elicitation_module()
+    stub.enqueue(body=_choice_body(_small_structure_answers()))
+    async def run() -> None:
+        async with AsyncJevClient(api_key="test", base_url=stub.base_url) as client:
+            with pytest.raises(RuntimeError, match="await elicit_cpts_async"):
+                elicitation.propose_structure(_small_variables(), client=client)
+            assert not stub.hits
+            await elicitation.propose_structure_async(_small_variables(), client=client)
+    asyncio.run(run())
+    assert len(stub.hits) == 1
+
+
+def test_async_cancellation_leaves_client_for_caller_cleanup(stub, clean_provider_env):
+    from daf_jev.client import AsyncJevClient
+
+    elicitation = _elicitation_module()
+    stub.enqueue(body=_choice_body(_small_structure_answers()), delay=0.2)
+    stub.enqueue(body=_choice_body(_small_structure_answers()))
+    async def run() -> None:
+        async with AsyncJevClient(api_key="test", base_url=stub.base_url) as client:
+            task = asyncio.create_task(
+                elicitation.propose_structure_async(_small_variables(), client=client)
+            )
+            async def request_started() -> None:
+                while not stub.hits:
+                    await asyncio.sleep(0.001)
+            await asyncio.wait_for(request_started(), timeout=2)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            await elicitation.propose_structure_async(_small_variables(), client=client)
+    asyncio.run(run())
+    assert len(stub.hits) == 2
+
+
 # ------------------------------------------------------- CPT elicitation -----
 
 
@@ -320,9 +446,12 @@ def test_elicit_cpts_missing_answer_names_question_id(stub, clean_provider_env) 
 def test_elicit_cpts_rejects_non_finite_probability(stub, clean_provider_env) -> None:
     answers = _canonical_answer_probabilities()
     answers["cpt::tub|asia=true"] = {"false": 0.95, "true": math.inf}
-    stub.enqueue(body=_choice_body(answers))
+    # Exercise the schema's finite-number check with valid JSON numeric syntax.
+    # A literal Infinity is rejected earlier by the strict JSON decoder.
+    text = json.dumps(_choice_body(answers)).replace("Infinity", "1e309")
+    stub.enqueue(text=text)
     with _open_client(stub) as client, pytest.raises(
-        ValueError, match=r"non-finite probability"
+        ValueError, match=r"must be finite"
     ):
         _elicitation_module().elicit_cpts(
             _asia_variables(), _asia_edges(), client=client
@@ -334,7 +463,7 @@ def test_elicit_cpts_rejects_unknown_state_label(stub, clean_provider_env) -> No
     answers["cpt::smoke|"] = {"false": 0.5, "true": 0.25, "maybe": 0.25}
     stub.enqueue(body=_choice_body(answers))
     with _open_client(stub) as client, pytest.raises(
-        ValueError, match=r"probabilities sum to"
+        ValueError, match=r"probabilities must match every choice option"
     ):
         _elicitation_module().elicit_cpts(
             _asia_variables(), _asia_edges(), client=client

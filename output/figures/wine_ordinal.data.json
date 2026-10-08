@@ -1,0 +1,37 @@
+{
+  "bin_counts": [
+    0,
+    49,
+    995,
+    255,
+    1
+  ],
+  "figure": "wine_ordinal",
+  "format": "dafjev.study-figure-data/1",
+  "lost_grade_information_bits": 0.8913187272013412,
+  "rows": [
+    {
+      "backend": "wine-hist-gradient-boosting",
+      "mae": 0.2769852473812563,
+      "mae_interval": [
+        0.25536069139714695,
+        0.3003541694116243
+      ],
+      "rmse": 0.45977972708306336
+    },
+    {
+      "backend": "prior",
+      "mae": 0.33186585041256306,
+      "mae_interval": [
+        0.3112644915794644,
+        0.3532224510157725
+      ],
+      "rmse": 0.4596996482160847
+    }
+  ],
+  "scope": "Wine errors use raw scalar bin indices, not original grades. MAE has a retained grouped bootstrap interval; RMSE is a point estimate. Bin support and conditional grade entropy disclose sparse extremes and information lost through binning.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

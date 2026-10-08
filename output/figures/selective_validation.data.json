@@ -1,0 +1,123 @@
+{
+  "figure": "selective_validation",
+  "format": "dafjev.study-figure-data/1",
+  "rows": [
+    {
+      "backend": "prior",
+      "dataset_id": "banking77-selection-fold0",
+      "eligible_coverage": 0.0,
+      "job": "banking77-selection-fold0",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "banking77-selection-fold0",
+      "eligible_coverage": 0.5135,
+      "job": "banking77-selection-fold0",
+      "observed_error": 0.03602726387536514,
+      "wilson_upper": 0.04926318841440923
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "banking77-selection-fold1",
+      "eligible_coverage": 0.0,
+      "job": "banking77-selection-fold1",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "banking77-selection-fold1",
+      "eligible_coverage": 0.6525,
+      "job": "banking77-selection-fold1",
+      "observed_error": 0.037547892720306515,
+      "wilson_upper": 0.04929305543331827
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "banking77-selection-fold2",
+      "eligible_coverage": 0.0,
+      "job": "banking77-selection-fold2",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "banking77-selection-fold2",
+      "eligible_coverage": 0.5852926463231616,
+      "job": "banking77-selection-fold2",
+      "observed_error": 0.03675213675213675,
+      "wilson_upper": 0.04913788220607945
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "banking77-selection-fold3",
+      "eligible_coverage": 0.0,
+      "job": "banking77-selection-fold3",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "banking77-selection-fold3",
+      "eligible_coverage": 0.6253126563281641,
+      "job": "banking77-selection-fold3",
+      "observed_error": 0.0376,
+      "wilson_upper": 0.04964083193204777
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "banking77-selection-fold4",
+      "eligible_coverage": 0.0,
+      "job": "banking77-selection-fold4",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "banking77-selection-fold4",
+      "eligible_coverage": 0.6626686656671664,
+      "job": "banking77-selection-fold4",
+      "observed_error": 0.03770739064856712,
+      "wilson_upper": 0.04936751819830373
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "clinc150-selection",
+      "eligible_coverage": 0.0,
+      "job": "clinc-wine-selection",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "tfidf-logistic-C1",
+      "dataset_id": "clinc150-selection",
+      "eligible_coverage": 0.6983870967741935,
+      "job": "clinc-wine-selection",
+      "observed_error": 0.040646651270207855,
+      "wilson_upper": 0.04981065702929373
+    },
+    {
+      "backend": "prior",
+      "dataset_id": "wine-selection",
+      "eligible_coverage": 0.0,
+      "job": "clinc-wine-selection",
+      "observed_error": null,
+      "wilson_upper": null
+    },
+    {
+      "backend": "wine-hist-gradient-boosting",
+      "dataset_id": "wine-selection",
+      "eligible_coverage": 0.1137218045112782,
+      "job": "clinc-wine-selection",
+      "observed_error": 0.008264462809917356,
+      "wilson_upper": 0.04533064360424888
+    }
+  ],
+  "scope": "Descriptive validation gates show eligible group coverage, observed error and the recorded Wilson upper error bound. Threshold selection is adaptive: these are not simultaneous guarantees and are not transferred to final refits. Ineligible gates have zero coverage and unavailable risk.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

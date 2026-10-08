@@ -15,6 +15,8 @@ from daf_jev._types import (
     ScoreQuestion,
     answer_from_wire,
     parse_response,
+    validate_probability_row,
+    validate_response,
 )
 from daf_jev.primitives import choice, noul, score
 
@@ -383,3 +385,61 @@ def test_builders_reject_non_json_instructions() -> None:
         choice(7, {"a": None})
     with pytest.raises(ValueError, match="instructions"):
         score(7, ["low", "high"])
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf"), -0.01, 1.01, True])
+@pytest.mark.parametrize("field", ["noul", "confidence", "probability"])
+def test_answer_numeric_fields_reject_invalid_unit_interval(field, bad) -> None:
+    payload = {"type": "choice", "choice": "a", "probabilities": {"a": 1.0}, "confidence": 0.9}
+    if field == "noul":
+        payload = {"type": "noul", "noul": bad}
+    elif field == "confidence":
+        payload["confidence"] = bad
+    else:
+        payload["probabilities"] = {"a": bad}
+    with pytest.raises(ValueError):
+        answer_from_wire(payload)
+
+
+@pytest.mark.parametrize("row", [{}, {"a": 0.0, "b": 0.0}, {"a": 0.2, "b": 0.2}, {"a": 0.8, "b": 0.8}])
+def test_probability_row_rejects_empty_or_malformed_mass(row) -> None:
+    with pytest.raises(ValueError):
+        validate_probability_row(row, rounding_digits=2)
+
+
+def test_native_rounding_allowance_preserves_stored_row() -> None:
+    row = {"a": 0.33, "b": 0.33, "c": 0.33}
+    answer = answer_from_wire({"type": "choice", "choice": "a", "probabilities": row, "confidence": 0.8})
+    assert answer.probabilities == row
+    assert sum(answer.probabilities.values()) == pytest.approx(0.99)
+    with pytest.raises(ValueError, match="allowed deviation"):
+        answer_from_wire({"type": "choice", "choice": "a", "probabilities": row, "confidence": 0.8}, probability_rounding_digits=None)
+    with pytest.raises(ValueError, match="allowed deviation"):
+        validate_probability_row({"a": 0.333, "b": 0.333, "c": 0.333}, rounding_digits=2)
+
+
+@pytest.mark.parametrize("digits", [-1, 16, True, 2.5, "2"])
+def test_rounding_declaration_is_validated(digits) -> None:
+    with pytest.raises(ValueError, match="rounding_digits"):
+        validate_probability_row({"a": 1.0}, rounding_digits=digits)
+
+
+@pytest.mark.parametrize("field", ["input_tokens", "output_tokens"])
+def test_usage_rejects_negative_token_counts(field) -> None:
+    payload = _answers_payload()
+    payload["usage"][field] = -1
+    with pytest.raises(ValueError, match="non-negative"):
+        parse_response(payload)
+
+
+def test_response_validator_binds_questions_and_preserves_answers() -> None:
+    response = parse_response(_answers_payload())
+    questions = {
+        "billing": noul("Billing?"),
+        "tone": choice("Tone?", {"calm": None, "angry": "hostile"}),
+        "severity": score("Severity?", ["low", "high", "critical"]),
+    }
+    validate_response(response, questions)
+    assert response.answers["severity"].score == 1.4
+    with pytest.raises(ValueError, match="answer IDs"):
+        validate_response(response, {"billing": questions["billing"]})

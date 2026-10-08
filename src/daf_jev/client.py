@@ -12,6 +12,12 @@ Passing keyword-only ``provider`` (or using ``for_provider`` /
 ``open_client`` / ``open_async_client``) resolves api_key, base_url, and
 model defaults from the provider's entry in ``daf_jev.providers``; explicit
 arguments still win.
+
+Successful asks validate every answer against the exact requested IDs,
+question types, option vocabulary, and score scale. Native probabilities use
+an explicit two-decimal rounding allowance by default; constructor argument
+``probability_rounding_digits=None`` selects strict full-precision validation.
+Stored probability rows are never rewritten.
 """
 
 from __future__ import annotations
@@ -35,12 +41,15 @@ from daf_jev._errors import (
     error_from_status,
 )
 from daf_jev._http import AsyncHttpxTransport, AsyncTransport, HttpxTransport, Transport
+from daf_jev._json import strict_json_loads
 from daf_jev._retry import RetryPolicy
 from daf_jev._types import (
+    NATIVE_PROBABILITY_ROUNDING_DIGITS,
     JSONContent,
     Question,
     SystemOneResponse,
     parse_response,
+    validate_response,
 )
 
 if TYPE_CHECKING:
@@ -75,8 +84,10 @@ class ModelCard:
 
 def _body_of(response: httpx.Response) -> Any:
     try:
-        return response.json()
+        return strict_json_loads(response.content)
     except ValueError:
+        if response.is_success:
+            raise
         text = response.text
         return text if text else None
 
@@ -159,6 +170,7 @@ class _BaseClient:
         timeout: float | None,
         env: Mapping[str, str] | None,
         provider: str | ProviderSpec | None = None,
+        probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
     ) -> None:
         # config has no import cycle with this module; resolving retry/timeout
         # pays for the import when environment resolution is needed.
@@ -188,6 +200,13 @@ class _BaseClient:
             timeout if timeout is not None else config.resolve_timeout(env)
         )
         self._transport = transport
+        if probability_rounding_digits is not None and (
+            isinstance(probability_rounding_digits, bool)
+            or not isinstance(probability_rounding_digits, int)
+            or not 0 <= probability_rounding_digits <= 15
+        ):
+            raise ValueError("probability_rounding_digits must be None or an integer in [0, 15]")
+        self._probability_rounding_digits = probability_rounding_digits
         self._closed = False
         # Jev fallback only without a provider: a provider-scoped client must
         # never pick up the jev credential (cross-provider key leak), so the
@@ -236,9 +255,19 @@ class _BaseClient:
             )
         raise error
 
-    def _parse_system_one(self, response: httpx.Response) -> SystemOneResponse:
+    def _parse_system_one(
+        self, response: httpx.Response, questions: Mapping[str, Question | dict]
+    ) -> SystemOneResponse:
         request_id = response.headers.get(REQUEST_ID_HEADER)
-        return parse_response(_body_of(response), request_id)
+        parsed = parse_response(
+            _body_of(response), request_id,
+            probability_rounding_digits=self._probability_rounding_digits,
+        )
+        validate_response(
+            parsed, questions,
+            probability_rounding_digits=self._probability_rounding_digits,
+        )
+        return parsed
 
 
 class JevClient(_BaseClient):
@@ -256,6 +285,7 @@ class JevClient(_BaseClient):
         timeout: float | None = None,
         env: Mapping[str, str] | None = None,
         provider: str | ProviderSpec | None = None,
+        probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
     ) -> None:
         super().__init__(
             api_key,
@@ -266,6 +296,7 @@ class JevClient(_BaseClient):
             timeout=timeout,
             env=env,
             provider=provider,
+            probability_rounding_digits=probability_rounding_digits,
         )
         self._sleep = sleep
 
@@ -281,6 +312,7 @@ class JevClient(_BaseClient):
         timeout: float | None = None,
         transport: Transport | None = None,
         env: Mapping[str, str] | None = None,
+        probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
     ) -> JevClient:
         """Build a client whose defaults come from a registered provider.
 
@@ -299,6 +331,7 @@ class JevClient(_BaseClient):
             timeout=timeout,
             env=env,
             provider=provider,
+            probability_rounding_digits=probability_rounding_digits,
         )
 
     def _default_transport(self, base_url: str) -> HttpxTransport:
@@ -355,12 +388,11 @@ class JevClient(_BaseClient):
             raise TypeSafeError("client is closed")
         if not questions:
             raise TypeSafeError("questions must be a nonempty mapping")
+        wire_questions = {qid: _question_to_wire(q) for qid, q in questions.items()}
         body = {
             "state": state,
             "model": model if model is not None else self._model,
-            "questions": {
-                qid: _question_to_wire(q) for qid, q in questions.items()
-            },
+            "questions": wire_questions,
         }
         headers = self._request_headers()
         if request_headers:
@@ -373,7 +405,7 @@ class JevClient(_BaseClient):
             ),
             timeout=timeout,
         )
-        return self._parse_system_one(response)
+        return self._parse_system_one(response, wire_questions)
 
     def models(
         self,
@@ -434,6 +466,7 @@ class AsyncJevClient(_BaseClient):
         timeout: float | None = None,
         env: Mapping[str, str] | None = None,
         provider: str | ProviderSpec | None = None,
+        probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
     ) -> None:
         super().__init__(
             api_key,
@@ -444,6 +477,7 @@ class AsyncJevClient(_BaseClient):
             timeout=timeout,
             env=env,
             provider=provider,
+            probability_rounding_digits=probability_rounding_digits,
         )
         self._sleep = sleep
 
@@ -459,6 +493,7 @@ class AsyncJevClient(_BaseClient):
         timeout: float | None = None,
         transport: AsyncTransport | None = None,
         env: Mapping[str, str] | None = None,
+        probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
     ) -> AsyncJevClient:
         """Build a client whose defaults come from a registered provider.
 
@@ -477,6 +512,7 @@ class AsyncJevClient(_BaseClient):
             timeout=timeout,
             env=env,
             provider=provider,
+            probability_rounding_digits=probability_rounding_digits,
         )
 
     def _default_transport(self, base_url: str) -> AsyncHttpxTransport:
@@ -535,12 +571,11 @@ class AsyncJevClient(_BaseClient):
             raise TypeSafeError("client is closed")
         if not questions:
             raise TypeSafeError("questions must be a nonempty mapping")
+        wire_questions = {qid: _question_to_wire(q) for qid, q in questions.items()}
         body = {
             "state": state,
             "model": model if model is not None else self._model,
-            "questions": {
-                qid: _question_to_wire(q) for qid, q in questions.items()
-            },
+            "questions": wire_questions,
         }
         headers = self._request_headers()
         if request_headers:
@@ -553,7 +588,7 @@ class AsyncJevClient(_BaseClient):
             ),
             timeout=timeout,
         )
-        return self._parse_system_one(response)
+        return self._parse_system_one(response, wire_questions)
 
     async def models(
         self,

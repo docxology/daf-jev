@@ -136,6 +136,8 @@ def build_questions() -> list[tuple[str, object]]:
 
 
 def run_batched(client: JevClient, questions: dict, runs: int) -> tuple[list[float], int, int]:
+    if runs < 1:
+        raise ValueError("runs must be >= 1")
     walls, in_tok, out_tok = [], 0, 0
     for _ in range(runs):
         started = perf_counter()
@@ -148,6 +150,8 @@ def run_batched(client: JevClient, questions: dict, runs: int) -> tuple[list[flo
 
 def run_singles(client: JevClient, questions: dict, runs: int) -> tuple[list[float], int, int]:
     """N sequential single-question calls per run; wall is the full round."""
+    if runs < 1:
+        raise ValueError("runs must be >= 1")
     round_walls, in_tok, out_tok = [], 0, 0
     for _ in range(runs):
         started = perf_counter()
@@ -188,6 +192,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="jev-latest",
                         help="model id (default jev-latest)")
     args = parser.parse_args(argv)
+    if args.runs < 1:
+        parser.error("--runs must be >= 1")
 
     settings = settings_or_skip()
     if settings is None:

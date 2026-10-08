@@ -2,15 +2,16 @@
   "fig:graphical_abstract": {
     "figure_id": "figure_001",
     "filename": "graphical_abstract.png",
-    "caption": "Graphical abstract of daf-jev. Left: a decision state enters the package through the three typed question primitives — noul probability, choice distribution, score rubric. Centre: the processing stack, from the typed client through the composition layer with its confidence gates and routing patterns and the evaluator with its calibration machinery up to the surfaced entry points (CLI, MCP server, agent skill). Right: live benchmark outputs read at figure-generation time from the benchmark JSONs — batching wall-clock speedup with the benchmarked model and run date, per-pipeline median latency, and the confidence reliability curve with its expected calibration error (correctness via the self-consistency proxy across repeated asks; a calibration proxy, not ground-truth accuracy). Arrows trace the flow from state, to typed answers, to routed decisions.",
+    "caption": "Modular decision workflow from independent targets and frozen requests through admission, declared backends and validated results to retained evidence. CPU, older native and hosted pilot counts describe separate cohorts; completion includes capability work. The full comparative study remains unfinished.",
     "label": "fig:graphical_abstract",
     "section": "Abstract",
     "width": "1.0\\textwidth",
     "placement": "h",
     "generated_by": "daf_jev.figures",
     "metadata": {
-      "alt_text": "Three-panel cover figure: question-type cards fed by a decision state, a four-layer processing stack from typed client to surfaced entry points, and miniature benchmark charts of batching speedup, median pipeline latency, and calibration reliability, annotated with the benchmarked model and run date.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "alt_text": "Three panels show independent targets and a frozen design, budgeted backend execution, and distinct retained CPU/native/hosted evidence.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:architecture": {
@@ -24,13 +25,14 @@
     "generated_by": "daf_jev.figures",
     "metadata": {
       "alt_text": "Module graph of daf-jev arranged as stacked layers: the CLI and orchestration scripts on top, the pure composition and typed-primitive modules beneath them, the frozen wire dataclasses below that, and the client/transport layer with the retry policy and typed exceptions at the bottom, with models.py, config.py, and the batch harness entering as side inputs.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:primitives": {
     "figure_id": "figure_003",
     "filename": "primitives_overview.png",
-    "caption": "The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A noul question yields a calibrated yes/no probability; a choice question yields a selected label, a full probability distribution over the named options, and a scalar confidence; a score question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only — it carries no measured data.",
+    "caption": "The three question primitives of the System One surface and the typed answer shapes daf-jev parses them into. A noul question yields a declared yes/no probability; a choice question yields a selected label, a probability distribution over the named options, and a scalar confidence; a score question yields a probability-weighted score over ordered levels together with the level legend, the level distribution, and a confidence. The diagram is a schematic of shapes only — it carries no measured data.",
     "label": "fig:primitives",
     "section": "Methodology",
     "width": "0.85\\textwidth",
@@ -38,21 +40,23 @@
     "generated_by": "daf_jev.figures",
     "metadata": {
       "alt_text": "Schematic of the three question builders (noul, choice, score) with arrows to their typed answer shapes: a yes/no probability, a selected label with probability distribution and confidence, and a probability-weighted score with level legend, level distribution, and confidence.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:batching": {
     "figure_id": "figure_004",
     "filename": "batching_speedup.png",
-    "caption": "Batching speedup of the benchmark model versus sequential single-question calls, measured by benchmarks/bench_batching.py. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width; the secondary axis shows the token-cost ratio — sequential tokens divided by batched tokens — which exceeds unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title carries the model and run date read from the benchmark JSON itself.",
+    "caption": "Batching speedup of the benchmark model versus sequential single-question calls, measured by benchmarks/bench_batching.py. Bars give the wall-time speedup of one batched call over one sequential call per question for each configured batch width; a separate panel shows the token ratio — sequential tokens divided by batched tokens — which exceeds unity because the sequential strategy re-sends the state once per question. Bars are annotated with their values; the title carries the model and run date read from the benchmark JSON itself.",
     "label": "fig:batching",
     "section": "Results",
     "width": "0.85\\textwidth",
     "placement": "h",
     "generated_by": "daf_jev.figures",
     "metadata": {
-      "alt_text": "Bar chart of wall-time speedup versus sequential calls for each configured batch width, with a secondary-axis token-cost ratio measuring sequential tokens relative to batched tokens; the speedup grows with batch width while the sequential strategy costs proportionally more tokens than the single batched call.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "alt_text": "Bar chart of wall-time speedup versus sequential calls for each configured batch width, with a separate token-ratio panel measuring sequential tokens relative to batched tokens; the speedup grows with batch width while the sequential strategy costs proportionally more tokens than the single batched call.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:latency": {
@@ -66,7 +70,8 @@
     "generated_by": "daf_jev.figures",
     "metadata": {
       "alt_text": "Grouped bar chart pairing the median and tail wall times of the composite scoring and intent routing decision pipelines.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:confidence": {
@@ -80,7 +85,8 @@
     "generated_by": "daf_jev.figures",
     "metadata": {
       "alt_text": "Confidence axis on the unit interval divided into three horizontal bands labelled escalate, review, and automate, with example threshold markers between the bands.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   },
   "fig:calibration": {
@@ -94,7 +100,98 @@
     "generated_by": "daf_jev.figures",
     "metadata": {
       "alt_text": "Reliability diagram plotting mean reported confidence against observed agreement with the modal choice per confidence bucket, each marker annotated with its bucket size, close to the dashed perfect-calibration diagonal, with the expected calibration error and Brier score annotated in the corner.",
-      "source": "daf-jev benchmark/figure pipeline"
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:cpu_quality": {
+    "figure_id": "figure_008",
+    "filename": "cpu_quality.png",
+    "caption": "Canonical test accuracy for applicable CPU comparators. Whiskers are retained 95% grouped bootstrap intervals for fixed predictions; they exclude refitting uncertainty. Wine accuracy uses probability argmax over bins. Unsupported comparator/task pairs supply no plotted estimate.",
+    "label": "fig:cpu_quality",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Canonical test accuracy for applicable CPU comparators. Whiskers are retained 95% grouped bootstrap intervals for fixed predictions; they exclude refitting uncertainty. Wine accuracy uses probability argmax over bins. Unsupported comparator/task pairs supply no plotted estimate.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:wine_ordinal": {
+    "figure_id": "figure_009",
+    "filename": "wine_ordinal.png",
+    "caption": "Wine errors use raw scalar bin indices, not original grades. MAE has a retained grouped bootstrap interval; RMSE is a point estimate. Bin support and conditional grade entropy disclose sparse extremes and information lost through binning.",
+    "label": "fig:wine_ordinal",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Wine errors use raw scalar bin indices, not original grades. MAE has a retained grouped bootstrap interval; RMSE is a point estimate. Bin support and conditional grade entropy disclose sparse extremes and information lost through binning.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:cohort_sensitivity": {
+    "figure_id": "figure_010",
+    "filename": "cohort_sensitivity.png",
+    "caption": "Canonical and leakage-filtered text results use separately refitted models and different test cohorts. Connecting lines are descriptive, without paired or causal change intervals; denominators are shown for each cohort.",
+    "label": "fig:cohort_sensitivity",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Canonical and leakage-filtered text results use separately refitted models and different test cohorts. Connecting lines are descriptive, without paired or causal change intervals; denominators are shown for each cohort.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:validation_folds": {
+    "figure_id": "figure_011",
+    "filename": "validation_folds.png",
+    "caption": "BANKING77 validation accuracy across five overlapping training fits. Pooled out-of-fold intervals resample input groups for fixed predictions and do not measure shared-training or refitting uncertainty.",
+    "label": "fig:validation_folds",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "BANKING77 validation accuracy across five overlapping training fits. Pooled out-of-fold intervals resample input groups for fixed predictions and do not measure shared-training or refitting uncertainty.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:selective_validation": {
+    "figure_id": "figure_012",
+    "filename": "selective_validation.png",
+    "caption": "Descriptive validation gates show eligible group coverage, observed error and the recorded Wilson upper error bound. Threshold selection is adaptive: these are not simultaneous guarantees and are not transferred to final refits. Ineligible gates have zero coverage and unavailable risk.",
+    "label": "fig:selective_validation",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Descriptive validation gates show eligible group coverage, observed error and the recorded Wilson upper error bound. Threshold selection is adaptive: these are not simultaneous guarantees and are not transferred to final refits. Ineligible gates have zero coverage and unavailable risk.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:execution_coverage": {
+    "figure_id": "figure_013",
+    "filename": "execution_coverage.png",
+    "caption": "Status fractions preserve each distinct study denominator. CPU studies, the older partial native study and the hosted pilot have different cohorts and source identities. The full hosted proposal is unexecuted. Completion counts include capability work and cannot be read as quality sample counts.",
+    "label": "fig:execution_coverage",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Status fractions preserve each distinct study denominator. CPU studies, the older partial native study and the hosted pilot have different cohorts and source identities. The full hosted proposal is unexecuted. Completion counts include capability work and cannot be read as quality sample counts.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
     }
   }
 }

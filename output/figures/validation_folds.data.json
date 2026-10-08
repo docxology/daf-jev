@@ -1,0 +1,41 @@
+{
+  "figure": "validation_folds",
+  "format": "dafjev.study-figure-data/1",
+  "rows": [
+    {
+      "backend": "tfidf-logistic-C1",
+      "fold_accuracy": [
+        0.8505747126436781,
+        0.8595702148925537,
+        0.8625,
+        0.8595,
+        0.8640679660169915
+      ],
+      "pooled_accuracy": 0.8592422273318004,
+      "pooled_interval": [
+        0.8521591363454618,
+        0.8661
+      ]
+    },
+    {
+      "backend": "prior",
+      "fold_accuracy": [
+        0.01899050474762619,
+        0.018490754622688656,
+        0.0185,
+        0.0185,
+        0.01899050474762619
+      ],
+      "pooled_accuracy": 0.018694391682495252,
+      "pooled_interval": [
+        0.016091954022988506,
+        0.021493551934419673
+      ]
+    }
+  ],
+  "scope": "BANKING77 validation accuracy across five overlapping training fits. Pooled out-of-fold intervals resample input groups for fixed predictions and do not measure shared-training or refitting uncertainty.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "bytes": 1545601,
+  "format": "dafjev.same-host-render-reproduction/1",
+  "gates": {
+    "missing_bibliography": 0,
+    "overfull_vertical_boxes": 0,
+    "undefined_references": 0,
+    "unloadable_images": 0
+  },
+  "inference_executed": false,
+  "pages": 26,
+  "presentation": {
+    "all_page_bounds_checked": 26,
+    "cited_bibliography_entries_complete": 25,
+    "headings_complete": 52,
+    "numbered_figures_complete": 13,
+    "private_markers": 0,
+    "safe_link_annotations": 171,
+    "tables_complete": 3,
+    "unresolved_markers": 0
+  },
+  "public_pdf": "output/pdf/modular-methods-scholarship-20261008-final.pdf",
+  "scope": "Same-host reproducibility with installed fonts and fixed source epoch; no cross-platform byte identity claim.",
+  "sha256": "a75ae2379f0a39071057e1a426af10b1b595bd010aa037719b10636d7b3599a3",
+  "source_commit": "450a49a3731c794cc6138707c2100ac48854a471",
+  "source_date_epoch": 1791487963,
+  "toolchain": {
+    "bibtex": "BibTeX 0.99e (TeX Live 2026)",
+    "pandoc": "pandoc 3.12",
+    "python": "Python 3.14.4",
+    "uv": "uv 0.12.23 (Homebrew 2026-10-03 aarch64-apple-darwin)",
+    "xelatex": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)"
+  },
+  "two_render_bytes_identical": true,
+  "variables": {
+    "count": 66,
+    "path": "output/data/manuscript_variables.json",
+    "sha256": "fff9c7af30a0887cd13742402e1880f7ab4598073f31ac164ba69e4b48aea762"
+  }
+}

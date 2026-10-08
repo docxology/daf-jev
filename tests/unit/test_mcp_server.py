@@ -67,8 +67,8 @@ def _run(coro):
 
 
 # ------------------------------------------------------------ shared bodies ---
-def _answers_body() -> dict:
-    return {
+def _answers_body(*answer_ids: str) -> dict:
+    body = {
         "model": "jev-latest",
         "usage": {"input_tokens": 120, "output_tokens": 45},
         "answers": {
@@ -88,6 +88,9 @@ def _answers_body() -> dict:
             },
         },
     }
+    if answer_ids:
+        body["answers"] = {key: body["answers"][key] for key in answer_ids}
+    return body
 
 
 def _models_body() -> dict:
@@ -209,7 +212,7 @@ def test_jev_ask_spec_string_questions(mcp_stub_env) -> None:
 
 
 def test_jev_ask_accepts_dict_state_and_native_question_dicts(mcp_stub_env) -> None:
-    mcp_stub_env.enqueue(body=_answers_body())
+    mcp_stub_env.enqueue(body=_answers_body("billing"))
     questions = {
         "billing": {"type": "noul", "instructions": "Is this about billing?"}
     }
@@ -268,7 +271,7 @@ def test_jev_evaluate_passes_object_and_array_states_through(mcp_stub_env) -> No
             "tone": {
                 "type": "choice",
                 "choice": "calm",
-                "probabilities": {"calm": 1.0},
+                "probabilities": {"calm": 1.0, "angry": 0.0},
                 "confidence": 0.9,
             }
         },
@@ -284,8 +287,11 @@ def test_jev_evaluate_passes_object_and_array_states_through(mcp_stub_env) -> No
     assert summary["n_states"] == 2
     assert summary["n_errors"] == 0
     assert summary["total_input_tokens"] == 6
-    assert mcp_stub_env.hits[0]["json"]["state"] == {"customer": "acme"}
-    assert mcp_stub_env.hits[1]["json"]["state"] == ["line", "items"]
+    # Concurrent requests preserve each payload; arrival order is unspecified.
+    states = [hit["json"]["state"] for hit in mcp_stub_env.hits]
+    assert len(states) == 2
+    assert {"customer": "acme"} in states
+    assert ["line", "items"] in states
 
 
 # ------------------------------------------------------------ jev_models ------
@@ -395,7 +401,7 @@ def test_jev_docs_verify_missing_manifest_is_error_string(tmp_path) -> None:
 def test_jev_ask_native_choice_and_score_criteria_reach_wire(
     mcp_stub_env,
 ) -> None:
-    mcp_stub_env.enqueue(body=_answers_body())
+    mcp_stub_env.enqueue(body=_answers_body("tone", "severity"))
     questions = {
         "tone": {
             "type": "choice",
@@ -545,7 +551,7 @@ def test_docs_snapshot_error_shape_when_manifest_missing(tmp_path) -> None:
 def test_every_tool_output_is_json_serializable(mcp_stub_env) -> None:
     # MCP tools hand their results to a JSON wire: every tool's output
     # must survive json.dumps() -> json.loads() unchanged.
-    mcp_stub_env.enqueue(body=_answers_body())
+    mcp_stub_env.enqueue(body=_answers_body("billing"))
     asked = _run(
         ms.jev_ask("state", {"billing": "noul:Is this about billing?"})
     )
@@ -558,7 +564,7 @@ def test_every_tool_output_is_json_serializable(mcp_stub_env) -> None:
             "tone": {
                 "type": "choice",
                 "choice": "calm",
-                "probabilities": {"calm": 1.0},
+                "probabilities": {"calm": 1.0, "angry": 0.0},
                 "confidence": 0.9,
             }
         },
