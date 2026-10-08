@@ -83,9 +83,11 @@ def source() -> dict[str, Any]:
             "source_worktree_changes": changed}
 
 
-def safe_identity(value: Any, *, name: str) -> str:
+def safe_identity(value: Any, *, name: str, allow_alias: bool = False) -> str:
     """Keep arbitrary input strings out of public identity fields."""
-    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_.:/+-]{1,160}", value):
+    identifier = value[1:] if allow_alias and isinstance(value, str) and value.startswith("~") else value
+    if (not isinstance(value, str) or len(value) > 160
+            or not re.fullmatch(r"[A-Za-z0-9_.:/+-]{1,160}", identifier)):
         raise ValueError(f"{name} must be a bounded portable identity")
     return value
 
@@ -118,7 +120,7 @@ def build(catalog: dict[str, Any], endpoints: dict[str, Any], fragment: dict[str
             or catalog.get("source") != "https://openrouter.ai/api/v1/models?output_modalities=decisions"):
         raise ValueError("a frozen official decisions catalog is required")
     models = catalog["payload"]["data"]
-    model_ids = [safe_identity(model["id"], name="catalog model ID") for model in models]
+    model_ids = [safe_identity(model["id"], name="catalog model ID", allow_alias=True) for model in models]
     if not model_ids or len(set(model_ids)) != len(model_ids):
         raise ValueError("catalog model IDs must be nonempty and distinct")
     account_input = prior["hosted_pilot"]["accounting"]
@@ -225,8 +227,8 @@ def build(catalog: dict[str, Any], endpoints: dict[str, Any], fragment: dict[str
     timing = {(row["dataset"], row["example_id"]) for row in pack["examples"]}
     arms: list[dict[str, Any]] = []
     for profile in profiles:
-        safe_identity(profile["id"], name="profile ID")
-        safe_identity(profile["model"], name="model ID")
+        safe_identity(profile["id"], name="profile ID", allow_alias=True)
+        safe_identity(profile["model"], name="model ID", allow_alias=True)
         quote = _liability(profile)
         profile["capabilities"]["probability_semantics"] = None
         profile["capabilities"]["authentication"] = "bearer"

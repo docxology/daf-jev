@@ -256,7 +256,7 @@ From the repository checkout:
 
 ```bash
 uv sync --extra figures
-uv run python scripts/generate_figures.py
+uv run python scripts/generate_figures.py --include-study
 uv run python scripts/z_generate_manuscript_variables.py
 uv run python scripts/render_pdf.py --output output/pdf/reproduction.pdf
 ```
@@ -267,7 +267,14 @@ the selected fresh PDF path. It refuses to overwrite an existing output; choose
 a new path for a rerun. Token-substituted `output/manuscript/` sections
 belong to the optional external template integration; they are not a prerequisite
 for the standalone renderer. Rendering requires the documented Pandoc/TeX
-toolchain. The renderer rejects unresolved bibliography entries, references,
+toolchain: Pandoc, XeLaTeX, BibTeX, the declared TeX packages, Times New Roman,
+Menlo, and `latinmodern-math.otf`. Fonts and compiler versions are reproduction
+inputs, not bundled package dependencies. The release reproduction record binds
+the source-build commit, its `SOURCE_DATE_EPOCH`, saved variables, selected
+evidence, figures and toolchain. Exact same-host reproduction uses that source
+commit with the released evidence/figure/map inputs overlaid; the later artifact
+commit has a different HEAD timestamp. Cross-platform PDF byte equality is not
+established. The renderer rejects unresolved bibliography entries, references,
 unloadable images and overfull vertical boxes. Use `--artifacts-dir DIR` with a
 fresh directory to retain intermediate TeX and logs for review. Inspect every
 section heading, representative prose and page layout as well as unresolved

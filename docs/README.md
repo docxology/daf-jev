@@ -122,6 +122,12 @@ uv run python scripts/render_pdf.py --output output/pdf/reproduction-new.pdf \
     --artifacts-dir .benchmarks/reproduction-build-new
 ```
 
+Rendering also requires Pandoc, XeLaTeX, BibTeX, the preamble's TeX packages,
+Times New Roman, Menlo and Latin Modern Math. The release reproduction record
+identifies the source-build commit and fixed epoch; overlay its retained
+evidence, figures and saved variables for exact same-host reproduction. A later
+artifact commit's HEAD timestamp defines a different build.
+
 The renderer requires zero unresolved citations, undefined references,
 unloadable images and overfull vertical boxes. Review all source headings/prose
 and every PDF page as well: marker/bounds checks alone cannot detect absent or

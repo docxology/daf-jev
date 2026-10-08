@@ -16,6 +16,8 @@ uv run python scripts/render_pdf.py \
 
 The variable generator writes `output/data/manuscript_variables.json` from package/configuration metadata, test evidence, documentation manifest and selected benchmark JSONs. Strict mode rejects missing required inputs; `--allow-draft` substitutes draft sentinels and is not final evidence. The standalone PDF renderer resolves tokens directly from the map, checks unresolved citations/references/images and writes the selected fresh PDF path, refusing to overwrite existing outputs. The exclusive artifacts directory retains combined Markdown, TeX, bibliography and compiler diagnostics. An overfull vertical box fails rendering because missing or clipped prose can evade a token-only check. External-template substituted sections are an optional integration. Inspect the final PDF before publication; root installation and public release are separate actions.
 
+PDF reproduction requires Pandoc, XeLaTeX, BibTeX, the declared TeX packages, Times New Roman, Menlo and Latin Modern Math. The release record binds the source-build commit and epoch, saved variables, selected evidence and figures. Same-host byte equality is tested at that source commit with these retained inputs; the later artifact commit's HEAD timestamp defines a different build. Cross-platform PDF byte equality is not established.
+
 The retained TypeSafe snapshot comprises {{DOCS_SNAPSHOT_PAGES}} pages ({{DOCS_SNAPSHOT_BYTES_HUMAN}}), scraped on {{DOCS_SNAPSHOT_DATE}} and identified by {{DOCS_SNAPSHOT_ID}}. Offline verification rehashes those exact bytes:
 
 ```bash

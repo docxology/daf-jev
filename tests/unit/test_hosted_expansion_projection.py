@@ -234,6 +234,7 @@ def test_hostile_theme_cannot_change_matrix_bytes_and_is_restored(inputs: tuple[
     ambient = dict(plt.rcParams)
     baseline_hashes = PROJECTION.render_matrix(plan, baseline)
     assert dict(plt.rcParams) == ambient
+
     with plt.rc_context({"image.origin": "lower", "text.color": "red", "font.size": 22,
                          "axes.facecolor": "black", "axes.labelcolor": "yellow",
                          "figure.facecolor": "magenta", "savefig.facecolor": "cyan",
@@ -242,3 +243,30 @@ def test_hostile_theme_cannot_change_matrix_bytes_and_is_restored(inputs: tuple[
         assert PROJECTION.render_matrix(plan, hostile) == baseline_hashes
         assert dict(plt.rcParams) == caller
     assert dict(plt.rcParams) == ambient
+
+
+def test_official_leading_tilde_alias_retained_and_deduplicated(inputs: tuple[dict[str, Any], ...], tmp_path: Path) -> None:
+    changed = copy.deepcopy(inputs)
+    target = changed[0]["payload"]["data"][1]
+    target["id"] = "typesafe/jev-1.13"
+    alias = copy.deepcopy(target)
+    alias["id"] = "~typesafe/jev-latest"
+    alias["alias_target"] = {"slug": target["id"]}
+    changed[0]["payload"]["data"].append(alias)
+    before = copy.deepcopy(changed[0])
+    plan = project(changed, tmp_path)
+    assert changed[0] == before
+    assert changed[0]["payload"]["data"][-1]["id"] == "~typesafe/jev-latest"
+    assert len(plan["arms"]) == 4 and plan["planned_cells"] == 2984
+    assert "typesafe/jev-1.13" in {arm["profile"]["id"] for arm in plan["arms"]}
+    assert "~typesafe/jev-latest" not in {arm["profile"]["id"] for arm in plan["arms"]}
+    assert PROJECTION.safe_identity("~typesafe/jev-latest", name="catalog model", allow_alias=True) == "~typesafe/jev-latest"
+    with pytest.raises(ValueError):
+        PROJECTION.safe_identity("~typesafe/jev-latest", name="dataset ID")
+
+
+@pytest.mark.parametrize("identity", ["~~typesafe/jev-latest", "typesafe/~jev", "~", "~typesafe/jev\n",
+                                      "~typesafe/jev?api_key=fixture", "~typesafe/jev#fragment", "~" + "a" * 160])
+def test_malformed_alias_identifiers_refused(identity: str) -> None:
+    with pytest.raises(ValueError, match="portable identity"):
+        PROJECTION.safe_identity(identity, name="catalog model", allow_alias=True)
