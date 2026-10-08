@@ -1447,6 +1447,29 @@ and [reproducibility.md](reproducibility.md).
   training-prior, fitted-classifier and analytical controls declare their
   respective meanings; this metadata is not an empirical calibration result.
 
+### `_cancellation.py`
+
+Private `mark_cancellation(error: asyncio.CancelledError) -> None` binds the
+exception caught by the current HTTP or workflow boundary, even when it has no
+partial work. `original_cancellation(error: asyncio.CancelledError) ->
+asyncio.CancelledError` returns the nearest marked origin through supported
+cancellation/timeout normalization nodes, or the supplied error when none is
+found. `cancellation_workflow(error: BaseException) -> dict[str, Any] | None`
+reads direct ordinary-failure workflow metadata or the marked cancellation's
+metadata. Traversal is cycle-safe, stops at that origin and does not search
+arbitrary exception causes/contexts. A current origin without work cannot borrow
+a previously handled request's evidence. Receipts and billing remain observer
+owned; these helpers neither infer transport arrival nor change cancellation
+state, financial admission or retry policy.
+
+Python 3.10 task boundaries may raise a fresh cancellation exception while
+retaining the original in standard exception chaining. Direct custom attributes
+and cause identity on the outer wrapper are therefore not the contract. The
+real-task and HTTP regression checks retain the workflow and original
+finalization cause through this private reader. See Python's
+[task cancellation and timeout semantics](https://docs.python.org/3.10/library/asyncio-task.html)
+and the pinned [3.10.20 cancellation implementation](https://github.com/python/cpython/blob/v3.10.20/Lib/asyncio/futures.py).
+
 ### `_json.py`
 
 `strict_json_loads(value: str | bytes | bytearray, *, parse_float=float) -> Any`
@@ -1818,7 +1841,11 @@ it is not the total validation/test quality-control physical row count.
   `dafjev_workflow` with child statuses, attempt IDs, observed receipts and any
   completed weak predictions. A refusal before any child work carries no
   fabricated partial result. Strong API invocation and actual transport admission
-  are distinguished by the retained attempt IDs/receipts.
+  are distinguished by the retained attempt IDs/receipts. Cancellation metadata
+  is recovered through `_cancellation.cancellation_workflow`; a task wrapper
+  need not expose those attributes directly. Durable attempt admission can
+  precede TCP arrival: interrupted admitted work remains accounted for even
+  when a loopback server observed no request.
 - Executed `kind: cascade` profiles name `weak`, `strong` and `gate_file`.
   `dafjev.policy-gates/1` evidence contains source manifest hash and validation
   identity binding exact prepared bytes/weak profile/source files/training seed.

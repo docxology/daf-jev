@@ -33,6 +33,10 @@ restate them here; there is no `../AGENTS.md` in this location.
     benchmark/manuscript configuration. Duplicate mapping keys, including
     collisions after merge expansion, aliases, unsafe tags and nonfinite numbers
     fail before planning or generation; global PyYAML behavior is unchanged.
+  - `_cancellation.py` — private recovery of explicitly owned cancellation
+    evidence through task/timeout exception chaining. It stops at the current
+    owned origin and rejects unrelated handled exception context. It does not
+    change cancellation state or infer usage, billing or transport arrival.
   - `_http.py` — `Transport` / `AsyncTransport` protocols +
     `HttpxTransport` / `AsyncHttpxTransport`.
   - `client.py` — `JevClient` / `AsyncJevClient` (`ask`, `models`, `close`,

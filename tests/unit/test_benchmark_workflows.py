@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from daf_jev import choice
+from daf_jev._cancellation import cancellation_workflow, original_cancellation
 from daf_jev.benchmark_policies import GateCalibration, wilson_upper
 from daf_jev.benchmark_store import BudgetStopped
 from daf_jev.benchmark_workflows import CascadeDecisionBackend, gate_from_dict
@@ -156,7 +157,8 @@ def test_gate_evidence_roundtrip_keeps_frozen_validation_statistics():
 
 
 @pytest.mark.parametrize("child", ["weak", "strong"])
-def test_original_cancellation_retains_partial_child_status_and_receipts(stub, child):
+@pytest.mark.parametrize("task_layers", [0, 2])
+def test_original_cancellation_retains_partial_child_status_and_receipts(stub, child, task_layers):
     async def run():
         weak = AsyncHTTPDecisionBackend(endpoint=stub.base_url + "/weak", model="weak")
         strong = AsyncHTTPDecisionBackend(endpoint=stub.base_url + "/strong", model="strong")
@@ -166,7 +168,11 @@ def test_original_cancellation_retains_partial_child_status_and_receipts(stub, c
             stub.enqueue(body=_response("a", .6), delay=1 if child == "weak" else 0)
             if child == "strong":
                 stub.enqueue(body=_response("b", .9), delay=1)
-            task = asyncio.create_task(cascade.predict(_request()))
+            async def predict(depth):
+                if depth:
+                    return await asyncio.create_task(predict(depth - 1))
+                return await cascade.predict(_request())
+            task = asyncio.create_task(predict(task_layers))
             async def wait_for_hit():
                 while len(stub.hits) < (1 if child == "weak" else 2):
                     await asyncio.sleep(.005)
@@ -174,7 +180,9 @@ def test_original_cancellation_retains_partial_child_status_and_receipts(stub, c
             task.cancel()
             with pytest.raises(asyncio.CancelledError) as error:
                 await task
-            record = error.value.dafjev_workflow
+            record = cancellation_workflow(error.value)
+            assert record is not None and task.cancelled()
+            assert original_cancellation(error.value).dafjev_workflow == record
             assert record["failed_phase"] == child
             assert record["weak_status"] == ("unresolved" if child == "weak" else "completed")
             assert record["strong_status"] == ("unattempted" if child == "weak" else "unresolved")

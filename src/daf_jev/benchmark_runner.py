@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
 
+from daf_jev._cancellation import cancellation_workflow
 from daf_jev._json import strict_json_loads
 from daf_jev._yaml import strict_yaml_loads
 from daf_jev.benchmark_datasets import pilot_samples, prepared_dataset_from_dict
@@ -797,14 +798,14 @@ async def _execute(store: RunStore, *, through_phase: str | None = None) -> dict
             error = None if result is not None else error
         except asyncio.TimeoutError as exc:
             error = "TimeoutError"
-            partial = getattr(exc.__cause__, "dafjev_workflow", None)
+            partial = cancellation_workflow(exc)
             if partial is not None:
                 result = DecisionResult({}, workflow=partial)
         except GraphicalExperimentError as exc:
             error = type(exc).__name__
             result = DecisionResult({}, workflow=exc.record)
         except BudgetStopped as exc:
-            partial = getattr(exc, "dafjev_workflow", None)
+            partial = cancellation_workflow(exc)
             if partial is None:
                 status, error = _budget_stop_outcome(store, identity, exc)
             else:
@@ -812,7 +813,7 @@ async def _execute(store: RunStore, *, through_phase: str | None = None) -> dict
                 result = DecisionResult({}, workflow=partial)
         except asyncio.CancelledError as exc:
             store.append({"event": "cell_cancelled", "cell_id": identity,
-                          "workflow": getattr(exc, "dafjev_workflow", None)})
+                          "workflow": cancellation_workflow(exc)})
             raise
         except Exception as exc:
             error = type(exc).__name__  # raw exceptions may contain private inputs/URLs

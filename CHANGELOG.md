@@ -24,5 +24,10 @@ installed-package checks support reproducible releases. Public verification
 projections retain source identities and results while explicitly omitting
 private machine paths and JUnit hostnames. Original captures remain retained.
 
+Cancellation evidence survives Python 3.10 task boundaries while staying bound
+to the current request. Deadline regression checks distinguish durable admission
+from confirmed HTTP arrival, including interrupted workflows that resume must
+not retry. CI retains native unit logs and JUnit evidence on failed runs.
+
 This release does not claim a completed all-provider comparison, deployment
 acceptance or new hosted accuracy, latency or cost results.

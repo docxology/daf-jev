@@ -1,10 +1,14 @@
 """Offline experiment planning/reporting and real local transport execution."""
 
+import asyncio
 import hashlib
 import json
 import shutil
+import threading
 import time
+from contextlib import contextmanager
 from decimal import ROUND_DOWN, Decimal, Inexact, localcontext
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
@@ -1020,7 +1024,8 @@ def test_graphical_summary_preserves_started_nonterminal_status(tmp_path, cancel
                    for event in store.events())
 
 
-def _http_cascade_store(tmp_path, stub, monkeypatch, *, local_limit=2, direct_weak=False):
+def _http_cascade_store(tmp_path, stub, monkeypatch, *, local_limit=2, direct_weak=False,
+                        single_cell=False):
     from daf_jev.benchmark_policies import GateCalibration
     from daf_jev.benchmark_runner import _gate_identity
 
@@ -1047,10 +1052,56 @@ def _http_cascade_store(tmp_path, stub, monkeypatch, *, local_limit=2, direct_we
     cascade_cells = [{**cell, "backend": "cascade", "id": content_hash([
         cell["dataset"], cell["example_id"], "cascade", cell["repeat"]])} for cell in weak_cells]
     manifest["cells"] = (weak_cells if direct_weak else []) + cascade_cells
+    if single_cell:
+        manifest["cells"] = manifest["cells"][:1]
     store = RunStore.create(tmp_path.resolve() / "cascade-runs", manifest)
     (store.directory / "inputs").mkdir()
     shutil.copyfile(base.directory / "inputs/dataset-0.json", store.directory / "inputs/dataset-0.json")
     return store
+
+
+@contextmanager
+def _blocked_cascade_server():
+    """Observe a complete real request, then hold its response until released."""
+    arrived, release = threading.Event(), threading.Event()
+    hits = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            hits.append({"path": self.path, "body": json.loads(body)})
+            arrived.set()
+            if not release.wait(5):
+                return  # finite fixture watchdog, independent of the SDK deadline
+            payload = json.dumps(_native()).encode()
+            try:
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": .01})
+    thread.start()
+
+    class Endpoint:
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+    endpoint = Endpoint()
+    endpoint.arrived, endpoint.release, endpoint.hits = arrived, release, hits
+    try:
+        yield endpoint
+    finally:
+        release.set()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
 
 
 def test_cascade_strong_admission_stop_retains_completed_weak_as_failed_workflow(tmp_path, stub, monkeypatch):
@@ -1078,30 +1129,130 @@ def test_cascade_strong_admission_stop_retains_completed_weak_as_failed_workflow
 
 
 @pytest.mark.parametrize("local_limit", [.02, .2])
-def test_cascade_weak_deadline_cancels_without_strong_call_or_implicit_retry(tmp_path, stub, monkeypatch, local_limit):
-    store = _http_cascade_store(tmp_path, stub, monkeypatch, local_limit=local_limit)
-    stub.enqueue(body=_native(), delay=1)
-    began = time.perf_counter()
-    report = execute_run(store.directory)
-    assert time.perf_counter() - began < .9
+def test_cascade_weak_deadline_cancels_without_strong_call_or_implicit_retry(tmp_path, monkeypatch, local_limit):
+    with _blocked_cascade_server() as server:
+        store = _http_cascade_store(tmp_path, server, monkeypatch, local_limit=local_limit)
+        began = time.perf_counter()
+        report = execute_run(store.directory)
+        assert time.perf_counter() - began < .9
+        repeated = execute_run(store.directory)
+        assert all(hit["path"] == "/weak" for hit in server.hits)
     events = store.events()
+    starts = [event for event in events if event["event"] == "attempt_started"]
     receipts = [event["receipt"] for event in events if event["event"] == "attempt_finished"]
-    assert len(stub.hits) == len(receipts) <= 1
-    if local_limit == .2:
-        assert len(receipts) == 1  # the .02 budget can validly expire during setup
-    if receipts:
+    # Durable admission happens before the first transport await. A profile
+    # deadline may expire during setup or after admission but before TCP I/O;
+    # neither outcome establishes that the server observed a request.
+    assert len(starts) == len(receipts) <= 1
+    if starts:
+        assert starts[0]["attempt_id"] == receipts[0]["attempt_id"]
         assert receipts[0]["error"] == "CancelledError"
         failed = next(event for event in events if event["event"] == "cell_finished" and event["status"] == "failed")
         assert failed["error"] == "TimeoutError"
         assert failed["workflow"]["weak_status"] == "unresolved"
         assert failed["workflow"]["strong_status"] == "unattempted"
         assert failed["workflow"]["observed_receipts"] == receipts
-    assert all(not event["hosted"] for event in events if event["event"] == "attempt_started")
+        assert report["denominators"] == {"failed": 1, "unattempted": len(store.manifest["cells"]) - 1}
+    else:
+        assert report["denominators"] == {"unattempted": len(store.manifest["cells"])}
+        assert all(cell["reason"] == "local_execution_deadline" for cell in report["cells"])
+    assert all(not event["hosted"] for event in starts)
     resources = [event for event in events if event["event"] == "resources_observed"]
     assert resources[0]["backend"] == "weak" and resources[0]["resources"]["wall_s"] >= local_limit
-    repeated = execute_run(store.directory)
     assert repeated["denominators"] == report["denominators"]
-    assert len(stub.hits) == len(receipts)
+
+
+@pytest.mark.parametrize("cancel_before_wire,local_limit", [(True, .02), (False, .02), (False, .2)])
+def test_cascade_cancellation_has_fixed_pretransport_and_inflight_outcomes(tmp_path, monkeypatch,
+                                                                        cancel_before_wire, local_limit):
+    from daf_jev._cancellation import cancellation_workflow
+    from daf_jev.benchmark_datasets import load_prepared_dataset
+    from daf_jev.benchmark_policies import GateCalibration
+    from daf_jev.benchmark_store import SpendLedger
+    from daf_jev.benchmark_workflows import CascadeDecisionBackend
+    from daf_jev.decision_backends import AsyncHTTPDecisionBackend, DecisionRequest
+
+    with _blocked_cascade_server() as server:
+        store = _http_cascade_store(tmp_path, server, monkeypatch, local_limit=local_limit,
+                                    single_cell=True)
+        cell = store.manifest["cells"][0]
+        dataset = load_prepared_dataset(store.directory / "inputs/dataset-0.json")
+        example = next(example for example in dataset.examples if example.id == cell["example_id"])
+        store.append({"event": "cell_started", "cell_id": cell["id"]})
+        ledger = SpendLedger(store, limit=store.manifest["budget_usd"])
+        child_calls = []
+
+        class CancelAtAdmission:
+            def before(self, request_hash, model, endpoint):
+                attempt = weak_observer.before(request_hash, model, endpoint)
+                task = asyncio.current_task()
+                assert task is not None
+                task.cancel()  # public observer seam, before any transport await
+                return attempt
+
+            def after(self, receipt):
+                weak_observer.after(receipt)
+
+        weak_observer = ledger.observer(cell_id=cell["id"], hosted=False, liability_usd=None)
+
+        def observers(child):
+            child_calls.append(child)
+            assert child == "weak", "cancellation must not invoke the strong child"
+            return CancelAtAdmission() if cancel_before_wire else weak_observer
+
+        async def exercise():
+            weak = AsyncHTTPDecisionBackend(endpoint=server.base_url + "/weak", model="fixture")
+            strong = AsyncHTTPDecisionBackend(endpoint=server.base_url + "/strong", model="fixture")
+            cascade = CascadeDecisionBackend(weak, strong,
+                gate=GateCalibration("insufficient_evidence", None, .05, None, 0, 0, 0),
+                observers=observers)
+            try:
+                task = asyncio.create_task(cascade.predict(DecisionRequest(example.state, example.questions)))
+                if cancel_before_wire:
+                    with pytest.raises(asyncio.CancelledError) as caught:
+                        await task
+                else:
+                    assert await asyncio.to_thread(server.arrived.wait, 5)
+                    assert [hit["path"] for hit in server.hits] == ["/weak"]
+                    # The unchanged deadline now covers a demonstrably in-flight
+                    # request, independently of client/setup scheduling speed.
+                    with pytest.raises(asyncio.TimeoutError) as caught:
+                        await asyncio.wait_for(task, timeout=local_limit)
+                workflow = cancellation_workflow(caught.value)
+                assert workflow["weak_status"] == "unresolved"
+                assert workflow["strong_status"] == "unattempted"
+                assert workflow["strong_invoked"] is False
+                assert len(workflow["attempt_ids"]["weak"]) == 1
+                assert workflow["attempt_ids"]["strong"] == []
+                return workflow
+            finally:
+                await weak.close()
+                await strong.close()
+
+        workflow = asyncio.run(exercise())
+        assert len(server.hits) == (0 if cancel_before_wire else 1)
+        assert server.arrived.is_set() is not cancel_before_wire
+        assert child_calls == ["weak"]
+        events = store.events()
+        starts = [event for event in events if event["event"] == "attempt_started"]
+        finishes = [event for event in events if event["event"] == "attempt_finished"]
+        assert len(starts) == len(finishes) == 1
+        receipt = finishes[0]["receipt"]
+        assert receipt["attempt_id"] == starts[0]["attempt_id"]
+        assert receipt["error"] == "CancelledError" and receipt["status_code"] is None
+        assert receipt["cost_status"] == "local" and receipt["cost_usd"] is None
+        assert workflow["observed_receipts"] == [receipt]
+        before_resume = store.events()
+        report = report_run(store.directory)
+        assert report["denominators"] == {"unresolved": 1}
+        assert report["accounting"]["unresolved_attempts"] == []
+        resumed = execute_run(store.directory)
+        assert resumed["denominators"] == {"unresolved": 1}
+        assert [event for event in store.events() if event["event"] in
+                {"attempt_started", "attempt_finished", "cell_started", "cell_finished"}] == [
+            event for event in before_resume if event["event"] in
+                {"attempt_started", "attempt_finished", "cell_started", "cell_finished"}]
+        assert len(server.hits) == (0 if cancel_before_wire else 1)
 
 
 def test_cascade_resume_carries_prior_local_time_and_unknown_windows(tmp_path, stub, monkeypatch):

@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import asdict, replace
 from typing import Any
 
+from daf_jev._cancellation import mark_cancellation
 from daf_jev.benchmark_policies import GateCalibration
 from daf_jev.benchmark_store import BudgetStopped
 from daf_jev.decision_backends import (
@@ -90,11 +91,13 @@ class CascadeDecisionBackend:
         try:
             return await self._predict(request)
         except (BudgetStopped, asyncio.CancelledError) as exc:
+            if isinstance(exc, asyncio.CancelledError):
+                mark_cancellation(exc)
             if self._attempt_ids["weak"] or self._weak_completed or self._attempt_ids["strong"]:
-                # Preserve the original exception, cancellation and child
-                # receipts. Admission refusal after weak work is a partial
-                # workflow, never a demonstrably unattempted whole cell.
-                exc.dafjev_workflow = {  # type: ignore[union-attr]
+                # Keep evidence on the original failure. A Python 3.10 Task
+                # can wrap cancellation in a fresh exception; readers follow
+                # standard chaining instead of requiring copied attributes.
+                record = {
                     "policy": "cascade", "executed": True, "status": "failed",
                     "failed_phase": self._active_child, "error": type(exc).__name__,
                     "strong_invoked": self._strong_attempts > 0,
@@ -107,6 +110,7 @@ class CascadeDecisionBackend:
                         if self._weak_completed and self._weak_result else {},
                     "reason": self._reason, "gate": self.gate.to_dict(),
                 }
+                exc.__dict__["dafjev_workflow"] = record
             raise
 
     async def _predict(self, request: DecisionRequest) -> DecisionResult:

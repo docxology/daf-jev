@@ -11,6 +11,11 @@ import httpx
 import pytest
 
 from daf_jev import choice
+from daf_jev._cancellation import (
+    cancellation_workflow,
+    mark_cancellation,
+    original_cancellation,
+)
 from daf_jev.benchmark_datasets import make_synthetic_dataset, save_dataset
 from daf_jev.benchmark_runner import execute_run, plan_run, report_run
 from daf_jev.benchmark_store import BudgetStopped, RunStore, SpendLedger
@@ -65,6 +70,51 @@ def _call(stub, asynchronous, log, *, mode="systemone", request=None):
         return backend.predict(request or _request())
     finally:
         backend.close()
+
+
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_successful_http_finalizer_cancellation_cannot_inherit_previous_request(stub, asynchronous):
+    stub.enqueue(body=_native())
+
+    class CancelAfter(_Log):
+        def after(self, receipt):
+            super().after(receipt)
+            raise asyncio.CancelledError("current receipt finalizer")
+
+    log = CancelAfter()
+    previous = asyncio.CancelledError("previous request")
+    mark_cancellation(previous)
+    previous.__dict__["dafjev_workflow"] = {"observed_receipts": ["unrelated-previous-receipt"]}
+
+    async def run():
+        adapter = AsyncHTTPDecisionBackend if asynchronous else HTTPDecisionBackend
+        backend = adapter(endpoint=stub.base_url + "/v1/fixture", model="fixture", observer=log)
+        try:
+            try:
+                raise previous
+            except asyncio.CancelledError:
+                if asynchronous:
+                    await backend.predict(_request())
+                else:
+                    backend.predict(_request())
+        finally:
+            if asynchronous:
+                await backend.close()
+            else:
+                backend.close()
+
+    with pytest.raises(asyncio.CancelledError) as caught:
+        asyncio.run(run())
+    current = original_cancellation(caught.value)
+    assert current is not previous
+    assert current.__context__ is previous
+    assert cancellation_workflow(caught.value) is None
+    assert len(stub.hits) == len(log.started) == len(log.receipts) == 1
+    receipt = log.receipts[0]
+    assert receipt.status_code == 200 and receipt.error is None
+    assert receipt.response_diagnostics.body_complete
+    assert receipt.request_hash == log.started[0][0]
+    assert "unrelated-previous-receipt" not in json.dumps(receipt.to_dict())
 
 
 @pytest.mark.parametrize("asynchronous", [False, True])
@@ -249,7 +299,8 @@ def test_sync_body_timeout_keeps_known_status_and_partial_digest():
 
 
 @pytest.mark.parametrize("after_fails", [False, True])
-def test_async_cancel_after_headers_preserves_partial_receipt_and_original_cancel(after_fails):
+@pytest.mark.parametrize("task_layers", [0, 2])
+def test_async_cancel_after_headers_preserves_partial_receipt_and_original_cancel(after_fails, task_layers):
     raw = _partial_payload()
     server = _RawServer(raw, block_after=len(raw) - 2)
     class Finalizer(_Log):
@@ -262,14 +313,21 @@ def test_async_cancel_after_headers_preserves_partial_receipt_and_original_cance
     async def run():
         backend = AsyncHTTPDecisionBackend(endpoint=server.base_url + "/fixture", model="fixture", observer=log)
         try:
-            task = asyncio.create_task(backend.predict(_request()))
+            async def predict(depth):
+                if depth:
+                    return await asyncio.create_task(predict(depth - 1))
+                return await backend.predict(_request())
+            task = asyncio.create_task(predict(task_layers))
             assert await asyncio.to_thread(server.prefix_sent.wait, 2)
             await asyncio.sleep(.05)  # the real reader is blocked on the final two bytes
             task.cancel()
             with pytest.raises(asyncio.CancelledError) as canceled:
                 await task
             if after_fails:
-                assert isinstance(canceled.value.__cause__, ValueError)
+                original = original_cancellation(canceled.value)
+                assert isinstance(original.__cause__, ValueError)
+                assert str(original.__cause__) == "owned-observer-outcome-not-persisted"
+            assert task.cancelled()
         finally:
             await backend.close()
     try:

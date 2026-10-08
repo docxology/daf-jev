@@ -30,7 +30,19 @@ jobs:
         run: uv run mypy src/daf_jev
 
       - name: Unit tests + coverage gate (>= 90%)
-        run: uv run pytest tests/unit --cov=src
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ci-results
+          uv run pytest tests/unit --cov=src --junitxml=ci-results/unit.xml 2>&1 | tee ci-results/unit.log
+      - name: Retain unit test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-python-${{ matrix.python-version }}
+          path: ci-results/
+          if-no-files-found: warn
+          retention-days: 30
       - name: Live tests (2 tests skip without JEV_API_KEY)
         run: uv run pytest tests/live
 

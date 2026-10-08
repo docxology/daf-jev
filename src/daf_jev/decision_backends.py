@@ -24,6 +24,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from daf_jev._cancellation import mark_cancellation, original_cancellation
 from daf_jev._json import strict_json_loads
 from daf_jev._types import Question, parse_response
 
@@ -540,6 +541,8 @@ class HTTPDecisionBackend(_HTTPAdapter):
         except BaseException as exc:
             error = type(exc).__name__
             failure = exc
+            if isinstance(exc, asyncio.CancelledError):
+                mark_cancellation(exc)
             raise
         finally:
             try:
@@ -547,6 +550,8 @@ class HTTPDecisionBackend(_HTTPAdapter):
                 if observer:
                     observer.after(receipt)
             except BaseException as finalization_error:
+                if isinstance(finalization_error, asyncio.CancelledError):
+                    mark_cancellation(finalization_error)
                 if failure is not None and not isinstance(failure, Exception):
                     raise failure from finalization_error
                 raise
@@ -584,6 +589,8 @@ class AsyncHTTPDecisionBackend(_HTTPAdapter):
         except BaseException as exc:
             error = type(exc).__name__
             failure = exc
+            if isinstance(exc, asyncio.CancelledError):
+                mark_cancellation(exc)
             raise
         finally:
             try:
@@ -591,6 +598,10 @@ class AsyncHTTPDecisionBackend(_HTTPAdapter):
                 if observer:
                     observer.after(receipt)
             except BaseException as finalization_error:
+                if isinstance(finalization_error, asyncio.CancelledError):
+                    mark_cancellation(finalization_error)
+                if isinstance(failure, asyncio.CancelledError):
+                    raise original_cancellation(failure) from finalization_error
                 if failure is not None and not isinstance(failure, Exception):
                     raise failure from finalization_error
                 raise

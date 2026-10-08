@@ -1042,6 +1042,7 @@ source to contract. Module contracts live in
 | `_types` | [`_types.py`](src/daf_jev/_types.py) | wire dataclasses — questions, answers, `Usage`; strict response parsing |
 | `_json` | [`_json.py`](src/daf_jev/_json.py) | ordered strict decoding; rejects duplicate keys/nonstandard constants |
 | `_yaml` | [`_yaml.py`](src/daf_jev/_yaml.py) | private safe literal configuration; rejects ambiguous mappings, aliases, unsafe tags and nonfinite numbers |
+| `_cancellation` | [`_cancellation.py`](src/daf_jev/_cancellation.py) | private task/timeout evidence recovery bound to the current owned cancellation |
 | `_errors` | [`_errors.py`](src/daf_jev/_errors.py) | typed error hierarchy mirroring the API's status codes |
 | `_retry` | [`_retry.py`](src/daf_jev/_retry.py) | `RetryPolicy` — 429/529 backoff with jitter, `Retry-After` aware |
 | `_http` | [`_http.py`](src/daf_jev/_http.py) | `Transport` / `AsyncTransport` protocols + httpx implementations |

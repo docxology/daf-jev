@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from daf_jev._cancellation import mark_cancellation
 from daf_jev._types import (
     Answer,
     ChoiceAnswer,
@@ -250,6 +251,7 @@ async def run_graphical_experiment(
         record["status"] = "complete"
         record["phase"] = "complete"
     except asyncio.CancelledError as exc:
+        mark_cancellation(exc)
         record["status"] = "interrupted"
         record["error_type"] = type(exc).__name__
         record["calls"] = client.calls
