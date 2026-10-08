@@ -4,7 +4,7 @@ The results in [@sec:results] combine separately selected historical API receipt
 
 ## Software and documentation identities
 
-The current package/render edition is daf-jev 0.6.0, generated under 3.14.4 on `macOS-27.0.1-arm64-arm-64bit-Mach-O`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python 3.10 or newer. Core runtime dependencies are `httpx` and `pyyaml`; optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
+The current package/render edition is daf-jev 0.7.0, generated under 3.14.4 on `macOS-27.0.1-arm64-arm-64bit-Mach-O`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python 3.10 or newer. Core runtime dependencies are `httpx` and `pyyaml`, with `tomli` on Python 3.10 and standard-library `tomllib` on newer Python. Optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
 
 The model-level documentation claims in [@sec:jev_model] are grounded in a retained hash-manifested TypeSafe snapshot (708902db9820d9d8, 111 pages). That identifies source documentation bytes, not the model's weights or current hosted behavior.
 
@@ -20,7 +20,7 @@ The command scripts expose their protocol through explicit arguments. `manuscrip
 
 Historical wall times include transport, parsing and composition; retries and network conditions can influence them. They are observations, not conservative guarantees for future application latency. Token totals are response usage, not dollar charges. Where an old receipt does not declare its percentile estimator, the current nearest-rank helper cannot retroactively determine it.
 
-The selected result files and their hashes bind prose and figures to one reviewed evidence set. The reproducible build timestamp is 2026-10-08T19:32:43Z; this pinned timestamp is neither the actual render time nor a benchmark execution date. Independently choosing the newest file for each benchmark cannot establish a common model/date/environment. Retained receipts remain unchanged when new experiments run.
+The selected result files and their hashes bind prose and figures to one reviewed evidence set. The reproducible build timestamp is 2026-10-08T22:37:43Z; this pinned timestamp is neither the actual render time nor a benchmark execution date. Independently choosing the newest file for each benchmark cannot establish a common model/date/environment. Retained receipts remain unchanged when new experiments run.
 
 ## Dataset views and evaluation roles
 
@@ -53,3 +53,14 @@ Quality passes precede warm-repeat passes. A new serializer, probability contrac
 Local execution admits only a verified owned runtime and complete input within a frozen operational bound. A conservative complete-prompt upper bound is labeled differently from an exact tokenizer count. An operational hardware bound is not the model's advertised context limit. Sampled process RSS and an OS physical-footprint observation are different resource measures; neither establishes continuous Metal memory peaks. Primary-only diagnostic observers can affect latency, and no unmeasured correction is subtracted.
 
 A hosted plan freezes endpoint, requested model, provider preferences, schema, token limits, tariffs, budget and concurrency before predictions. Probes, failures and retries consume the same allocation as quality calls. Paid native admission cannot use one catalog context length as an unverified aggregate billable-input ceiling; zero-priced catalog candidates still require response and billing reconciliation. A failed capability probe is retained without endpoint substitution or a new budget ledger. These restrictions can leave a large part of a frozen study unattempted, as the selected coverage figure shows.
+
+The prospective expansion freezes complete validation and official-test obligations separately from the retained failed pilot. Figure [@fig:hosted_admission] distinguishes static task incompatibility, unavailable liability bounds and tariff-admissible candidates whose execution remains unverified. Its declaration of a large cohort does not establish completed samples, quality or an expected bill. The original unknown charge continues to stop admission; a new run's empty ledger cannot import that debt merely through descriptive metadata. Future execution needs a reviewed shared-allocation guard as well as independent billing evidence.
+
+\begin{landscape}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{../output/reports/hosted-expansion-20261008/admission-matrix.pdf}
+\caption{Prospective hosted admission matrix. Categories concern frozen task and accounting contracts, not observed model quality or endpoint acceptance. Every new request remains blocked by the prior unresolved charge; the matrix is retained with exact plan and figure-source hashes.}
+\label{fig:hosted_admission}
+\end{figure}
+\end{landscape}

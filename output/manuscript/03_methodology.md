@@ -66,6 +66,10 @@ Reliability tables and expected calibration error summarize confidence/outcome c
 
 Uncertainty intervals resample input groups, keeping repeated or matched physical rows together. The selected CPU intervals use retained grouped percentile draws on fixed predictions. They describe resampling variation for that evaluated prediction set; they do not include model refitting, shared-training dependence across folds, model-selection uncertainty or a future deployment shift. Overlapping training sets make cross-validation errors dependent [@bengio2004variance]. The report therefore avoids treating pooled out-of-fold intervals as a universal variance estimate for the learning procedure.
 
+The bootstrap substitutes an empirical sampling world for an unknown population; its usefulness depends on that approximation and the statistic's behavior [@efron2003second]. The prospective paired comparison reducer binds both arms to the same prepared inputs, planned decisions, targets and groups. It resamples the two arms together and recomputes macro-F1 for every draw. It retains the full execution denominators alongside conditional comparisons, rejects unmatched cohorts and suppresses incompatible ordinal decision rules. Missing probability forecasts remain unavailable. These intervals concern the fixed observed pairs; budget-dependent missingness does not acquire a random-sampling justification through bootstrapping.
+
+Larger test sets can improve discrimination between systems, but repeated calls on the same input do not supply new independent task examples. NLP experiments show that detectable differences also depend on paired output correlation and that within-corpus significance need not transfer across domains [@bergkirkpatrick2012significance]. We therefore preregister complete quality cohorts separately from repeated latency/stability panels and preserve incomplete coverage, rather than treating a target call count as an achieved precision guarantee.
+
 ## Selective prediction and cascades
 
 Let $a_\tau(x)$ indicate acceptance at confidence threshold $\tau$, and let $\ell(\hat y,y)$ be decision loss. Selective coverage and risk are

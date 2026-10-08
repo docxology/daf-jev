@@ -16,6 +16,8 @@ uv run python scripts/render_pdf.py \
 
 The variable generator writes `output/data/manuscript_variables.json` from package/configuration metadata, test evidence, documentation manifest and selected benchmark JSONs. Strict mode rejects missing required inputs; `--allow-draft` substitutes draft sentinels and is not final evidence. The standalone PDF renderer resolves tokens directly from the map, checks unresolved citations/references/images and writes the selected fresh PDF path, refusing to overwrite existing outputs. The exclusive artifacts directory retains combined Markdown, TeX, bibliography and compiler diagnostics. An overfull vertical box fails rendering because missing or clipped prose can evade a token-only check. External-template substituted sections are an optional integration. Inspect the final PDF before publication; root installation and public release are separate actions.
 
+PDF reproduction requires Pandoc, XeLaTeX, BibTeX, the declared TeX packages, Times New Roman, Menlo and Latin Modern Math. The release record binds the source-build commit and epoch, saved variables, selected evidence and figures. Same-host byte equality is tested at that source commit with these retained inputs; the later artifact commit's HEAD timestamp defines a different build. Cross-platform PDF byte equality is not established.
+
 The retained TypeSafe snapshot comprises 111 pages (1.1 MiB), scraped on 2026-09-24 and identified by 708902db9820d9d8. Offline verification rehashes those exact bytes:
 
 ```bash
@@ -27,19 +29,19 @@ Omitting `--manifest` from the scraper's check performs a fresh network comparis
 
 ## Test evidence
 
-Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 56 files, 1590 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
+Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 59 files, 1703 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
 
 ```bash
 uv run pytest tests/unit --cov=src
 ```
 
-Coverage is 93.11% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
+Coverage is 93.03% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
 
 ## Run custody and scientific gates
 
 The new benchmark format freezes source/config/catalog/dataset hashes, cohort, selected IDs and protocol in a unique run directory. Its append-only linked journal and independent saved head retain all attempts, failures and unresolved starts. Input/source identity is checked before and after execution; report reduction rechecks inputs. Resume avoids automatic replay of uncertain paid attempts. Reported spend, unresolved liability and unknown local cost remain distinct.
 
-Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.6.0, with reproducible build timestamp 2026-10-08T19:32:43Z; its render environment is `macOS-27.0.1-arm64-arm-64bit-Mach-O` under 3.14.4. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
+Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.7.0, with reproducible build timestamp 2026-10-08T22:37:43Z; its render environment is `macOS-27.0.1-arm64-arm-64bit-Mach-O` under 3.14.4. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
 
 Protocol corrections must preserve the original experimental identity and its limitations. A clean admission stop is bound by an additive receipt and unchanged manifest/journal/head; it does not relabel future unattempted work as complete. A revised globally shared timing cohort or ordered prompt serializer needs a newly accepted source, selected-ID pack and complete input/custody proofs. Earlier observations cannot be retroactively converted into matched permutation evidence or identical-prompt repetitions, and a new manifest cannot reset a shared resource allowance.
 

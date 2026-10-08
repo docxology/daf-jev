@@ -1,0 +1,42 @@
+{
+  "cross_platform_byte_equality": false,
+  "fonts": {
+    "DejaVuSans.ttf": {
+      "bytes": 756072,
+      "sha256": "3fdf69cabf06049ea70a00b5919340e2ce1e6d02b0cc3c4b44fb6801bd1e0d22"
+    },
+    "Menlo.ttc": {
+      "bytes": 2134132,
+      "sha256": "f2d400484a6aace67980730ec0a9ef24ce9e535a2604f118e6fdc2510021b85f"
+    },
+    "Times New Roman Bold Italic.ttf": {
+      "bytes": 620008,
+      "sha256": "906157e8294fdf168d83002eaabde01c2d30fc3f44977be89e33fa22f262002a"
+    },
+    "Times New Roman Bold.ttf": {
+      "bytes": 832472,
+      "sha256": "50f5b1f27b7d34621090e437e8b1dd4510a22d2823fc876b3286bed327b64bbb"
+    },
+    "Times New Roman Italic.ttf": {
+      "bytes": 660268,
+      "sha256": "7bb99c3a67697fbce15ab66d806d9a2151432ce1dab2eaba4156e1251da486c0"
+    },
+    "Times New Roman.ttf": {
+      "bytes": 824920,
+      "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+    },
+    "latinmodern-math.otf": {
+      "bytes": 733736,
+      "sha256": "6075562b771f8b82f0c179e363389684f2dd09de30038269e2628e504bd7be0f"
+    }
+  },
+  "fonts_not_distributed": true,
+  "matplotlib": "3.11.2",
+  "python": "Python 3.14.4",
+  "versions": {
+    "bibtex": "BibTeX 0.99e (TeX Live 2026)",
+    "pandoc": "pandoc 3.12",
+    "uv": "uv 0.12.23 (Homebrew 2026-10-03 aarch64-apple-darwin)",
+    "xelatex": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)"
+  }
+}

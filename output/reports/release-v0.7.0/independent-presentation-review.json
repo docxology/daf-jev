@@ -1,0 +1,29 @@
+{
+  "checks": {
+    "annotations_checked": 179,
+    "captions": 14,
+    "cited_bibliography_keys": 27,
+    "clipping_tokens_references_private_paths_detected": 0,
+    "embedded_unicode_font_entries": 9,
+    "headings": 52,
+    "package_input_hashes_matched": 52,
+    "pages_visually_checked": 27,
+    "prose_sentinels": 396,
+    "rotated_bounds_correct": true,
+    "saved_variables_offline_equal": true,
+    "selected_inputs_held": 53,
+    "tables": 3,
+    "two_fresh_pdfs_byte_equal": true
+  },
+  "format": "dafjev.declared-independent-review-summary/1",
+  "manuscript_source_build_commit": "4e3c24f9ac236c39a67a3db33d9fb33f54801702",
+  "original_native_review_retained_privately": true,
+  "original_review_sha256": "3fd0cdd471058a8a1403d5758ca183dd4af2c1cd765173bad3f5ba117bc0a4b0",
+  "outcome": "PASS",
+  "package_source_build_commit": "f18a5befed721f735e1637289337318e12a9e112",
+  "pdf_sha256": "99d754f25acc16161004bc6460531cd3f511c81025d51a4e97e7c7be7a7a21c0",
+  "scope_limits": [
+    "Source/package/PDF evidence only; no inference, billing or full-study acceptance.",
+    "Final upload asset allowlist review is separate."
+  ]
+}
