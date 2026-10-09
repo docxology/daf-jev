@@ -492,8 +492,11 @@ wire path is silently coerced.
   Pandoc/XeLaTeX renderer. `--output FILE` requires a fresh PDF path;
   `--artifacts-dir DIR` optionally retains intermediate Markdown, TeX and logs
   in a fresh directory. `--install` separately replaces the root PDF.
-  Bibliography misses, undefined references, unloadable images and overfull
-  vertical boxes must all be zero. The preamble flushes pending pages before
+  BibTeX must exit successfully with no warnings; a generated bibliography file
+  does not excuse syntax or style errors. Bibliography misses, undefined
+  references, unloadable images and overfull vertical boxes must all be zero.
+  The bibliography uses entry types supported by `plainnat`.
+  The preamble flushes pending pages before
   longtables. These gates complement section/prose completeness and page-layout
   review; they do not establish model execution or publication acceptance.
 - `figures.py` — the manuscript figure registry (matplotlib imported at
@@ -1738,6 +1741,35 @@ it is not the total validation/test quality-control physical row count.
   A shared finished event must match the durable per-run event/receipt hashes
   and exact cost/status before reduction releases liability for any next
   admission. Contradictory hash-linked data fails before another reservation.
+- `reconciliation_target(manifest_hash, attempt_id)` reads an exact imported
+  finished UNKNOWN attempt cut. `preview_reconciliation(*, evidence: Path,
+  evidence_sha256, review: Path, review_sha256)` validates offline without
+  changing accounting; `reconcile` accepts the same keyword arguments and
+  explicitly appends one `allocation_legacy_billing_reconciled` event under an
+  inactive allocation's exclusive execution lease and journal transaction.
+  Original run files, UNKNOWN receipts and import events remain unchanged.
+  Strict evidence/review schemas are `dafjev.external-billing-evidence/1` and
+  `dafjev.external-billing-review/1`. Generation metadata requires an already
+  retained original response ID; a `dafjev.exact-provider-charge-statement/1`
+  binds the entire immutable attempt mapping instead. Both require a distinct
+  independently recorded operator review of provider origin, unique attribution
+  and exact USD charge. Actor strings, checksums and review flags validate local
+  bookkeeping, not provider authentication or independent authority. Aggregate
+  usage, missing activity and advertised free tariffs are not exact proof.
+  Each of the three retained JSON files is bounded to 1 MiB, strictly decoded
+  with Decimal costs, and bound by SHA256 plus physical file identity. Reopen,
+  repeated requests and subsequent admission revalidate those references.
+  Authority/reference pairs and document digests cannot reconcile two attempts.
+  Identical retained proof is an idempotent no-op; conflicting or stale proof
+  fails closed. `snapshot()` preserves original `reported_cost_usd` and adds
+  `externally_verified_cost_usd`, `effective_cost_usd`,
+  `historical_unknown_attempts` and `externally_reconciled_attempts`.
+  Effective charges debit the same allocation and respect the frozen original
+  run limit. Costs above the original bound,
+  unresolved/open work, structural rejection and durability stops remain
+  admission stops; this operation is not an administrative blanket unlock.
+  Older readers reject the new event rather than overlook an effective charge.
+  See [shared allocations](shared_allocations.md#external-evidence-for-a-finished-unknown-attempt).
 
 - `RunStore.create(root, manifest) -> RunStore` creates a UUID run;
   `RunStore.create_at(directory, manifest) -> RunStore` is explicit exclusive

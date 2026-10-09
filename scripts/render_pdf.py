@@ -24,14 +24,12 @@ Usage:
   uv run python scripts/render_pdf.py --install  # also replace the repo-root
                                                  # daf-jev_combined.pdf
 
-Render gates (fail with exit 2): zero unresolved bibtex entries, zero
-undefined LaTeX references, zero unloadable images, zero overfull vertical
-boxes. Use --artifacts-dir with a fresh directory to retain TeX/log inputs
-for content-completeness review. bibtex's exit code is
-tolerated when it still wrote out.bbl (its 3 known header-comment parse
-errors and unknown-@online-type warnings are pre-existing and benign); the
-gate counters above are the real contract. SOURCE_DATE_EPOCH is pinned from
-HEAD so identical inputs render byte-identical PDFs.
+Render gates (fail with exit 2): successful BibTeX with zero warnings or
+unresolved entries, zero undefined LaTeX references, zero unloadable images,
+zero overfull vertical boxes. Use --artifacts-dir with a fresh directory to
+retain TeX/log inputs for content-completeness review. A generated out.bbl
+does not excuse a failed or warning-producing BibTeX run. SOURCE_DATE_EPOCH
+is pinned from HEAD so identical inputs render byte-identical PDFs.
 """
 import argparse
 import hashlib
@@ -55,6 +53,11 @@ PANDOC = ['pandoc', 'combined.md', '-o', 'out.tex', '--standalone', '--natbib',
           '-V', 'mainfont=Times New Roman',
           '-V', 'monofont=Menlo',
           '--pdf-engine=xelatex']
+
+
+def bibtex_succeeded(returncode: int, log: str) -> bool:
+    """Require native BibTeX success without suppressing style/data warnings."""
+    return returncode == 0 and 'Warning--' not in log
 
 
 def build(install: bool, output: pathlib.Path | None = None,
@@ -117,29 +120,33 @@ def build(install: bool, output: pathlib.Path | None = None,
             ['xelatex', '-interaction=nonstopmode', 'out.tex']]
     for argv in runs:
         r = subprocess.run(argv, cwd=man, capture_output=True, text=True, env=env)
-        benign = argv[0] == 'bibtex' and (man / 'out.bbl').exists()
-        if r.returncode != 0 and not benign:
+        failed_bibtex = (argv[0] == 'bibtex' and not bibtex_succeeded(
+            r.returncode, (man / 'out.blg').read_text() if (man / 'out.blg').exists() else ''
+        ))
+        if r.returncode != 0 or failed_bibtex:
             print(f"FAIL ({r.returncode}): {' '.join(argv[:3])}...")
             print(((r.stdout or '') + (r.stderr or ''))[-1200:])
             if artifacts_dir is None:
                 shutil.rmtree(build_dir, ignore_errors=True)
             else:
                 print(f'artifacts kept in {build_dir}')
-            return 1
+            return 2 if argv[0] == 'bibtex' else 1
 
     blg = (man / 'out.blg').read_text()
     log = (man / 'out.log').read_text()
     missing = blg.count("didn't find a database entry")
+    bibtex_warnings = blg.count('Warning--')
     undef = len(re.findall(r'Reference .* undefined', log))
     noload = log.count('Unable to load picture')
     overfull_vboxes = log.count('Overfull \\vbox')
     pages = re.search(r'\((\d+) pages', log)
     print(f'GATE bibtex-missing={missing} (must be 0)')
+    print(f'GATE bibtex-warnings={bibtex_warnings} (must be 0)')
     print(f'GATE undefined-refs={undef} (must be 0)')
     print(f'GATE unloadable-images={noload} (must be 0)')
     print(f'GATE overfull-vboxes={overfull_vboxes} (must be 0)')
     print(f'pages={pages.group(1) if pages else "?"}')
-    if missing or undef or noload or overfull_vboxes:
+    if missing or bibtex_warnings or undef or noload or overfull_vboxes:
         print(f'artifacts kept in {build_dir}')
         return 2
 

@@ -74,6 +74,11 @@ verified on 2026-09-24: v0.3.0
 (<https://zenodo.org/records/22921974>, 2026-09-23), with the
 public repository at <https://github.com/docxology/daf-jev>.
 This dated inventory does not claim the current working tree has been released.
+The v0.7.1 version was published in the same concept on 2026-10-09 as
+[23266335](https://zenodo.org/records/23266335), DOI
+[10.5281/zenodo.23266335](https://doi.org/10.5281/zenodo.23266335), with the
+seven verified assets of the GitHub v0.7.1 tag. Unreleased source changes remain
+separate from that archive.
 
 ## ARCHITECTURE.md — the contract
 
