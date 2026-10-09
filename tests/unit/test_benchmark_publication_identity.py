@@ -67,6 +67,36 @@ def test_legacy_publication_keeps_family_fallback_and_unknown_meaning():
     assert "calibrated posterior" not in text
 
 
+def test_shared_allocation_inspection_is_separate_and_omits_local_directory():
+    report = {"format": "dafjev.benchmark-report/1", "manifest_hash": "a" * 64,
+              "journal_hash": "b" * 64, "status": "partial", "planned_cells": 0,
+              "denominators": {}, "accounting": {"reported_cost_usd": "0"},
+              "cells": [], "cohorts": [], "shared_accounting": {
+                  "status": "observed", "scope": "current read-only allocation snapshot",
+                  "binding": {"directory": "/private/owned-allocation",
+                              "allocation_id": "one-cap", "manifest_hash": "c" * 64},
+                  "snapshot": {"reported_cost_usd": "20", "admission_stopped": True}}}
+    text = markdown_report(report)
+    assert 'Accounting: {"reported_cost_usd":"0"}' in text
+    assert '"reported_cost_usd":"20"' in text
+    assert '"admission_stopped":true' in text
+    assert "original per-run receipts" in text
+    assert "current read-only allocation snapshot" in text
+    assert "one-cap" in text and "c" * 64 in text
+    assert "/private/owned-allocation" not in text
+
+
+def test_unavailable_shared_accounting_is_not_displayed_as_zero_billing():
+    report = {"format": "dafjev.benchmark-report/1", "manifest_hash": "a" * 64,
+              "journal_hash": "b" * 64, "status": "partial", "planned_cells": 0,
+              "denominators": {}, "accounting": {}, "cells": [], "cohorts": [],
+              "shared_accounting": {"status": "unavailable", "reason": "ValueError",
+                                    "scope": "per-run receipts unchanged"}}
+    text = markdown_report(report)
+    assert '"status":"unavailable"' in text and '"reason":"ValueError"' in text
+    assert '"reported_cost_usd":"0"' not in text
+
+
 def test_multipage_pdf_retains_every_line_inside_the_actual_page(tmp_path):
     sentinels = [f"LAYOUT-SENTINEL-{index:03d}" for index in range(130)]
     report = {"format": "dafjev.benchmark-report/1", "manifest_hash": "a" * 64,

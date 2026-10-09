@@ -44,6 +44,19 @@ def register_benchmark_parser(parser: argparse.ArgumentParser) -> None:
     catalog = sub.add_parser("catalog", help="explicit public GET of OpenRouter decision catalog")
     catalog.add_argument("--output", required=True, type=Path)
     catalog.add_argument("--profiles-output", type=Path)
+    allocation = sub.add_parser("allocation", help="explicit shared USD allocation administration; no inference")
+    accounting = allocation.add_subparsers(dest="allocation_command", required=True)
+    initialize = accounting.add_parser("init", help="create one allocation exclusively; never implicit")
+    initialize.add_argument("directory", type=Path)
+    initialize.add_argument("--allocation-id", required=True)
+    initialize.add_argument("--limit-usd", default="25")
+    initialize.add_argument("--required-import", type=Path, action="append", default=[],
+                            help="exact legacy binding JSON; must be imported before execution")
+    inspect = accounting.add_parser("inspect", help="read existing allocation without mutation")
+    inspect.add_argument("directory", type=Path)
+    legacy = accounting.add_parser("import-legacy", help="append verified old-run accounting explicitly")
+    legacy.add_argument("directory", type=Path)
+    legacy.add_argument("--binding", required=True, type=Path)
     plan = sub.add_parser("plan", help="freeze experiment inputs without inference")
     plan.add_argument("--config", required=True, type=Path)
     plan.add_argument("--out-dir", required=True, type=Path)
@@ -73,6 +86,7 @@ def main(args: argparse.Namespace) -> int:
         save_dataset,
     )
     from daf_jev.benchmark_runner import (
+        _input_bytes,
         catalog_profiles,
         execute_run,
         plan_run,
@@ -112,10 +126,28 @@ def main(args: argparse.Namespace) -> int:
             with args.profiles_output.open("x") as handle:
                 handle.write(canonical_json(catalog_profiles(args.output)) + "\n")
         result = {"catalog": str(args.output), "models": len(catalog["payload"]["data"]), "evidence": "discovery_only"}
+    elif command == "allocation":
+        from daf_jev._json import strict_json_loads
+        from daf_jev.benchmark_allocation import AllocationLedger, LegacyRunBinding
+
+        def binding(path: Path) -> LegacyRunBinding:
+            return LegacyRunBinding.from_dict(strict_json_loads(_input_bytes(path)))
+
+        if args.allocation_command == "init":
+            required = tuple(binding(path) for path in args.required_import)
+            ledger = AllocationLedger.create(args.directory, allocation_id=args.allocation_id,
+                                             limit=args.limit_usd, required_imports=required)
+        else:
+            ledger = AllocationLedger(args.directory, read_only=args.allocation_command == "inspect")
+            if args.allocation_command == "import-legacy":
+                ledger.import_run(binding(args.binding))
+        result = {"binding": ledger.identity(), "accounting": ledger.snapshot(),
+                  "operation": args.allocation_command, "evidence": "accounting_only; no inference"}
     elif command == "plan":
         store = plan_run(args.config, args.out_dir)
         result = {"directory": str(store.directory), "manifest_hash": store.manifest_hash,
-                  "planned_cells": len(store.manifest["cells"]), "budget_usd": store.manifest["budget_usd"]}
+                  "planned_cells": len(store.manifest["cells"]), "budget_usd": store.manifest["budget_usd"],
+                  "shared_allocation": store.manifest.get("shared_allocation")}
     else:
         result = (execute_run(args.directory, through_phase=args.through_phase)
                   if command in ("run", "resume") else report_run(args.directory))

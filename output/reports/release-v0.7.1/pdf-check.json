@@ -1,0 +1,13 @@
+{
+  "cover_version_and_concept_doi": true,
+  "format": "dafjev.pdf-check/1",
+  "pages": 28,
+  "pdf_sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+  "private_path_or_key_pattern": false,
+  "prose_spans_outside_rotated_page": [],
+  "question_mark_pairs": 0,
+  "scope": "All-page text and page-bound geometry checks; visual presentation reviewed separately.",
+  "text_extractor": "PyMuPDF 1.28.2",
+  "unresolved_tokens": 0,
+  "version": "0.7.1"
+}

@@ -188,6 +188,36 @@ process-environment key and retain their `live` marker. A skipped live test is
 not live acceptance. Generated test counts and coverage must refer to a completed
 check of the current source; prior results are not a current-tree guarantee.
 
+### Optional compiled benchmark runtime on Mac/Python 3.10
+
+The locked SciPy 1.15.3 arm64 wheel failed `scipy.sparse.linalg` import on the
+tested Mac. Its PROPACK Mach-O zero-fill section had a nonzero file offset;
+the same failure reproduced from the exact published artifact. SciPy's
+[upstream issue 25635](https://github.com/scipy/scipy/issues/25635) reports this
+loader failure class. That report is context, not a substitute for this
+repository's retained machine/artifact evidence.
+
+The benchmark extra constrains SciPy to `>=1.14.1,<1.15` only for Darwin with
+Python below 3.11. The lock selects 1.14.1 there; the complementary non-Darwin
+Python 3.10 constraint preserves its previous 1.15.3 selection. Newer Python
+selections and core dependencies are unchanged. The isolated candidate imports
+the real compiled library and fits/predicts the public structured classifier on
+owned toy data, retaining a complete vocabulary including an absent class.
+This is runtime compatibility evidence; it does not rerun the Wine study or
+establish native language-model acceptance.
+
+```bash
+uv run --extra benchmark python scripts/check_benchmark_runtime.py
+```
+
+This bounded offline diagnostic imports SciPy and runs a small actual fit. It
+prints dependency versions, training-input hash and the two check predictions;
+it performs no provider calls. Save its output alongside the full aggregate
+checks for the exact source/runtime being accepted. Keep previous failed
+captures intact. A repaired subset cannot be added to an older failed aggregate
+to claim a full passing run. The general SciPy/Python compatibility policy is
+documented in its [release notes](https://docs.scipy.org/doc/scipy/release/1.14.0-notes.html).
+
 ### Retained verification for exact offline regeneration
 
 Use the native capture to retain unit execution/branch coverage and live test
@@ -313,13 +343,14 @@ uv run python scripts/render_pdf.py --output output/pdf/expanded-reproduction-ne
     --artifacts-dir .benchmarks/expanded-reproduction-build-new
 ```
 
-The figure command appends six empirical figures to the seven legacy entries.
+The figure command appends six empirical figures to the eight core entries,
+including the data-free shared-allocation admission diagram.
 All figures have PNG and vector PDF copies. Each empirical figure also has a
 `.data.json` companion recording exact input hashes, the plotted observations
 and interpretive scope. No model, calibration fit, resampling or hosted call
 runs during figure generation. Missing or changed selected inputs fail; newer
 unselected files cannot replace them. The default legacy API still renders
-seven figures. A study `--only NAME` invocation requires `--include-study`.
+eight figures. A study `--only NAME` invocation requires `--include-study`.
 
 CPU accuracy intervals resample input groups for fixed predictions. They do not
 include refitting uncertainty. BANKING77 folds have overlapping training fits;

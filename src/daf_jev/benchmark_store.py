@@ -19,10 +19,13 @@ from decimal import (
     localcontext,
 )
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from daf_jev._json import strict_json_loads
 from daf_jev.decision_backends import CallReceipt, canonical_json, content_hash, utc_now
+
+if TYPE_CHECKING:
+    from daf_jev.benchmark_allocation import AllocationLedger
 
 
 class BudgetStopped(RuntimeError):
@@ -112,6 +115,7 @@ class RunStore:
         self.read_only = read_only
         self._mutex = threading.RLock()
         self._transaction_depth = 0
+        self._lease_active = False
         self._cache: list[dict[str, Any]] = []
         self._fingerprint: Any = None
         for name in ("manifest.json", "events.jsonl", "head.json", ".run.lock"):
@@ -187,6 +191,12 @@ class RunStore:
     @classmethod
     def create(cls, root: Path, manifest: dict[str, Any]) -> RunStore:
         directory = Path(root).absolute() / str(uuid.uuid4())
+        return cls.create_at(directory, manifest)
+
+    @classmethod
+    def create_at(cls, directory: Path, manifest: dict[str, Any]) -> RunStore:
+        """Explicitly create an exclusively named store; never open/reset one."""
+        directory = Path(directory).absolute()
         _regular(directory / "manifest.json")
         directory.mkdir(parents=True, exist_ok=False)
         manifest = copy.deepcopy(manifest)
@@ -246,12 +256,16 @@ class RunStore:
         path = self.directory / ".run.lock"
         _regular(path)
         descriptor = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
+        acquired = False
         try:
             self._check_lock(path, descriptor)
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self._check_lock(path, descriptor)
+            self._lease_active = acquired = True
             yield
         finally:
+            if acquired:
+                self._lease_active = False
             os.close(descriptor)
 
     def events(self) -> list[dict[str, Any]]:
@@ -300,9 +314,17 @@ class SpendLedger:
     authoritative even if they exceed the configured bound; that breach halts
     admission and is never hidden by clamping.
     """
-    def __init__(self, store: RunStore, *, limit: str = "25") -> None:
+    def __init__(self, store: RunStore, *, limit: str = "25",
+                 allocation: AllocationLedger | None = None) -> None:
         self.store = store
         self.limit = usd(limit)
+        self.allocation = allocation
+        if allocation is not None:
+            allocation.require_execution(store)
+            if self.limit > allocation.limit:
+                raise ValueError("run limit exceeds shared allocation")
+            if "budget_usd" in store.manifest and usd(store.manifest["budget_usd"]) != self.limit:
+                raise ValueError("run limit differs from frozen budget")
         self._lock = threading.RLock()
         self.reservations: dict[str, Decimal] = {}
         self.admissions: dict[str, dict[str, Any]] = {}
@@ -312,7 +334,10 @@ class SpendLedger:
         self._sequence = 0
         with store.transaction():
             self._sync()
-        self._resume_blocked = bool(self.reservations)
+        # A shared execution entry already refuses all earlier global pending
+        # work. Other observers inside this current lease may legitimately see
+        # concurrently admitted attempts; they do not represent crash recovery.
+        self._resume_blocked = bool(self.reservations) and allocation is None
 
     def _binding(self, cell: str, receipt: CallReceipt) -> dict[str, Any]:
         canonical_json(receipt.to_dict())
@@ -376,7 +401,10 @@ class SpendLedger:
 
     def reserve(self, cell_id: str, request_hash: str, model: str, endpoint: str,
                 hosted: bool, liability: str | None) -> str:
-        with self._lock, self.store.transaction(), localcontext(currency_context()):
+        if not isinstance(hosted, bool):
+            raise ValueError("hosted admission flag must be boolean")
+        shared = self.allocation
+        with self._lock, (shared.transaction() if shared is not None else contextlib.nullcontext()), self.store.transaction(), localcontext(currency_context()):
             self._sync()
             if hosted and (self.stopped or self._resume_blocked or liability is None):
                 raise BudgetStopped("paid admission stopped: unresolved or unbounded liability")
@@ -384,19 +412,30 @@ class SpendLedger:
             if hosted and self.charged + sum(self.reservations.values(), Decimal(0)) + bound > self.limit:
                 raise BudgetStopped("USD budget exhausted")
             attempt = str(uuid.uuid4())
-            self.store.append({"event": "attempt_started", "cell_id": cell_id, "attempt_id": attempt,
-                "request_hash": request_hash, "model": model, "endpoint": endpoint,
-                "hosted": hosted, "liability_usd": str(bound)})
+            if shared is not None and hosted:
+                shared.reserve(self.store, attempt, cell_id, request_hash, model, endpoint, str(bound))
+            try:
+                self.store.append({"event": "attempt_started", "cell_id": cell_id, "attempt_id": attempt,
+                    "request_hash": request_hash, "model": model, "endpoint": endpoint,
+                    "hosted": hosted, "liability_usd": str(bound)})
+            except BaseException:
+                self.stopped = True
+                if shared is not None and hosted:
+                    shared.reject("reservation_split_write")
+                raise
             self._sync()
             return attempt
 
     def finish(self, cell_id: str, receipt: CallReceipt) -> None:
-        with self._lock, self.store.transaction():
+        shared = self.allocation
+        with self._lock, (shared.transaction() if shared is not None else contextlib.nullcontext()), self.store.transaction():
             self._sync()
             try:
                 self._binding(cell_id, receipt)
             except (ValueError, OverflowError, TypeError) as exc:
                 self.stopped = True
+                if shared is not None:
+                    shared.reject("invalid_receipt")
                 self.store.append({"event": "accounting_rejected", "cell_id": cell_id, "attempt_id": receipt.attempt_id})
                 if isinstance(exc, ValueError):
                     raise
@@ -405,8 +444,12 @@ class SpendLedger:
                 self.store.append({"event": "attempt_finished", "cell_id": cell_id, "receipt": receipt.to_dict()})
             except BaseException:
                 self.stopped = True
+                if shared is not None:
+                    shared.reject("finish_split_write")
                 raise
             self._sync()
+            if shared is not None and self.admissions[receipt.attempt_id]["hosted"]:
+                shared.finish(self.store, cell_id, receipt)
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock, self.store.transaction(), localcontext(currency_context()):

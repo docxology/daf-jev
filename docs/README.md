@@ -30,6 +30,8 @@ Documentation for daf-jev.
   admission, resident model ownership, counterbalanced passes and resource limits.
 - [decision_benchmarking.md](decision_benchmarking.md) — plan/run/resume/report,
   quality/timing/cost metrics, policies and partial-run interpretation.
+- [shared_allocations.md](shared_allocations.md) — explicit shared spending
+  authorization, legacy accounting imports, cross-run admission and recovery.
 - [datasets.md](datasets.md) — deterministic synthetic controls, pinned public
   datasets, leakage groups, splits, labels and sampling.
 - [full_study.md](full_study.md) — full-fold selection, final training views,

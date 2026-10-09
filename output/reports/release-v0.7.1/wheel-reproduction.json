@@ -1,0 +1,38 @@
+{
+  "actual_wheel_generators": [
+    "Generator: setuptools (84.0.0)",
+    "Generator: setuptools (84.0.0)"
+  ],
+  "backend_constraint_observed": true,
+  "checker_bytes_held": true,
+  "checker_sha256": "553ebe1cc31b30f2514fe3e76fa4db3b213df7d07f97e6b814e60621097ae187",
+  "from_sdist_wheel_sha256": "d320c883ada3bff92746e1a248fdf28d89b325f098752eecfb7750b2b1986e44",
+  "head_epoch_unchanged": true,
+  "installed": {
+    "async_connection_reused": true,
+    "core_only": true,
+    "hosted_requests": 0,
+    "loopback_requests": 3,
+    "python": "3.10.20",
+    "source_bytes_equal": true
+  },
+  "installed_core_python_bytes_held": true,
+  "installed_core_python_sha256": "a82a1bdbbda93dfa083f64b157b0d048379a330c2bc6d9e1f4e8fcec7276b65d",
+  "installed_core_python_version": "Python 3.10.20",
+  "resolved_tool_bytes_held": true,
+  "resolved_tool_sha256": {
+    "python": "bf4ea26231212e330b8e9b6f24969a30f894fec88665bf42754070d114ac7fc6",
+    "uv": "c87143aea2480b09f107a9f97fa93899d116f0307b4d210649a735e141bdd889"
+  },
+  "source_build_commit": "476bf6d92ac27061392d99a5035ea6e788c0034c",
+  "source_date_epoch": "1791512618",
+  "source_unchanged": true,
+  "tool_versions": {
+    "python": "Python 3.14.4",
+    "setuptools": "84.0.0",
+    "uv": "uv 0.12.23 (Homebrew 2026-10-03 aarch64-apple-darwin)"
+  },
+  "wheel_bytes_equal": true,
+  "wheel_from_sdist_checked": true,
+  "wheel_sha256": "d320c883ada3bff92746e1a248fdf28d89b325f098752eecfb7750b2b1986e44"
+}

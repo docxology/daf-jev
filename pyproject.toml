@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "daf-jev"
-version = "0.7.0"
+version = "0.7.1"
 license = "MIT"
 license-files = ["LICENSE"]
 description = "Typed decision interfaces, modular orchestration, and reproducible local and hosted model evaluation"
@@ -66,6 +66,9 @@ mcp = [
 ]
 benchmark = [
     "scikit-learn>=1.5,<2",
+    # SciPy 1.15.3 CPython 3.10 macOS wheels fail recent dyld zero-fill validation.
+    "scipy>=1.14.1,<1.15; sys_platform == 'darwin' and python_version < '3.11'",
+    "scipy>=1.15.3; sys_platform != 'darwin' and python_version < '3.11'",
     "psutil>=6,<8",
 ]
 

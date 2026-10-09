@@ -7,14 +7,15 @@ as figure 1; figures 2-3 (architecture, primitives) are data-free
 diagrams; figures 4-5 (batching, latency) read the selected benchmark JSONs
 from ``output/benchmarks/`` at generation time; figure 6 (confidence) is
 a parametric illustration of confidence-gated routing; figure 7
-(calibration) plots the live reliability benchmark.
+(calibration) plots the historical modal-agreement proxy. The admission
+diagram describes durable accounting across runs without measured data.
 
 Every label, color, and size is a module-level constant below — no magic
 numbers inline. All generators share :func:`_style` (palette, fonts,
 gridlines, dpi) and the :func:`_panel_letter` helper for multi-panel
 layouts. Generation is offline (no network). Missing benchmark data
 raises :class:`FileNotFoundError` naming the missing file; figures 2, 3,
-and 6 never touch benchmark data and are always renderable.
+and 6 and the admission diagram never touch benchmark data.
 """
 import json
 import textwrap
@@ -31,7 +32,7 @@ from cycler import cycler
 from matplotlib.patches import ConnectionPatch, FancyArrowPatch, FancyBboxPatch
 from matplotlib.ticker import MaxNLocator
 
-__all__ = ["architecture_mermaid", "generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+__all__ = ["architecture_mermaid", "generate_admission", "generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
 
 
 # ---------------------------------------------------------------------------
@@ -713,6 +714,39 @@ def generate_graphical_abstract(out_dir: Path, project_root: Path | None = None)
     return _save(fig, out_dir, "graphical_abstract.png", tight=False)
 
 
+def generate_admission(out_dir: Path, project_root: Path | None = None) -> Path:
+    """Draw the cross-run admission and conservative crash-recovery contract."""
+    _style()
+    fig, ax = _new_diagram("Shared hosted allocation: reserve before every attempt")
+    nodes = (
+        (5, 68, "Shared reservation", "bounded liability\ndurable intent"),
+        (37, 68, "Run admission", "request identity\ndurable intent"),
+        (69, 68, "HTTP attempt", "one admitted\ntransport attempt"),
+        (69, 38, "Run receipt", "reported charge\nor unknown"),
+        (37, 38, "Shared receipt", "reconcile the\nsame attempt"),
+        (5, 38, "Next admission", "check all runs\nand reservations"),
+    )
+    for x, y, label, sublabel in nodes:
+        _box(ax, x, y, 26, 17, label, sublabel=sublabel,
+             facecolor=COLOR_LAYER_SIDE)
+    for start, end in (
+        ((31, 76.5), (37, 76.5)), ((63, 76.5), (69, 76.5)),
+        ((82, 68), (82, 55)), ((69, 46.5), (63, 46.5)),
+        ((37, 46.5), (31, 46.5)), ((18, 55), (18, 68)),
+    ):
+        _arrow(ax, start, end)
+    _box(ax, 19, 8, 62, 17, "Stop hosted admission",
+         sublabel="unknown charge, abandoned intent, or inconsistent journals",
+         facecolor=COLOR_BAND_ESCALATE)
+    _arrow(ax, (82, 38), (75, 25), dashed=True)
+    _arrow(ax, (50, 38), (50, 25), dashed=True)
+    ax.text(50, 94, "One allocation across runs; exclusive executor lease",
+            ha="center", va="center", fontsize=FONT_ANNOTATE)
+    ax.text(50, 2, "Planning and reporting inspect evidence without inference or allocation mutation.",
+            ha="center", va="center", fontsize=FONT_MINI)
+    return _save(fig, out_dir, "hosted_admission.png")
+
+
 _REGISTRY: dict[str, Callable[[Path, Path | None], Path]] = {
     "graphical_abstract": generate_graphical_abstract,
     "architecture": generate_architecture,
@@ -721,6 +755,7 @@ _REGISTRY: dict[str, Callable[[Path, Path | None], Path]] = {
     "latency": generate_latency,
     "confidence": generate_confidence,
     "calibration": generate_calibration,
+    "admission": generate_admission,
 }
 
 FIGURE_FILENAMES: dict[str, str] = {
@@ -731,6 +766,7 @@ FIGURE_FILENAMES: dict[str, str] = {
     "latency": "latency_percentiles.png",
     "confidence": "confidence_bands.png",
     "calibration": "calibration_reliability.png",
+    "admission": "hosted_admission.png",
 }
 
 
@@ -914,6 +950,27 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
             "each marker annotated with its bucket size, close to the dashed "
             "perfect-calibration diagonal, with the expected calibration error "
             "and Brier score annotated in the corner."
+        ),
+    },
+    {
+        "label": "fig:admission",
+        "filename": "hosted_admission.png",
+        "section": "Reproducibility",
+        "width": "1.0\\textwidth",
+        "caption": (
+            "Hosted admission across runs. A shared allocation reserves each "
+            "attempt before the run admission and HTTP transport. The run receipt "
+            "is saved before shared reconciliation. Unknown billing, abandoned "
+            "intents or inconsistent journals stop further hosted admission. "
+            "An exclusive allocation execution lease coordinates separate "
+            "runners while within-run request concurrency remains configurable. "
+            "This is an accounting schematic, without measured cost or timing."
+        ),
+        "alt_text": (
+            "Six boxes form a loop: shared reservation, run admission, HTTP "
+            "attempt, run receipt, shared receipt and next admission. Dashed "
+            "arrows lead from receipt uncertainty to a red stop-admission box. "
+            "A note states that planning and reporting do not mutate the allocation."
         ),
     },
 )

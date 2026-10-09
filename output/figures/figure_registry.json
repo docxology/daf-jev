@@ -104,8 +104,23 @@
       "evidence_selection": "manuscript/evidence.json"
     }
   },
-  "fig:cpu_quality": {
+  "fig:admission": {
     "figure_id": "figure_008",
+    "filename": "hosted_admission.png",
+    "caption": "Hosted admission across runs. A shared allocation reserves each attempt before the run admission and HTTP transport. The run receipt is saved before shared reconciliation. Unknown billing, abandoned intents or inconsistent journals stop further hosted admission. An exclusive allocation execution lease coordinates separate runners while within-run request concurrency remains configurable. This is an accounting schematic, without measured cost or timing.",
+    "label": "fig:admission",
+    "section": "Reproducibility",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Six boxes form a loop: shared reservation, run admission, HTTP attempt, run receipt, shared receipt and next admission. Dashed arrows lead from receipt uncertainty to a red stop-admission box. A note states that planning and reporting do not mutate the allocation.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json"
+    }
+  },
+  "fig:cpu_quality": {
+    "figure_id": "figure_009",
     "filename": "cpu_quality.png",
     "caption": "Canonical test accuracy for applicable CPU comparators. Whiskers are retained 95% grouped bootstrap intervals for fixed predictions; they exclude refitting uncertainty. Wine accuracy uses probability argmax over bins. Unsupported comparator/task pairs supply no plotted estimate.",
     "label": "fig:cpu_quality",
@@ -120,7 +135,7 @@
     }
   },
   "fig:wine_ordinal": {
-    "figure_id": "figure_009",
+    "figure_id": "figure_010",
     "filename": "wine_ordinal.png",
     "caption": "Wine errors use raw scalar bin indices, not original grades. MAE has a retained grouped bootstrap interval; RMSE is a point estimate. Bin support and conditional grade entropy disclose sparse extremes and information lost through binning.",
     "label": "fig:wine_ordinal",
@@ -135,7 +150,7 @@
     }
   },
   "fig:cohort_sensitivity": {
-    "figure_id": "figure_010",
+    "figure_id": "figure_011",
     "filename": "cohort_sensitivity.png",
     "caption": "Canonical and leakage-filtered text results use separately refitted models and different test cohorts. Connecting lines are descriptive, without paired or causal change intervals; denominators are shown for each cohort.",
     "label": "fig:cohort_sensitivity",
@@ -150,7 +165,7 @@
     }
   },
   "fig:validation_folds": {
-    "figure_id": "figure_011",
+    "figure_id": "figure_012",
     "filename": "validation_folds.png",
     "caption": "BANKING77 validation accuracy across five overlapping training fits. Pooled out-of-fold intervals resample input groups for fixed predictions and do not measure shared-training or refitting uncertainty.",
     "label": "fig:validation_folds",
@@ -165,7 +180,7 @@
     }
   },
   "fig:selective_validation": {
-    "figure_id": "figure_012",
+    "figure_id": "figure_013",
     "filename": "selective_validation.png",
     "caption": "Descriptive validation gates show eligible group coverage, observed error and the recorded Wilson upper error bound. Threshold selection is adaptive: these are not simultaneous guarantees and are not transferred to final refits. Ineligible gates have zero coverage and unavailable risk.",
     "label": "fig:selective_validation",
@@ -180,7 +195,7 @@
     }
   },
   "fig:execution_coverage": {
-    "figure_id": "figure_013",
+    "figure_id": "figure_014",
     "filename": "execution_coverage.png",
     "caption": "Status fractions preserve each distinct study denominator. CPU studies, the older partial native study and the hosted pilot have different cohorts and source identities. The full hosted proposal is unexecuted. Completion counts include capability work and cannot be read as quality sample counts.",
     "label": "fig:execution_coverage",

@@ -34,7 +34,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/v0.7.0-public-bounded-labels-20261008/verification.json",
-    "sha256": "fb5eb3262527fe8a9f145618da529fa0ccf4f6224ae1c21ca7dac2d1a9c6ad58"
+    "path": "output/verification/v0.7.1-public-mac314/verification.json",
+    "sha256": "eca3ee74aabd216b80fe412790f256bba05d5fc236753f4739cdf58405d4c214"
   }
 }

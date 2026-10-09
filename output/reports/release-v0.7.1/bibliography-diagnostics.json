@@ -1,0 +1,9 @@
+{
+  "cited_entries_rendered": 27,
+  "format": "dafjev.bibliography-diagnostics/1",
+  "future_followup": "Make bibliography comment syntax and entry types compatible with the declared BibTeX style in a separate source revision and fresh capture.",
+  "interpretation": "Existing plainnat compatibility diagnostics from leading comment prose and @online types are retained. All cited content rendered; this build is not warning-free BibTeX. The renderer contract tolerates these diagnostics while enforcing zero missing citations/references/images.",
+  "missing_database_entries": 0,
+  "syntax_error_messages": 3,
+  "unknown_online_entry_type_warnings": 11
+}
