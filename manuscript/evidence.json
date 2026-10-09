@@ -38,7 +38,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json",
-    "sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b"
+    "path": "output/verification/v0.7.2-public-mac310-1fc82cc/verification.json",
+    "sha256": "2a6076df2c6cac40f7c083a628d05fd199bc56d4929b214ddd2c5e4839a7f7c0"
   }
 }

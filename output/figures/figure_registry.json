@@ -208,5 +208,35 @@
       "source": "daf-jev benchmark/figure pipeline",
       "evidence_selection": "manuscript/evidence.json"
     }
+  },
+  "fig:native_capabilities": {
+    "figure_id": "figure_015",
+    "filename": "native_capabilities.png",
+    "caption": "Native Decisions endpoint probes use one selected validation fixture per dataset. Labels give the primitive and requested vocabulary cardinality; Noul has a scalar probability rather than an option vocabulary. HTTP time sums the recorded physical attempts for each fixture, excluding queueing and retry waits. Charges are exact provider-reported amounts, plotted in millionths of a US dollar; UNKNOWN amounts are unavailable. These fixtures establish scoped response acceptance, without quality, calibration, maximum-context or maximum-batching claims.",
+    "label": "fig:native_capabilities",
+    "section": "Results",
+    "width": "1.0\\textwidth",
+    "placement": "h",
+    "generated_by": "daf_jev.figures",
+    "metadata": {
+      "alt_text": "Dataset-labelled native validation fixtures with HTTP elapsed time and reported cost; scoped acceptance does not establish predictive quality or maximum boundaries.",
+      "source": "daf-jev benchmark/figure pipeline",
+      "evidence_selection": "manuscript/evidence.json",
+      "native_provenance": {
+        "selected_input_sha256": {
+          "native_hosted": "3bd7239260016809d97fee578340a4a3651efcb547ea5caa3919f8a964f55e74"
+        },
+        "manifest_hash": "310b696618dd850e5bc91a2d718f4e00293d2bfac91e3ee6f3b9a2c1bff7423e",
+        "journal_hash": "619da7ab33137802c751dd63f0fee38831a3fb25e22d3fb8b425d406923cb67d",
+        "inference_source_hash": "c4b1f77ed9cbbbc4efac3e54666cf9992041b566283d665d5f65ba17355d6238",
+        "source_git_head": "b33ed048f053f2fcf325ce643b830843f0ae7e2b",
+        "scope": {
+          "cut_timestamp": "2026-10-09T18:18:33.695094+00:00",
+          "maximum_boundaries_verified": false,
+          "quality_claims": false,
+          "through_phase": "capability_probe"
+        }
+      }
+    }
   }
 }

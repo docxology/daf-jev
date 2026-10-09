@@ -1,0 +1,365 @@
+{
+  "format": "dafjev.native-capabilities-figure/1",
+  "scope": {
+    "cut_timestamp": "2026-10-09T18:18:33.695094+00:00",
+    "maximum_boundaries_verified": false,
+    "quality_claims": false,
+    "through_phase": "capability_probe"
+  },
+  "selected_input_sha256": {
+    "native_hosted": "3bd7239260016809d97fee578340a4a3651efcb547ea5caa3919f8a964f55e74"
+  },
+  "manifest_hash": "310b696618dd850e5bc91a2d718f4e00293d2bfac91e3ee6f3b9a2c1bff7423e",
+  "journal_hash": "619da7ab33137802c751dd63f0fee38831a3fb25e22d3fb8b425d406923cb67d",
+  "inference_source_hash": "c4b1f77ed9cbbbc4efac3e54666cf9992041b566283d665d5f65ba17355d6238",
+  "source_git_head": "b33ed048f053f2fcf325ce643b830843f0ae7e2b",
+  "caption": "Native Decisions endpoint probes use one selected validation fixture per dataset. Labels give the primitive and requested vocabulary cardinality; Noul has a scalar probability rather than an option vocabulary. HTTP time sums the recorded physical attempts for each fixture, excluding queueing and retry waits. Charges are exact provider-reported amounts, plotted in millionths of a US dollar; UNKNOWN amounts are unavailable. These fixtures establish scoped response acceptance, without quality, calibration, maximum-context or maximum-batching claims.",
+  "rows": [
+    {
+      "cell_id": "ee11f5dd43e7b4bd078a7bb33ad3f4430dac109b91db69726513a722d8d0b749",
+      "dataset_index": 0,
+      "dataset": "banking77",
+      "family": "banking77",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 77
+      },
+      "label": "banking77 · Choice 77",
+      "attempt_ids": [
+        "a07b387f-7be8-4069-a95e-79230518cacc"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 2.3864839999996548,
+      "reported_cost_usd": "0.000071568",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "6a0b678b3cb700873ac6ec3eed127462fd4c434ba9fd639ebd7768fc79367f77",
+      "dataset_index": 1,
+      "dataset": "clinc150",
+      "family": "clinc150",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 151
+      },
+      "label": "clinc150 · Choice 151",
+      "attempt_ids": [
+        "12835c60-cc24-4407-acd9-6667156f1002"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 0.7374029160000646,
+      "reported_cost_usd": "0.000105756",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "bfbad7651bf680125de459f5635088efd525ecf061039261a86db9782b615166",
+      "dataset_index": 2,
+      "dataset": "wine",
+      "family": "wine",
+      "status": "completed",
+      "primitives": [
+        "score"
+      ],
+      "options_per_question": {
+        "decision": 5
+      },
+      "label": "wine · Score 5",
+      "attempt_ids": [
+        "6975b321-b7a5-46ad-acfa-d11b30aca087"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 1.5766083329999674,
+      "reported_cost_usd": "0.000020496",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "1a0aacb3a6b37ff5e095fc9e5e76bbcd36a5644ee4d06de66f8aedf51b663276",
+      "dataset_index": 3,
+      "dataset": "synthetic-binary-v3",
+      "family": "synthetic-binary",
+      "status": "completed",
+      "primitives": [
+        "noul"
+      ],
+      "options_per_question": {},
+      "label": "synthetic-binary-v3 · Noul scalar probability",
+      "attempt_ids": [
+        "a3a5acd7-4957-4ec4-b1fb-b7e35deac254"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 1.9117333340000187,
+      "reported_cost_usd": "0.000012474",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "d5d6699642e240d8b843b66d303d38768f95b2fdb22a04c2f87355185f3ade8c",
+      "dataset_index": 4,
+      "dataset": "synthetic-categorical-v3",
+      "family": "synthetic-categorical",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 3
+      },
+      "label": "synthetic-categorical-v3 · Choice 3",
+      "attempt_ids": [
+        "2416dc02-70d3-4ce1-87a8-ad47059c4bed"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 1.2363981669996065,
+      "reported_cost_usd": "0.000014532",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "d009075bf8aa32fea976bc8aeff5cb4f4bbf96ed33133409aedb0bfde7819b6a",
+      "dataset_index": 5,
+      "dataset": "synthetic-ordinal-v3",
+      "family": "synthetic-ordinal",
+      "status": "completed",
+      "primitives": [
+        "score"
+      ],
+      "options_per_question": {
+        "decision": 4
+      },
+      "label": "synthetic-ordinal-v3 · Score 4",
+      "attempt_ids": [
+        "d12a87da-21ac-402e-8ab7-54f4f443de90"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 2.0081184999999095,
+      "reported_cost_usd": "0.000014322",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "2bcad37cd984b22a77ab11aef389ade044fadf6729dafe5ede0fe7f46aabba5c",
+      "dataset_index": 6,
+      "dataset": "synthetic-bayes-v3",
+      "family": "synthetic-bayes",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 2
+      },
+      "label": "synthetic-bayes-v3 · Choice 2",
+      "attempt_ids": [
+        "e70b403d-6e32-430d-9406-2ee991b0fa39"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 1.451366582999981,
+      "reported_cost_usd": "0.000017388",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "735c700cd7783b7d94d3ae831fe6698c237edb0c88020f5a8086194793c0a7e9",
+      "dataset_index": 7,
+      "dataset": "synthetic-categorical-matched-v3",
+      "family": "synthetic-categorical-matched-options-v3",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 3
+      },
+      "label": "synthetic-categorical-matched-v3 · Choice 3",
+      "attempt_ids": [
+        "0fec99cf-6ece-45fb-8895-c6933a4a51b6"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 2.1105569580004158,
+      "reported_cost_usd": "0.000014532",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "4480b49d948cc102dc027fff4c61c31eb394a59c7923970bc69c35352257df88",
+      "dataset_index": 8,
+      "dataset": "banking77-selection-fold1",
+      "family": "banking77",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 77
+      },
+      "label": "banking77-selection-fold1 · Choice 77",
+      "attempt_ids": [
+        "2fd8093e-7644-47f5-b06c-c86e72308339"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 0.974463165999623,
+      "reported_cost_usd": "0.000071232",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "9b0c6f8712a22aa7f80c1471ea847183ded114f732f2e8297d630f52c372060e",
+      "dataset_index": 9,
+      "dataset": "banking77-selection-fold2",
+      "family": "banking77",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 77
+      },
+      "label": "banking77-selection-fold2 · Choice 77",
+      "attempt_ids": [
+        "b10ab891-7162-4477-8b65-3847a3e54a06"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 2.4338745840004776,
+      "reported_cost_usd": "0.000071484",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "ec00214da925add61fe56649768dac962b536060d08905f1b91f94d35eb2dd12",
+      "dataset_index": 10,
+      "dataset": "banking77-selection-fold3",
+      "family": "banking77",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 77
+      },
+      "label": "banking77-selection-fold3 · Choice 77",
+      "attempt_ids": [
+        "c17f5173-1144-483a-ab75-2fffd7226209"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 2.5278940419993887,
+      "reported_cost_usd": "0.00007161",
+      "cost_status": "reported"
+    },
+    {
+      "cell_id": "88a16e5d21f272b17ec0640e11f48091d2fc92251a23a405fb0893e70d195546",
+      "dataset_index": 11,
+      "dataset": "banking77-selection-fold4",
+      "family": "banking77",
+      "status": "completed",
+      "primitives": [
+        "choice"
+      ],
+      "options_per_question": {
+        "decision": 77
+      },
+      "label": "banking77-selection-fold4 · Choice 77",
+      "attempt_ids": [
+        "9fd9ced7-732b-4807-9859-b3be5306fa21"
+      ],
+      "requested_models": [
+        "typesafe/jev-1.13"
+      ],
+      "resolved_models": [
+        "typesafe/jev-1.13-20260917"
+      ],
+      "providers": [
+        "TypeSafe"
+      ],
+      "http_elapsed_s_sum": 1.9368222500006596,
+      "reported_cost_usd": "0.000071526",
+      "cost_status": "reported"
+    }
+  ]
+}
