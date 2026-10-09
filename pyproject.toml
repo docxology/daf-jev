@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "daf-jev"
-version = "0.7.1"
+version = "0.7.2"
 license = "MIT"
 license-files = ["LICENSE"]
 description = "Typed decision interfaces, modular orchestration, and reproducible local and hosted model evaluation"

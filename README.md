@@ -89,8 +89,9 @@ with prepared datasets, durable attempt receipts and separate quality/cost evide
   `position_slope`, `noul_choice_delta`) over repeated stochastic prompts
   (coin, d6), plus a live multi-provider jaggedness benchmark
   (`benchmarks/bench_jaggedness.py`).
-- **Figures & manuscript** — a matplotlib figure registry (seven legacy figures, six selected empirical figures +
-  `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
+- **Figures & manuscript** — a matplotlib registry with eight core figures,
+  six selected empirical figures and an optional native capability figure,
+  plus `figure_registry.json` and a `{{TOKEN}}` variable pipeline that keep the
   10-section manuscript in `manuscript/` free of hardcoded results.
 - **MCP server** — `daf-jev serve` exposes the toolkit as nine MCP tools
   (`jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
@@ -979,6 +980,12 @@ behave differently from the hosted jev endpoint.
 
 ## Package and releases
 
+The native-only continuation is documented in [the hosted study guide](docs/native_hosted_study.md).
+It uses complete decision vocabularies, TypeSafe-only Jev routing and the same
+shared allocation. New successful capability observations keep a separate
+selected journal cut; the larger quality run remains in progress. The retained
+v0.7.1 release and its PDF continue to describe their original evidence.
+
 The v0.7.1 source adds shared hosted allocation admission and the scoped
 Mac/Python 3.10 benchmark-runtime repair to the modular decision-evaluation
 release: typed native
@@ -1006,7 +1013,7 @@ readiness or ship the documentation snapshot.
   [10.5281/zenodo.23266335](https://doi.org/10.5281/zenodo.23266335).
   Its source, wheel, sdist, manuscript, selected evidence, release manifest and
   checksums are the seven verified GitHub v0.7.1 assets. New source changes
-  described in the unreleased changelog are separate from that archived tag.
+  described in the 0.7.2 changelog are separate from that archived tag.
 - **v0.6.0 historical version record (recorded 2026-09-23)**:
   [22921974](https://zenodo.org/records/22921974), version DOI
   `10.5281/zenodo.22921974`; earlier versions remain in the same concept family.
@@ -1015,8 +1022,10 @@ readiness or ship the documentation snapshot.
   A new version DOI is added only after the corresponding version record is created and verified.
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Reviewed scholarship PDF**:
+  [Native hosted capability evidence, v0.7.2](output/pdf/daf-jev-0.7.2-manuscript.pdf)
+  documents the updated source and its selected terminal capability evidence.
   [Billing recovery and bibliography follow-up](output/pdf/billing-recovery-scholarship-20261009.pdf)
-  documents the current unreleased source and its selected verification evidence.
+  remains retained with its original source and selected verification evidence.
   The archived release PDF is
   [Modular Decision Models, v0.7.1](output/pdf/daf-jev-0.7.1-manuscript.pdf).
   The [v0.7.0 GitHub release](https://github.com/docxology/daf-jev/releases/tag/v0.7.0)
@@ -1039,7 +1048,7 @@ citation must use the DOI confirmed for the published version:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.7.1}
+  version = {0.7.2}
 }
 ```
 

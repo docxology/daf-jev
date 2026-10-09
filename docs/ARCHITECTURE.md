@@ -481,8 +481,25 @@ wire path is silently coerced.
   verification inputs before/after, retains native exports and command logs in
   a fresh confined nonsymlink directory, and writes
   `dafjev.verification-evidence/1` even for a failed capture. Only its owned
-  private raw coverage files are removed. Capture does not change the
+  private raw coverage files are removed. Fresh captures record
+  `environment.stdlib_directory` from the actual capturing interpreter's
+  `sysconfig` alongside its version and platform; this is private original
+  provenance, never inferred or backfilled into older receipts. Capture does not change the
   publication selection or publish results; live collection is not live acceptance.
+- `scripts/project_verification.py` creates a fresh, hash-bound public derivative
+  of successful original captures. It relocates project/interpreter display and
+  removes JUnit hostname attributes. An explicitly captured canonical absolute
+  POSIX `lib/pythonX.Y` or `lib64/pythonX.Y` standard-library prefix matching the
+  recorded Python version may additionally become `<PYTHON_STDLIB>`; the
+  transformation is declared in the derivative. Prefix siblings, traversal,
+  backslash/control-character suffixes, relative prepends, third-party package
+  directories in prefix ancestry or suffixes, and other private paths still
+  fail before output creation. Captured interpreter display must name a
+  canonical absolute narrow Python executable; every replacement checks both
+  path boundaries. Coverage JSON is strictly decoded before recursive string
+  key/value relocation, collision checking and declared JSON serialization, so
+  escape spelling cannot conceal private data. Missing stdlib provenance supplies no substitution. Native
+  files, result values and before/after source inventories remain unchanged.
 - `scripts/check_benchmark_runtime.py` — `check_runtime() -> dict` imports real
   SciPy sparse linear algebra and fits/predicts the public structured comparator
   on bounded owned toy data with a complete absent-class vocabulary. CLI has
@@ -536,12 +553,37 @@ wire path is silently coerced.
   schematic without measurements and preserves the cover as registry figure 1.
 - `study_evidence.py` — pure selected aggregate consumption, no model execution
   or plotting. `load_studies(project_root) -> StudyEvidence` consumes SHA-bound
-  `study_summaries.cpu` and `.hosted` through `evidence.selected_study_bytes`.
+  `study_summaries.cpu`, `.hosted` and optional `.native_hosted` through
+  `evidence.selected_study_bytes`.
   It rejects malformed formats, duplicate arm identities, invalid metrics,
   inconsistent status/attempt/gate denominators and non-finite currency.
   `arm(...)` requires a unique declared cohort; `limits(...)` consumes retained
   grouped percentile intervals without refitting. `tokens()` emits optional
   `STUDY_*` measured variables. It preserves null risk for ineligible gates.
+  Native summaries use `dafjev.native-hosted-study-summary/1`. All five global
+  statuses and each phase's status rows conserve the frozen plan. Physical
+  attempts remain distinct from cells. Successful native completions require a
+  final HTTP 200 receipt with response-body custody, usage, reported charge and
+  matching dataset/phase identities. The initial capability cut explicitly
+  excludes predictive-quality and maximum-boundary claims; its historical
+  bounded UNKNOWN charge remains separate. Selecting this summary adds seven
+  `NATIVE_HOSTED_*` variables without altering legacy measured tokens.
+- `scripts/export_native_capabilities.py` — explicit offline export of an
+  original executable manifest, immutable terminal capability journal prefix
+  and report, each selected by expected SHA-256. It opens no live run/head,
+  allocation or credential and performs no network calls. The journal prefix
+  is retained byte for byte; manifest/report projections declare their exact
+  original hashes and documentary substitutions and cannot resume execution.
+  Decoded fields are checked for private paths and credentials before a fresh
+  destination is created. Report, journal, receipt and status conservation must
+  agree; the exported capability cut cannot acquire later quality outcomes.
+- `figures.NATIVE_FIGURE_NAME` — optional `native_capabilities` figure from the
+  selected native summary. It writes PNG, vector PDF and plotted-data JSON with
+  exact manifest/journal/inference-source/Git/cut provenance in the registry.
+  Requested vocabulary, observed HTTP latency and reported charges describe
+  actual selected probes; these measurements establish neither accuracy nor
+  maximum supported boundaries. Existing core and study figures remain
+  unchanged when no native summary is selected.
 - `study_figures.py` — optional headless matplotlib figures `cpu_quality`,
   `wine_ordinal`, `cohort_sensitivity`, `validation_folds`, `selective_validation`
   and `execution_coverage`. `generate(name, out_dir, project_root)` reads selected
@@ -581,6 +623,8 @@ wire path is silently coerced.
   studies fail in both strict and draft mode. These retained study values preserve
   their original execution/source identity rather than acquiring the current
   software-verification identity.
+  An optional selected native hosted summary adds seven `NATIVE_HOSTED_*`
+  variables from its conserved plan, phase counts and per-attempt accounting.
   Optional `manuscript/evidence.json` `verification={path,sha256}` selects a
   completed capture through `evidence.selected_verification`. Unit/live counts,
   coverage and Python/platform then derive from those retained outputs; variable

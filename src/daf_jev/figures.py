@@ -18,8 +18,10 @@ raises :class:`FileNotFoundError` naming the missing file; figures 2, 3,
 and 6 and the admission diagram never touch benchmark data.
 """
 import json
+import math
 import textwrap
 from collections.abc import Callable
+from decimal import localcontext
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +34,7 @@ from cycler import cycler
 from matplotlib.patches import ConnectionPatch, FancyArrowPatch, FancyBboxPatch
 from matplotlib.ticker import MaxNLocator
 
-__all__ = ["architecture_mermaid", "generate_admission", "generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_one", "generate_primitives", "write_figure_registry"]
+__all__ = ["architecture_mermaid", "generate_admission", "generate_all", "generate_architecture", "generate_batching", "generate_calibration", "generate_confidence", "generate_graphical_abstract", "generate_latency", "generate_native_capabilities", "generate_one", "generate_primitives", "write_figure_registry"]
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +178,7 @@ def _arrow(ax, start: tuple[float, float], end: tuple[float, float], *, dashed: 
     )
 
 def _save(fig: plt.Figure, out_dir: Path, filename: str, *, tight: bool = True) -> Path:
-    """Save a figure as PNG into *out_dir* and return the written path.
+    """Save PNG and vector PDF companions; return the written PNG path.
 
     With ``tight=False`` the canvas is written at its exact figsize so the
     graphical abstract lands at its designed pixel size.
@@ -747,6 +749,100 @@ def generate_admission(out_dir: Path, project_root: Path | None = None) -> Path:
     return _save(fig, out_dir, "hosted_admission.png")
 
 
+NATIVE_FIGURE_NAME = "native_capabilities"
+_NATIVE_CAPTION = (
+    "Native Decisions endpoint probes use one selected validation fixture per dataset. "
+    "Labels give the primitive and requested vocabulary cardinality; Noul has a scalar "
+    "probability rather than an option vocabulary. HTTP time sums the recorded physical "
+    "attempts for each fixture, excluding queueing and retry waits. Charges are exact "
+    "provider-reported amounts, plotted in millionths of a US dollar; UNKNOWN amounts "
+    "are unavailable. These fixtures establish scoped response acceptance, without "
+    "quality, calibration, maximum-context or maximum-batching claims."
+)
+_NATIVE_META = {
+    "label": "fig:native_capabilities", "filename": "native_capabilities.png",
+    "section": "Results", "width": "1.0\\textwidth", "caption": _NATIVE_CAPTION,
+    "alt_text": "Dataset-labelled native validation fixtures with HTTP elapsed time and reported cost; scoped acceptance does not establish predictive quality or maximum boundaries.",
+}
+
+
+def generate_native_capabilities(out_dir: Path, project_root: Path | None = None) -> Path:
+    """Render only the explicitly selected, validated native capability cut."""
+    from .benchmark_store import currency_context, usd_total
+    from .study_evidence import selected_native_study
+
+    study, sha = selected_native_study(project_root or Path.cwd())
+    rows = []
+    for probe in sorted(study["capability_probes"], key=lambda p: (p["dataset_index"], p["cell_id"])):
+        dataset = study["datasets"][probe["dataset_index"]]
+        evidence = probe["evidence"]
+        receipts = [w["receipt"] for w in study["attempt_receipts"] if w["cell_id"] == probe["cell_id"]]
+        with localcontext(currency_context()):
+            reported = sum((usd_total(r["cost_usd"]) for r in receipts if r["cost_status"] == "reported"), usd_total("0"))
+        unknown = any(r["cost_status"] == "unknown" for r in receipts)
+        options = evidence["options_per_question"]
+        vocabulary = ", ".join(str(n) for n in options.values()) if options else "scalar probability"
+        primitive = "/".join(evidence["primitives"]).capitalize()
+        rows.append({"cell_id": probe["cell_id"], "dataset_index": probe["dataset_index"],
+                     "dataset": dataset["id"], "family": dataset["family"], "status": probe["status"],
+                     "primitives": evidence["primitives"], "options_per_question": options,
+                     "label": f"{dataset['id']} · {primitive} {vocabulary}",
+                     "attempt_ids": [r["attempt_id"] for r in receipts],
+                     "requested_models": sorted({r["requested_model"] for r in receipts}),
+                     "resolved_models": sorted({r["resolved_model"] for r in receipts if r["resolved_model"]}),
+                     "providers": sorted({r["provider"] for r in receipts if r["provider"]}),
+                     "http_elapsed_s_sum": math.fsum(r["elapsed_s"] for r in receipts) if receipts else None,
+                     "reported_cost_usd": str(reported) if receipts and not unknown else None,
+                     "cost_status": "unknown" if unknown else "reported" if receipts else "unattempted"})
+    requested = sorted({model for row in rows for model in row["requested_models"]})
+    providers = sorted({provider for row in rows for provider in row["providers"]})
+    model_label = requested[0] if len(requested) == 1 else f"{len(requested)} requested native models"
+    provider_label = "/".join(providers) or "provider unavailable"
+    if len(requested) > 1:
+        for row in rows:
+            row["label"] += " · " + "/".join(row["requested_models"])
+    style = {**matplotlib.rcParamsDefault, "backend": "Agg", "font.family": "DejaVu Sans",
+             "font.size": 9, "axes.labelsize": 10, "pdf.fonttype": 42}
+    with plt.rc_context(style):
+        fig, (latency, cost) = plt.subplots(1, 2, figsize=(12, max(4.5, .36 * len(rows) + 2.3)),
+                                         sharey=True, gridspec_kw={"width_ratios": [1.25, 1]})
+        colors = {"completed": "#0072B2", "failed": "#D55E00", "unsupported": "#6B7280", "unresolved": "#D55E00"}
+        for y, row in enumerate(rows):
+            color = colors[row["status"]]
+            elapsed, charge = row["http_elapsed_s_sum"], row["reported_cost_usd"]
+            if elapsed is not None:
+                latency.barh(y, elapsed, color=color, height=.65)
+            else:
+                latency.text(.02, y, "no transport attempt", va="center", transform=latency.get_yaxis_transform())
+            if charge is not None:
+                cost.barh(y, float(charge) * 1e6, color=color, height=.65)
+            else:
+                cost.text(.02, y, row["cost_status"].upper(), va="center", transform=cost.get_yaxis_transform())
+        latency.set_yticks(range(len(rows)), [r["label"] for r in rows])
+        latency.invert_yaxis()
+        for ax, title, xlabel in ((latency, "A  Recorded HTTP time", "Sum of physical attempt elapsed time (s)"),
+                                  (cost, "B  Provider-reported billing", "Reported charge (millionths of USD)")):
+            ax.set_title(title, loc="left", weight="bold", fontsize=11, pad=12)
+            ax.set_xlabel(xlabel)
+            ax.spines[["top", "right"]].set_visible(False)
+            ax.grid(axis="x", color="#E5E7EB", linewidth=.7)
+            ax.set_axisbelow(True)
+            ax.set_xlim(left=0)
+            ax.margins(x=.12)
+        completed = sum(r["status"] == "completed" for r in rows)
+        fig.suptitle(f"Native endpoint validation fixtures: {completed}/{len(rows)} accepted", fontsize=14, weight="bold", y=.98)
+        fig.text(.5, .91, f"{model_label} via {provider_label} · selected fixtures with complete requested vocabularies", ha="center", fontsize=10)
+        fig.text(.5, .02, "Acceptance only: predictive quality and maximum boundaries remain unverified.", ha="center", fontsize=10)
+        fig.subplots_adjust(left=.43, right=.98, top=.83, bottom=.16, wspace=.23)
+        path = _save(fig, out_dir, _NATIVE_META["filename"])
+    data = {"format": "dafjev.native-capabilities-figure/1", "scope": study["scope"],
+            "selected_input_sha256": {"native_hosted": sha}, "manifest_hash": study["manifest_hash"],
+            "journal_hash": study["journal_hash"], "inference_source_hash": study["inference_source_hash"],
+            "source_git_head": study["source_git_head"], "caption": _NATIVE_CAPTION, "rows": rows}
+    path.with_suffix(".data.json").write_text(json.dumps(data, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+    return path
+
+
 _REGISTRY: dict[str, Callable[[Path, Path | None], Path]] = {
     "graphical_abstract": generate_graphical_abstract,
     "architecture": generate_architecture,
@@ -775,6 +871,8 @@ def generate_one(name: str, out_dir: Path, project_root: Path | None = None, *, 
 
     Raises :class:`ValueError` naming the valid choices for an unknown name.
     """
+    if name == NATIVE_FIGURE_NAME:
+        return generate_native_capabilities(out_dir, project_root)
     if include_study and name == "graphical_abstract":
         from .study_figures import generate_overview
         return generate_overview(out_dir, project_root or Path.cwd())
@@ -981,14 +1079,15 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None, *, in
 
     The registry is the engine-facing manifest consumed by template
     validation: one entry per figure label, mirroring the manuscript's own
-    figure lines (captions, sections, widths). It is static metadata — no
-    measured statistics are embedded.
+    figure lines (captions, sections, widths). Optional native metadata binds
+    the selected summary and terminal cut without embedding quality estimates.
 
     Args:
         out_dir: Destination directory (created if absent); the registry is
             written alongside the PNGs as :data:`FIGURE_REGISTRY_FILENAME`.
-        project_root: Accepted for signature symmetry with the generator
-            functions; the registry is static and reads nothing from the tree.
+        project_root: Used for explicit native provenance when ``include_study``
+            is true and ``native_hosted`` is selected; defaults to the current
+            working directory. The historical default registry remains static.
 
     Returns:
         The written registry path.
@@ -996,9 +1095,17 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None, *, in
     out_dir.mkdir(parents=True, exist_ok=True)
     registry: dict[str, Any] = {}
     entries = _FIGURE_META
+    native_provenance = None
     if include_study:
+        from .evidence import has_selected_study
+        from .study_evidence import selected_native_study
         from .study_figures import metadata
         entries += metadata()
+        if has_selected_study(project_root or Path.cwd(), "native_hosted"):
+            native, sha = selected_native_study(project_root or Path.cwd())
+            entries += (_NATIVE_META,)
+            native_provenance = {"selected_input_sha256": {"native_hosted": sha},
+                                 **{k: native[k] for k in ("manifest_hash", "journal_hash", "inference_source_hash", "source_git_head", "scope")}}
     for index, meta in enumerate(entries, start=1):
         if include_study and meta["label"] == "fig:graphical_abstract":
             meta = {**meta, "caption": "Modular decision workflow from independent targets and frozen requests through admission, declared backends and validated results to retained evidence. CPU, older native and hosted pilot counts describe separate cohorts; completion includes capability work. The full comparative study remains unfinished.",
@@ -1018,6 +1125,8 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None, *, in
                 "evidence_selection": "manuscript/evidence.json",
             },
         }
+        if meta["label"] == _NATIVE_META["label"]:
+            registry[meta["label"]]["metadata"]["native_provenance"] = native_provenance
     path = out_dir / FIGURE_REGISTRY_FILENAME
     path.write_text(
         json.dumps(registry, indent=2, ensure_ascii=False) + "\n",
@@ -1048,7 +1157,10 @@ def generate_all(out_dir: Path, project_root: Path | None = None, *, include_stu
     """
     paths = [generate_one(name, out_dir, project_root, include_study=include_study) for name in _REGISTRY]
     if include_study:
+        from .evidence import has_selected_study
         from .study_figures import FILENAMES, generate
         paths.extend(generate(name, out_dir, project_root or Path.cwd()) for name in FILENAMES)
+        if has_selected_study(project_root or Path.cwd(), "native_hosted"):
+            paths.append(generate_native_capabilities(out_dir, project_root))
     write_figure_registry(out_dir, project_root, include_study=include_study)
     return paths

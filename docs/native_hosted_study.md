@@ -23,16 +23,16 @@ alternate endpoint silently replaces the primary model.
 
 The official [Jev guide](https://openrouter.ai/docs/guides/community/jev) defines
 32,000 input tokens across state plus all questions and free output. Its
-[specific endpoint](https://openrouter.ai/api/v 1/models/typesafe/jev-1.13/endpoints)
+[specific endpoint](https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints)
 independently declares that prompt ceiling. The code-owned contract is
-`openrouter-typesafe-jev-1.13-input 32000/1`. At the retained input tariff the
+`openrouter-typesafe-jev-1.13-input32000/1`. At the retained input tariff the
 conditional reservation is USD 0.001344 per physical request, distinct from
 reported billing. Model context metadata cannot widen the guarantee. Each
 retry requires fresh admission; no hidden transport retries or auxiliary paid
 services are enabled. A contract breach preserves its receipt and stops work.
 
 The TypeSafe [Choice contract](https://docs.typesafe.ai/primitives/choice)
-documents up to 255 options. Preserve all 77 BANKING 77 options and all 151 CLINC
+documents up to 255 options. Preserve all 77 BANKING77 options and all 151 CLINC
 options, including the original OOS label. Wine uses five ordinal grade bins.
 Full-vocabulary validation probes must succeed before corresponding quality
 cells are admitted. A probe cannot prove all context/batching boundaries,
@@ -43,7 +43,7 @@ normalized or converted from labels into one-hot beliefs.
 ## Full-study obligations
 
 Use the retained full-study prepared inputs and seed 20261007. Canonical official
-text tests remain separate from leakage-filtered sensitivity views. BANKING 77
+text tests remain separate from leakage-filtered sensitivity views. BANKING77
 training validation rotations cover all five frozen grouped folds; the official
 test is scored once in the primary evaluation view. CLINC uses its published
 training/validation/test/OOS identities. Wine keeps red/white identity and
@@ -62,7 +62,7 @@ unattempted and unresolved cells. Do not replace failed warm samples or shorten
 vocabularies to make a cell succeed. Unsupported models need their own explicit
 reason; Jev's billing contract is not transferred to Kev or another provider.
 
-Report accuracy, macro-F 1, OOS detection, ordinal bin error, supplied-distribution
+Report accuracy, macro-F1, OOS detection, ordinal bin error, supplied-distribution
 proper scores, calibration, selective risk/coverage, reliability, throughput,
 latency percentiles and cost per decision/correct decision. Use the declared
 nearest-rank percentile method and 2,000 sample-grouped bootstrap resamples.
@@ -83,3 +83,30 @@ completion requires capability/quality/warm/workflow receipts, independently
 reviewed accounting, and a complete status matrix. The original USD 25 cap includes
 all probes, failures and retries. Admission stops when remaining liability cannot
 fit; planned size is not a promise that every cell will complete.
+
+## Retained native capability cut
+
+The selected [public summary](../output/reports/native-hosted-capability-20261009-v2/summary.json)
+is a terminal capability-only cut from run
+`60bebbff-00e2-4fea-ad31-b02c4260e660`, whose frozen matrix contains 25,077
+cells. All 12 selected validation-fixture probes completed through native
+Decisions requests with TypeSafe routing, including complete 77- and 151-option
+vocabularies and the five-bin Score task. These 12 physical attempts report
+USD 0.000556920 combined. The other 25,065 cells remain unattempted **at this
+selected cut**; later execution does not silently change this publication input.
+
+The [export declaration](../output/reports/native-hosted-capability-20261009-v2/publication-evidence.json)
+binds the exact original manifest, report and terminal journal prefix, and each
+public derivative. The prefix retains request/response identities, provider,
+token usage, timing and reported charges. Response-body digests establish
+custody of retained bodies; they do not reconstruct response text. Documentary
+manifest/report projections remove a private allocation-directory display and
+cannot be used to resume inference. The original failed Mercury attempt remains
+UNKNOWN under its independently reviewed bound and is not included as a new
+reported native charge.
+
+This cut establishes selected-fixture execution and billing evidence. Quality,
+repeatability, calibration, executed policies and graphical workflows require
+their own completed receipts and independently reviewed report. Full-vocabulary
+probe success does not establish a provider's advertised maximum capacity or
+predictive performance.

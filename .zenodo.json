@@ -1,8 +1,8 @@
 {
   "title": "daf-jev: Modular Decision Models, Orchestration, and Reproducible Evaluation",
   "upload_type": "software",
-  "version": "0.7.1",
-  "publication_date": "2026-10-08",
+  "version": "0.7.2",
+  "publication_date": "2026-10-09",
   "creators": [
     {
       "name": "Friedman, Daniel Ari",
@@ -11,7 +11,7 @@
       "email": "daniel@activeinference.institute"
     }
   ],
-  "description": "<p>daf-jev provides typed binary, categorical and ordinal decision interfaces, provider adapters, pure composition and exact discrete Bayes inference. A reproducible benchmark framework separates native decision distributions from generated labels or scores, freezes datasets, models and policies, and retains quality, coverage, runtime and cost evidence. The release includes selected historical API observations, completed CPU comparator studies, partial local model observations and a failed hosted capability probe with unresolved billing. Numerical validity and model agreement do not establish probability calibration or decision correctness. Source, installed-package, runtime, hosted and publication acceptance remain distinct. The repository contains documentation, examples, optional MCP and figure surfaces, and an evidence-selected manuscript.</p><p>Source and reproducible artifacts: <a href=\"https://github.com/docxology/daf-jev\">GitHub repository</a>. This software release does not establish completion of the proposed full local or hosted study.</p>",
+  "description": "<p>daf-jev provides typed binary, categorical and ordinal decision interfaces, provider adapters, pure composition and exact discrete Bayes inference. A reproducible benchmark framework separates native decision distributions from generated labels or scores, freezes datasets, models and policies, and retains quality, coverage, runtime and cost evidence. The release includes selected historical API observations, completed CPU comparator studies, partial local model observations, a historical failed hosted probe whose unknown charge is preserved under a reviewed bound, and successful native Jev capability probes. Numerical validity and model agreement do not establish probability calibration or decision correctness. Source, installed-package, runtime, hosted and publication acceptance remain distinct. The repository contains documentation, examples, optional MCP and figure surfaces, and an evidence-selected manuscript.</p><p>Source and reproducible artifacts: <a href=\"https://github.com/docxology/daf-jev\">GitHub repository</a>. This software release does not establish completion of the proposed full local or hosted study.</p>",
   "access_right": "open",
   "license": "mit",
   "keywords": [

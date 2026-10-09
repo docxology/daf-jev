@@ -1,20 +1,22 @@
 # Changes
 
-## Unreleased
+## 0.7.2
 
-Explicit offline billing reconciliation can attach reviewed, request-specific
-provider evidence to a finished historical attempt. Original unknown receipts
-remain unchanged. External charges and effective allocation spend are separate
-from original reported billing; unresolved attempts and reservation breaches
-continue to stop admission.
+Native Jev hosting now has a sourced input-window billing contract, per-attempt
+reservation and breach checks. An explicit independently reviewed bound can
+permit continuation past a finished historical UNKNOWN while preserving the
+original receipt and the shared allocation. Other uncertainty remains stopped.
 
-The manuscript bibliography uses types supported by the native BibTeX renderer.
-Rendering now rejects bibliography failures and warnings instead of accepting a
-partially generated bibliography. Cite keys and original source metadata remain
-unchanged.
+The active study uses native decision models. Jev capability observations,
+complete intent vocabularies, provider-reported charges and the exact terminal
+journal cut feed a selected report and a new scientific figure. Historical
+CPU/local studies and the earlier failed hosted pilot keep their own identities.
+A full quality study is ongoing; capability success is not comparative acceptance.
 
-These software changes do not resolve the retained hosted attempt's charge or
-establish new model-study results.
+Fresh native verification records its interpreter's stdlib location. Public
+projections relocate that declared prefix only, reject unknown private paths,
+and preserve the originals. Offline capability exports validate manifest,
+receipt, journal and report identities before writing a fresh derivative bundle.
 
 ## 0.7.1
 
