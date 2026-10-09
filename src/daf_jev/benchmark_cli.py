@@ -57,6 +57,17 @@ def register_benchmark_parser(parser: argparse.ArgumentParser) -> None:
     legacy = accounting.add_parser("import-legacy", help="append verified old-run accounting explicitly")
     legacy.add_argument("directory", type=Path)
     legacy.add_argument("--binding", required=True, type=Path)
+    target = accounting.add_parser("reconciliation-target", help="read exact imported UNKNOWN attempt identity; no proof or writes")
+    target.add_argument("directory", type=Path)
+    target.add_argument("--legacy-manifest-hash", required=True)
+    target.add_argument("--attempt-id", required=True)
+    for name in ("preview-reconciliation", "reconcile"):
+        recovery = accounting.add_parser(name, help="validate exact provider evidence offline" if name.startswith("preview") else "explicit append-only externally reviewed legacy charge")
+        recovery.add_argument("directory", type=Path)
+        recovery.add_argument("--evidence", required=True, type=Path)
+        recovery.add_argument("--evidence-sha256", required=True)
+        recovery.add_argument("--review", required=True, type=Path)
+        recovery.add_argument("--review-sha256", required=True)
     plan = sub.add_parser("plan", help="freeze experiment inputs without inference")
     plan.add_argument("--config", required=True, type=Path)
     plan.add_argument("--out-dir", required=True, type=Path)
@@ -138,9 +149,19 @@ def main(args: argparse.Namespace) -> int:
             ledger = AllocationLedger.create(args.directory, allocation_id=args.allocation_id,
                                              limit=args.limit_usd, required_imports=required)
         else:
-            ledger = AllocationLedger(args.directory, read_only=args.allocation_command == "inspect")
+            ledger = AllocationLedger(args.directory, read_only=args.allocation_command in {"inspect", "reconciliation-target", "preview-reconciliation"})
             if args.allocation_command == "import-legacy":
                 ledger.import_run(binding(args.binding))
+            elif args.allocation_command == "reconciliation-target":
+                result = ledger.reconciliation_target(args.legacy_manifest_hash, args.attempt_id)
+                print(canonical_json(result))
+                return 0
+            elif args.allocation_command in {"preview-reconciliation", "reconcile"}:
+                operation = ledger.preview_reconciliation if args.allocation_command == "preview-reconciliation" else ledger.reconcile
+                result = operation(evidence=args.evidence, evidence_sha256=args.evidence_sha256,
+                                   review=args.review, review_sha256=args.review_sha256)
+                print(canonical_json(result))
+                return 0
         result = {"binding": ledger.identity(), "accounting": ledger.snapshot(),
                   "operation": args.allocation_command, "evidence": "accounting_only; no inference"}
     elif command == "plan":

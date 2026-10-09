@@ -324,7 +324,8 @@ restate them here; there is no `../AGENTS.md` in this location.
   private raw coverage. Does not execute live tests or select publication inputs.
 - `scripts/render_pdf.py` — in-repo PDF render (pandoc --natbib over the
   generated token map; inputs `manuscript/render/{preamble,cover}.tex`);
-  runs the render gates (zero unresolved bibtex entries / undefined refs /
+  requires a successful warning-free native BibTeX run and runs the render
+  gates (zero unresolved bibtex entries / undefined refs /
   unloadable images / overfull vertical boxes; `SOURCE_DATE_EPOCH` pinned from
   HEAD). `--output FILE` selects a fresh standalone PDF; `--artifacts-dir DIR`
   exclusively retains intermediate Markdown/TeX/log inputs in a fresh directory.
@@ -467,15 +468,19 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   owner-approved publication (2026-09-18). Never `git add` any path under
   this lane into an OUTER repo (the hum-docxology worktree; container
   rules in `../../AGENTS.md`).
-- **Zenodo deposits (v0.6.0 published 2026-09-23; family re-verified
-  against the live API 2026-09-24).** The stable concept DOI
+- **Zenodo deposits (v0.7.1 published and live API verified 2026-10-09).**
+  The stable concept DOI
   `10.5281/zenodo.22816187` always resolves to the latest published
   version. Version deposits: v0.3.0 = **22817425**, v0.4.0 = **22884305**,
   v0.4.1 = **22884676** (published 2026-09-21; source zip from tag
   `v0.4.1` + the rendered PDF), v0.4.2 = **22921823** (2026-09-22),
   v0.5.0 = **22921963** (2026-09-22), v0.6.0 = **22921974** (2026-09-23,
-  latest; version DOI `10.5281/zenodo.22921974`, record
-  <https://zenodo.org/records/22921974>). Deposit **22816188** is the
+  historical; version DOI `10.5281/zenodo.22921974`, record
+  <https://zenodo.org/records/22921974>), v0.7.1 = **23266335**
+  (2026-10-09, latest; version DOI `10.5281/zenodo.23266335`, record
+  <https://zenodo.org/records/23266335>; the exact seven GitHub v0.7.1 assets).
+  Unreleased source changes remain separate from that archived tag.
+  Deposit **22816188** is the
   earlier superseded deposit in the same concept family — never cite or
   pin it. New releases MUST be new version deposits
   on the same concept via the Zenodo

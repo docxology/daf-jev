@@ -131,6 +131,93 @@ account-aggregate reconciliation closes a stop. Retain original evidence and
 obtain evidence for the exact attempted call before any additional hosted
 execution. Administrative evidence cannot fabricate a reported provider cost.
 
+## External evidence for a finished UNKNOWN attempt
+
+The offline reconciliation interface can add a separately verified charge for
+one **finished, imported legacy attempt**. It does not replay that request,
+change its original receipt, remove the original import, or create another
+allowance. The first research allocation still has no accepted exact-attempt
+proof and remains blocked. The commands below are preparation recipes, not a
+claim that its billing has been resolved.
+
+```bash
+uv run daf-jev benchmark allocation reconciliation-target \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --legacy-manifest-hash ORIGINAL_MANIFEST_HASH --attempt-id ORIGINAL_ATTEMPT_ID
+uv run daf-jev benchmark allocation preview-reconciliation \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --evidence evidence.json --evidence-sha256 EXACT_EVIDENCE_SHA256 \
+  --review review.json --review-sha256 EXACT_REVIEW_SHA256
+uv run daf-jev benchmark allocation reconcile \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --evidence evidence.json --evidence-sha256 EXACT_EVIDENCE_SHA256 \
+  --review review.json --review-sha256 EXACT_REVIEW_SHA256
+```
+
+The target freezes the canonical allocation directory, ID, manifest hash and
+journal tip; the complete legacy binding and original import event hash; and
+the attempt's UUID, cell, request hash, model, endpoint, original liability,
+timestamp, nullable original provider/response ID, start and finish event hashes,
+and receipt hash. A modern same-model/day record cannot supply an original
+missing response ID. A copied directory cannot reuse an approved target,
+including when its lock files are hardlinked to the original.
+
+Retain three immutable local JSON files, each at most 1 MiB. They can contain
+private provider evidence and should not be published as generic logs:
+
+- `dafjev.external-billing-evidence/1` has exactly `format`, `scope`, `target`,
+  `source_kind`, `document`, `authority`, `reference`, `collected_by`, `currency`
+  and `cost_usd`. Scope is `exact_attempt_account_charge`; currency is `USD`;
+  cost is a nonnegative exact decimal string. `document` binds its absolute
+  local path, SHA256 and byte count. `target` is the exact target above.
+- `generation_metadata` evidence uses a document containing `data`. Its ID
+  must match the already-retained original response ID and evidence reference;
+  model and `total_cost` must match the exact claim. JSON numbers are parsed as
+  Decimal. Without that original ID, obtain uniquely attributed provider
+  evidence instead of guessing a generation.
+- `provider_statement` uses `dafjev.exact-provider-charge-statement/1` with
+  exactly `format`, `scope`, `authority`, `reference`, `request`, `currency`
+  and `cost_usd`. `request` must equal the complete immutable attempt mapping,
+  including UUID and receipt/event hashes. This is a structured exact-attempt
+  attribution record whose provider origin and mapping require independent
+  review; generic activity exports or support statements lacking that
+  attribution are insufficient.
+- `dafjev.external-billing-review/1` has exactly `format`, `decision`,
+  `reviewer`, `evidence_sha256`, `document_sha256`, `allocation_tip`,
+  `provider_origin_verified`, `unique_exact_attempt_verified` and
+  `usd_account_charge_verified`. Decision is `approve_exact_attempt_charge`;
+  the three verified fields must be true; reviewer differs from collector.
+  The review binds both input digests and the expected allocation cut.
+
+These schemas express a **trusted, independently reviewed local operator
+attestation**. Different actor names and true flags do not establish real
+independence, and SHA256 proves byte custody rather than provider origin. The
+operator must verify the actual source and unique call attribution before
+invoking reconciliation. The API neither authenticates OpenRouter nor prevents
+a malicious caller from manufacturing a different attestation for a different
+ledger. A cooperative, human-owned canonical ledger remains required.
+
+Preview validates the retained bytes and cut without writing allocation events.
+Application requires an inactive exclusive lease and adds one linked event;
+it does not rewrite the run. The authority/reference pair and provider-document
+digest can be used for only one attempt. An identical repeat is a no-op only
+after revalidating the original files and recorded event. Conflicting proof,
+changed file identity, missing proof, stale cut, malformed JSON, partial writes
+or changed original evidence fail closed. Keep all three proof files available
+at their bound paths for later inspection and admission.
+
+Shared snapshots keep `reported_cost_usd` as the original receipt total and
+retain every original UNKNOWN in `historical_unknown_attempts`. Separately,
+`externally_verified_cost_usd` and `externally_reconciled_attempts` describe
+accepted external evidence; `effective_cost_usd` is the sum charged against
+the same allowance and the original frozen run limit. Original per-run
+reporting still shows UNKNOWN. Resolving
+one exact charge cannot clear another UNKNOWN, unfinished admission, rejected
+receipt, structural stop or durability failure. A positive exact charge above
+an original zero reservation is fully debited **and remains stopped for a bound
+breach**; it is never clamped to zero. Older software refuses the new event
+rather than reporting a misleading reduced total.
+
 These controls coordinate cooperating POSIX processes on the same local
 filesystem. They do not enforce account-wide authorization across unrelated
 directories or machines, establish complete provider invoices, or attest all

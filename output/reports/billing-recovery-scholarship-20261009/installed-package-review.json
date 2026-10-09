@@ -1,0 +1,63 @@
+{
+  "build_offline": true,
+  "custody": {
+    "all_unchanged": true,
+    "original_protected": 52,
+    "original_tracked": 477,
+    "package_source_inputs_unchanged": true,
+    "real_ledger_files": 6
+  },
+  "decision": "PASS_SCOPED_S2_OFFLINE_SOURCE_PACKAGE_AND_INSTALLED_CORE",
+  "financial_admission": "NOT_ESTABLISHED; actual 404 UNKNOWN remains unchanged",
+  "format": "dafjev.package-independent-review/1",
+  "hosted_inference": 0,
+  "installed_core": {
+    "async_connection_reused": true,
+    "core_only": true,
+    "hosted_requests": 0,
+    "loopback_requests": 3,
+    "python": "3.10.20",
+    "source_bytes_equal": true
+  },
+  "installed_recovery_cli": {
+    "bad_hash_refused": true,
+    "explicit_append": true,
+    "failed": 0,
+    "idempotent": true,
+    "original_unknown_preserved": true,
+    "passed": 6,
+    "preview_and_target_read_only": true
+  },
+  "local_model_inference": 0,
+  "native_inspector": {
+    "dependency_and_extra_declarations_equal": true,
+    "description_exact_README": true,
+    "entry_points_equal": true,
+    "source_bytes_equal": true,
+    "typed_marker": true,
+    "unexpected_payload_excluded": true
+  },
+  "owned_billing_counterchecks": {
+    "failed": 0,
+    "fixture_scope": "synthetic trusted local attestations only; no provider authority proved",
+    "passed": 19
+  },
+  "package_version": "0.7.1",
+  "private_review_retained": true,
+  "release_status": "Unreleased source improvements; does not replace immutable archived v0.7.1 artifacts",
+  "review_sha256": "889ddf07ea052cc8f004e742f3a8963bed9e95fcd8f3b1af6f0068eec377565c",
+  "sdist": {
+    "bytes": 294966,
+    "name": "daf_jev-0.7.1.tar.gz",
+    "sha256": "738f640701cca19ef793fe9a6b015d08f62735d43a98a9c555e2bbc2d8cb17ab"
+  },
+  "source_commit": "281fc5c8144a7b104de1bd911dd2bab699f47940",
+  "source_date_epoch": 1791562323,
+  "source_inputs": 123,
+  "source_modules": 50,
+  "wheel": {
+    "bytes": 273200,
+    "name": "daf_jev-0.7.1-py3-none-any.whl",
+    "sha256": "baefaefd38d4d6b34b83268d45cee3a28030429357df61d1aa29759244bf7a0e"
+  }
+}

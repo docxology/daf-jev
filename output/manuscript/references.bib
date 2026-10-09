@@ -4,8 +4,8 @@
 % docs/models.md documents the crosswalk (key -> source -> used-for) and uses
 % the same historical keys. Original access dates and snapshot notes are retained;
 % additional primary research and current interface sources were checked 2026-10-08. Web sources
-% use @online (biblatex) with url/urldate; fall back to @misc with the same
-% fields if your toolchain does not support @online.
+% use the plainnat-supported misc type with url/urldate and howpublished.
+% Original provenance fields and access dates are retained.
 %
 % Primary (TypeSafe-authored) sources: typesafe2026systemone,
 % typesafe2026systemoneconcept, typesafe2026apidocs, typesafe2026confidence,
@@ -17,10 +17,11 @@
 
 % ---------------------------------------------------------------- TypeSafe (primary)
 
-@online{typesafe2026systemone,
+@misc{typesafe2026systemone,
   author       = {{TypeSafe AI}},
   title        = {Introducing System One Models \& Jev},
   titleaddon   = {TypeSafe AI Blog, Company News, September 15, 2026},
+  howpublished = {TypeSafe AI Blog, Company News, September 15, 2026},
   year         = {2026},
   month        = {9},
   url          = {https://typesafe.ai/blog/introducing-system-one-models-and-jev},
@@ -30,10 +31,11 @@
                   envelope, and early access. Canonical key: typesafe2026systemone.},
 }
 
-@online{typesafe2026systemoneconcept,
+@misc{typesafe2026systemoneconcept,
   author       = {{TypeSafe AI}},
   title        = {System One},
   titleaddon   = {TypeSafe documentation, concepts/system-one},
+  howpublished = {TypeSafe documentation, concepts/system-one},
   year         = {2026},
   url          = {https://docs.typesafe.ai/concepts/system-one.md},
   urldate      = {2026-09-16},
@@ -41,10 +43,11 @@
                   (snapshot id b79c9cd6008489f1, scraped 2026-09-16T21:19:06Z).},
 }
 
-@online{typesafe2026apidocs,
+@misc{typesafe2026apidocs,
   author       = {{TypeSafe AI}},
   title        = {API reference},
   titleaddon   = {TypeSafe documentation, api},
+  howpublished = {TypeSafe documentation, api},
   year         = {2026},
   url          = {https://docs.typesafe.ai/api.md},
   urldate      = {2026-09-16},
@@ -53,10 +56,11 @@
                   local snapshot docs/reference/api.md (snapshot id b79c9cd6008489f1).},
 }
 
-@online{typesafe2026confidence,
+@misc{typesafe2026confidence,
   author       = {{TypeSafe AI}},
   title        = {Confidence},
   titleaddon   = {TypeSafe documentation, confidence},
+  howpublished = {TypeSafe documentation, confidence},
   year         = {2026},
   url          = {https://docs.typesafe.ai/confidence.md},
   urldate      = {2026-09-16},
@@ -66,10 +70,12 @@
                   (snapshot id b79c9cd6008489f1).},
 }
 
-@online{typesafe2026patterns,
+@misc{typesafe2026patterns,
   author       = {{TypeSafe AI}},
   title        = {Patterns},
   titleaddon   = {TypeSafe documentation, patterns (incl. confidence-routing and
+                  composite-scoring pattern pages)},
+  howpublished = {TypeSafe documentation, patterns (incl. confidence-routing and
                   composite-scoring pattern pages)},
   year         = {2026},
   url          = {https://docs.typesafe.ai/patterns.md},
@@ -79,10 +85,11 @@
                   local snapshot docs/reference/patterns/ (snapshot id b79c9cd6008489f1).},
 }
 
-@online{typesafe2026primitives,
+@misc{typesafe2026primitives,
   author       = {{TypeSafe AI}},
   title        = {Primitives (Questions)},
   titleaddon   = {TypeSafe documentation, primitives (incl. choice, score, noul pages)},
+  howpublished = {TypeSafe documentation, primitives (incl. choice, score, noul pages)},
   year         = {2026},
   url          = {https://docs.typesafe.ai/primitives.md},
   urldate      = {2026-09-16},
@@ -92,10 +99,11 @@
                   (snapshot id b79c9cd6008489f1).},
 }
 
-@online{typesafe2026aiprimer,
+@misc{typesafe2026aiprimer,
   author       = {{TypeSafe AI}},
   title        = {AI primer},
   titleaddon   = {TypeSafe documentation, introduction/machine-learning-primer},
+  howpublished = {TypeSafe documentation, introduction/machine-learning-primer},
   year         = {2026},
   url          = {https://docs.typesafe.ai/introduction/machine-learning-primer.md},
   urldate      = {2026-09-16},
@@ -106,10 +114,11 @@
                   (snapshot id b79c9cd6008489f1).},
 }
 
-@online{typesafe2026team,
+@misc{typesafe2026team,
   author       = {{TypeSafe AI}},
   title        = {Team},
   titleaddon   = {TypeSafe AI},
+  howpublished = {TypeSafe AI},
   year         = {2026},
   url          = {https://typesafe.ai/team},
   urldate      = {2026-09-16},
@@ -121,11 +130,12 @@
 
 % ---------------------------------------------------------------- Third-party
 
-@online{register2026jev,
+@misc{register2026jev,
   author       = {Claburn, Thomas},
   title        = {TypeSafe AI debuts model for machines that plays Doom},
   titleaddon   = {'Jev' doesn't chat. It produces typed probabilistic decisions},
   journaltitle = {The Register},
+  howpublished = {The Register; 'Jev' doesn't chat. It produces typed probabilistic decisions},
   year         = {2026},
   month        = {9},
   day          = {16},
@@ -136,11 +146,12 @@
                   framing.},
 }
 
-@online{orcarouter2026jev,
+@misc{orcarouter2026jev,
   author       = {Corvin, Magnus},
   title        = {Jev Refuses to Write a Single Word: What TypeSafe AI's Decision Model
                  Does, and What Nobody Has Verified Yet},
   journaltitle = {OrcaRouter},
+  howpublished = {OrcaRouter},
   year         = {2026},
   month        = {9},
   day          = {16},
@@ -151,10 +162,11 @@
                   audit method.},
 }
 
-@online{elsolitario2026jev,
+@misc{elsolitario2026jev,
   author       = {Morales, Andr\'es},
   title        = {TypeSafe AI's Jev: The Model That Decides Without Text},
   journaltitle = {El Solitario},
+  howpublished = {El Solitario},
   year         = {2026},
   month        = {9},
   day          = {16},
@@ -165,11 +177,12 @@
                   vendor-run benchmarks and pricing sustainability.},
 }
 
-@online{thedecoder2026jev,
+@misc{thedecoder2026jev,
   author       = {Schreiner, Maximilian},
   title        = {Former OpenAI researcher builds an AI model that judges options
                  instead of writing text},
   journaltitle = {The Decoder},
+  howpublished = {The Decoder},
   year         = {2026},
   month        = {9},
   day          = {16},
@@ -179,11 +192,12 @@
                   and that "no hallucinations" does not mean "no mistakes".},
 }
 
-@online{every2026minivibecheck,
+@misc{every2026minivibecheck,
   author       = {Taylor, Mike},
   title        = {Mini-Vibe Check: TypeSafe's Jev Judged Everything I've Written in
                  0.7 Seconds},
   journaltitle = {Every, Also True for Humans},
+  howpublished = {Every, Also True for Humans},
   year         = {2026},
   month        = {9},
   day          = {15},
@@ -340,9 +354,10 @@
 
 % ---------------------------------------------------------------- Current primary interface documentation
 
-@online{openrouter2026decisions,
+@misc{openrouter2026decisions,
   author       = {{OpenRouter}},
   title        = {Submit a Decisions request},
+  howpublished = {OpenRouter documentation},
   year         = {2026},
   url          = {https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request},
   urldate      = {2026-10-08},
@@ -373,9 +388,10 @@
   note = {Primary paper and metadata checked 2026-10-08}
 }
 
-@online{openrouter2026structured,
+@misc{openrouter2026structured,
   author       = {{OpenRouter}},
   title        = {Structured Outputs},
+  howpublished = {OpenRouter documentation},
   year         = {2026},
   url          = {https://openrouter.ai/docs/guides/features/structured-outputs},
   urldate      = {2026-10-08},

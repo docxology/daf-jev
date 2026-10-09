@@ -1,0 +1,103 @@
+{
+  "archival_summary": {
+    "all7_hashes_sizes_MD5_match_retained_accepted_assets": true,
+    "anonymous_fetch_acceptance_attribution": "separate previously retained independent public review, not a fresh download claim by this reviewer",
+    "concept": 22816187,
+    "file_count": 7,
+    "public_summary_privacy_check": true,
+    "scope": "exact previously accepted v0.7.1 assets only, not new source/PDF",
+    "zenodo_record": 23266335
+  },
+  "custody": {
+    "actual_ledger_files": 6,
+    "all_unchanged": true,
+    "original_protected": 52,
+    "original_tracked": 477,
+    "publication_initial10_inputs_held": true,
+    "static_source_current299": true
+  },
+  "decision": "PASS_SCOPED_CURRENT_SOURCE_MANUSCRIPT_AND_EVIDENCE",
+  "format": "dafjev.publication-independent-review/1",
+  "generation": {
+    "actual_canonical310_generation_render_recorded_and_runtime_probed": true,
+    "all10_resolved_sections_exact_source_substitution": true,
+    "combined_and_web_exact_ordered_sections": true,
+    "same_host_canonical310_PDF_repeat_byte_equal": true,
+    "selected_historical4_and_study2_unchanged_and_hashverified": true,
+    "strict66_map_equal_library_regeneration": true
+  },
+  "notes": [
+    "First diagnostic PDF renderer used3.14.4; same bytes subsequently genuinely rendered and repeated under accepted3.10.20 before acceptance.",
+    "Private diagnostic oracle corrections retained: passive PDF first-page Fit action allowed; smart quotes and layout whitespace normalized for heading matching; no production changes."
+  ],
+  "package_public_summary": {
+    "byte_equal_private_review_proposal": true,
+    "full_private_review_sha256": "889ddf07ea052cc8f004e742f3a8963bed9e95fcd8f3b1af6f0068eec377565c",
+    "sha256": "3dc3eeaced5997a97e19da35b808fbd20072e3335dd4072927514c16cc21f4c6"
+  },
+  "pdf": {
+    "all52_headings_and15_figures_present": true,
+    "annotations": 180,
+    "bibliography_entries": 31,
+    "bytes": 1669985,
+    "independent_all28_page_pixels_inspected": true,
+    "new_recovery_paragraph_page": 9,
+    "no_script_or_embedded_files_or_additional_actions": true,
+    "ordinary_initial_page_Fit_navigation_only": true,
+    "pages": 28,
+    "path": "output/pdf/billing-recovery-scholarship-20261009.pdf",
+    "private_paths_unresolved_tokens_unresolved_refs": 0,
+    "public_http_uri_annotations": 39,
+    "render_gates": 5,
+    "render_gates_all_zero": true,
+    "rendered_cited_entries": 27,
+    "sha256": "d768a812ffcdeeab13efec7178cd7ac8b048a8d64bfdfd8c41a1fe35b8501604"
+  },
+  "private_review_sha256": "f574193bbabee1af545533a15c98b9fc64224c40299fd61352f4a91ba31748ee",
+  "public_report_input_hashes": {
+    "installed-package-review.json": {
+      "bytes": 2046,
+      "sha256": "3dc3eeaced5997a97e19da35b808fbd20072e3335dd4072927514c16cc21f4c6"
+    },
+    "reproduction.json": {
+      "bytes": 21949,
+      "sha256": "047287959d5d942521e41a5562f2ba3e24c1f0ebbd366063a20b7fdb64f651b6"
+    },
+    "runtime-mac314-summary.json": {
+      "bytes": 1982,
+      "sha256": "2937da1d32eced0f8d2da4b9f67ecb1f87a0fa72ed85266620d28016e097c3b4"
+    },
+    "summary.md": {
+      "bytes": 3632,
+      "sha256": "add512408457d31a83f3e866608dd5fedb69927d3f7e0b783f8fdf92a1822e54"
+    },
+    "zenodo-v071-publication.json": {
+      "bytes": 6066,
+      "sha256": "2a701a7b964434b108de712f569c2bb8224700dab4eab44a2d0e7196ad287d17"
+    }
+  },
+  "scope": {
+    "financial_GO": false,
+    "full_comparative_study_complete": false,
+    "hosted_billing_reconciled": false,
+    "new_model_requests": 0,
+    "remote_PR_merge_acceptance": false
+  },
+  "source_commit": "281fc5c8144a7b104de1bd911dd2bab699f47940",
+  "source_date_epoch": 1791562323,
+  "source_static_inputs": 299,
+  "verification": {
+    "additional314": "allowlisted aggregate summary only; original native retained privately; no privacy-gate exception",
+    "additional314_coverage_combined_percent": 92.65578635014836,
+    "coverage_combined_percent": 92.71041898405636,
+    "live_tests_collected": 2,
+    "live_tests_executed": 0,
+    "native310_sha256": "a35fc784f12a9961ae3ff5d3d0da222037033666d94a7933199d3221980839b3",
+    "native314_sha256": "b29b38732f3339cb778899765138ac0a69aa612dca39b011611c3fa5d0134606",
+    "original_to_projection_equivalence": "all four emitted files and every field exactly equal after documented path/hostname transformation",
+    "primary": "standard Mac/Python3.10 full declared privacy projection",
+    "primary_projection_sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b",
+    "unit_failures_errors_skipped": 0,
+    "unit_passed": 1868
+  }
+}

@@ -1,5 +1,30 @@
 # Changes
 
+## Unreleased
+
+Explicit offline billing reconciliation can attach reviewed, request-specific
+provider evidence to a finished historical attempt. Original unknown receipts
+remain unchanged. External charges and effective allocation spend are separate
+from original reported billing; unresolved attempts and reservation breaches
+continue to stop admission.
+
+The manuscript bibliography uses types supported by the native BibTeX renderer.
+Rendering now rejects bibliography failures and warnings instead of accepting a
+partially generated bibliography. Cite keys and original source metadata remain
+unchanged.
+
+These software changes do not resolve the retained hosted attempt's charge or
+establish new model-study results.
+
+## 0.7.1
+
+Shared hosted allocations coordinate reservations and reconciliation across
+separate run executors without resetting the original research allowance.
+Historical imports preserve unknown charges and block admission until accounting
+is resolved. The optional benchmark environment supports Mac/Python 3.10 with an
+explicit compatible SciPy constraint. Current verification and publication inputs
+are bound to the source being described.
+
 ## 0.7.0
 
 Typed backend contracts and local, hosted, generated-output and supervised

@@ -304,8 +304,12 @@ the source-build commit, its `SOURCE_DATE_EPOCH`, saved variables, selected
 evidence, figures and toolchain. Exact same-host reproduction uses that source
 commit with the released evidence/figure/map inputs overlaid; the later artifact
 commit has a different HEAD timestamp. Cross-platform PDF byte equality is not
-established. The renderer rejects unresolved bibliography entries, references,
-unloadable images and overfull vertical boxes. Use `--artifacts-dir DIR` with a
+established. The renderer requires a successful BibTeX run with no warnings,
+and rejects unresolved bibliography entries, references, unloadable images and
+overfull vertical boxes. The bibliography uses entry types supported by
+`plainnat`; creating a bibliography file does not excuse syntax or style
+diagnostics. Earlier release diagnostics remain historical evidence and are
+not retroactively changed by this source repair. Use `--artifacts-dir DIR` with a
 fresh directory to retain intermediate TeX and logs for review. Inspect every
 section heading, representative prose and page layout as well as unresolved
 tokens and citations: a successful typesetting exit alone does not establish

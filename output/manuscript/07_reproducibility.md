@@ -29,13 +29,13 @@ Omitting `--manifest` from the scraper's check performs a fresh network comparis
 
 ## Test evidence
 
-Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 63 files, 1810 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
+Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 65 files, 1868 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
 
 ```bash
 uv run pytest tests/unit --cov=src
 ```
 
-Coverage is 92.79% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
+Coverage is 92.71% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
 
 ## Run custody and scientific gates
 
@@ -45,7 +45,7 @@ Hosted runs bind one existing shared allocation in their frozen manifests. Every
 
 ![Hosted admission across runs. Shared reservation precedes run admission and transport; run receipts precede shared reconciliation. Unknown billing or incomplete journals stop further admission. The schematic contains no measured cost or timing.](../output/figures/hosted_admission.png){#fig:admission width=100%}
 
-Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.7.1, with reproducible build timestamp 2026-10-09T02:30:02Z; its render environment is `macOS-27.0.1-arm64-arm-64bit-Mach-O` under 3.14.4. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
+Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.7.1, with reproducible build timestamp 2026-10-09T16:12:03Z; its render environment is `macOS-27.0.1-arm64-arm-64bit` under 3.10.20. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
 
 Protocol corrections must preserve the original experimental identity and its limitations. A clean admission stop is bound by an additive receipt and unchanged manifest/journal/head; it does not relabel future unattempted work as complete. A revised globally shared timing cohort or ordered prompt serializer needs a newly accepted source, selected-ID pack and complete input/custody proofs. Earlier observations cannot be retroactively converted into matched permutation evidence or identical-prompt repetitions, and a new manifest cannot reset a shared resource allowance.
 

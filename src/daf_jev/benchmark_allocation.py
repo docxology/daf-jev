@@ -17,6 +17,7 @@ from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
+from daf_jev._json import strict_json_loads
 from daf_jev.benchmark_store import (
     BudgetStopped,
     RunStore,
@@ -36,6 +37,7 @@ _STOP_REASONS = {
     "allocation_durability_failure", "open_reservations_at_execution_end",
     "run_binding_changed", "legacy_binding_changed",
     "admission_pair_mismatch",
+    "reconciliation_durability_failure",
 }
 _EVENT_FIELDS = {
     "allocation_run_bound": {"binding"},
@@ -43,7 +45,60 @@ _EVENT_FIELDS = {
     "allocation_attempt_started": {"run_manifest_hash", "attempt_id", "cell_id", "request_hash", "model", "endpoint", "liability_usd"},
     "allocation_attempt_finished": {"run_manifest_hash", "attempt_id", "cell_id", "receipt_sha256", "run_event_hash", "cost_status", "cost_usd"},
     "allocation_stopped": {"reason"},
+    "allocation_legacy_billing_reconciled": {"evidence", "review", "document"},
 }
+
+_PROOF_LIMIT = 1024 * 1024
+
+
+def _object(value: Any, fields: set[str], name: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != fields:
+        raise ValueError(f"invalid {name} schema")
+    return value
+
+
+def _proof(path: Path, sha256: str, retained: Mapping[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    """Bounded strict file ingest; byte custody does not authenticate its author."""
+    path = Path(path).absolute()
+    _directory(path.parent)
+    if ".." in path.parts:
+        raise ValueError("proof path must not escape")
+    expected = _digest(sha256)
+    before = _stat(path)
+    if before[2] > _PROOF_LIMIT:
+        raise ValueError("billing proof exceeds byte limit")
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        chunks = []
+        size = 0
+        while chunk := os.read(descriptor, 65536):
+            size += len(chunk)
+            if size > _PROOF_LIMIT:
+                raise ValueError("billing proof exceeds byte limit")
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        observed = os.fstat(descriptor)
+        physical = (observed.st_dev, observed.st_ino, observed.st_size, observed.st_mtime_ns, observed.st_ctime_ns)
+        if before != physical or before != _stat(path) or hashlib.sha256(raw).hexdigest() != expected:
+            raise ValueError("billing proof bytes/custody changed")
+    finally:
+        os.close(descriptor)
+    reference = {"path": str(path), "sha256": expected, "bytes": len(raw), "identity": list(before)}
+    if retained is not None and dict(retained) != reference:
+        raise ValueError("retained billing proof identity changed")
+    return strict_json_loads(raw, parse_float=Decimal), reference
+
+
+def _retained_proof(value: Any) -> Mapping[str, Any]:
+    reference = _object(value, {"path", "sha256", "bytes", "identity"}, "retained proof")
+    if isinstance(reference["bytes"], bool) or not isinstance(reference["bytes"], int) or not 0 <= reference["bytes"] <= _PROOF_LIMIT:
+        raise ValueError("invalid proof byte count")
+    identity = reference["identity"]
+    if not isinstance(identity, (list, tuple)) or len(identity) != 5 or any(isinstance(x, bool) or not isinstance(x, int) or x < 0 for x in identity):
+        raise ValueError("invalid proof physical identity")
+    _text(reference["path"], "proof path")
+    _digest(reference["sha256"])
+    return reference
 
 
 def _text(value: Any, name: str) -> str:
@@ -198,6 +253,7 @@ class AllocationLedger:
         self._reasons: set[str] = set()
         self._runs: dict[str, dict[str, Any]] = {}
         self._imports: dict[str, dict[str, Any]] = {}
+        self._import_events: dict[str, str] = {}
         self._admissions: dict[str, dict[str, Any]] = {}
         self._reservations: dict[str, Decimal] = {}
         self._finished: set[str] = set()
@@ -207,6 +263,12 @@ class AllocationLedger:
         self._pair_sequences: dict[str, int] = {}
         self._all_attempts: set[str] = set()
         self._unknown: set[str] = set()
+        self._historical_unknown: set[str] = set()
+        self._reconciliations: dict[str, dict[str, Any]] = {}
+        self._proof_claims: dict[tuple[str, str], str] = {}
+        self._proof_documents: dict[str, str] = {}
+        self._externally_verified = Decimal(0)
+        self._external_by_run: dict[str, Decimal] = {}
         self._charged = Decimal(0)
         self._check_locks()
         with self.transaction():
@@ -276,13 +338,43 @@ class AllocationLedger:
                     if actual != row["accounting"] or self._all_attempts.intersection(actual["attempt_ids"]):
                         raise ValueError("legacy accounting/collision mismatch")
                     self._imports[key] = {"binding": binding.to_dict(), "accounting": actual}
+                    self._import_events[key] = row["hash"]
                     self._all_attempts.update(actual["attempt_ids"])
                     self._charged += usd_total(actual["reported_cost_usd"])
                     self._reservations.update({a: usd(b) for a, b in actual["reservations"].items()})
                     self._unknown.update(actual["unknown_attempt_ids"])
-                    if actual["admission_stopped"]:
+                    self._historical_unknown.update(actual["unknown_attempt_ids"])
+                    # The legacy aggregate stop is lossy. Billing uncertainty
+                    # can be resolved separately; structural rejection and
+                    # original reported-cost breaches cannot be administratively
+                    # cleared by an external document.
+                    if self._legacy_structural_stop(binding):
                         self._stopped = True
                         self._reasons.add("legacy_accounting_stopped")
+                elif kind == "allocation_legacy_billing_reconciled":
+                    proposal = self._validate_reconciliation(row, expected_tip=row["previous"])
+                    attempt = proposal["attempt_id"]
+                    if attempt in self._reconciliations:
+                        raise ValueError("duplicate legacy billing reconciliation")
+                    self._check_proof_reuse(proposal)
+                    bound = self._reservations[attempt]
+                    cost = usd(proposal["cost_usd"])
+                    self._reconciliations[attempt] = row
+                    self._proof_claims[(proposal["authority"], proposal["reference"])] = attempt
+                    self._proof_documents[proposal["document_sha256"]] = attempt
+                    self._externally_verified += cost
+                    key = proposal["legacy_manifest_hash"]
+                    self._external_by_run[key] = self._external_by_run.get(key, Decimal(0)) + cost
+                    del self._reservations[attempt]
+                    self._unknown.remove(attempt)
+                    if cost > bound:
+                        self._stopped = True
+                        self._reasons.add("externally_verified_cost_exceeds_reservation")
+                    binding = LegacyRunBinding.from_dict(self._imports[key]["binding"])
+                    original = RunStore(binding.directory, read_only=True)
+                    if usd_total(self._imports[key]["accounting"]["reported_cost_usd"]) + self._external_by_run[key] > usd(original.manifest.get("budget_usd", "25")):
+                        self._stopped = True
+                        self._reasons.add("externally_verified_cost_exceeds_run_limit")
                 elif kind == "allocation_attempt_started":
                     attempt = _text(row["attempt_id"], "attempt_id")
                     key = _digest(row["run_manifest_hash"])
@@ -293,7 +385,7 @@ class AllocationLedger:
                     for name in ("cell_id", "request_hash", "model", "endpoint"):
                         _text(row[name], name)
                     bound = usd(row["liability_usd"])
-                    if self._stopped or not self._required_complete() or self._charged + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
+                    if self._stopped or self._unknown or not self._required_complete() or self._effective_cost() + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
                         raise ValueError("global attempt violates shared admission")
                     self._all_attempts.add(attempt)
                     self._admissions[attempt] = row
@@ -323,6 +415,7 @@ class AllocationLedger:
                             self._reasons.add("reported_cost_exceeds_reservation")
                     elif row["cost_status"] == "unknown" and row["cost_usd"] is None:
                         self._unknown.add(attempt)
+                        self._historical_unknown.add(attempt)
                         self._stopped = True
                         self._reasons.add("unknown_billing")
                     else:
@@ -337,10 +430,183 @@ class AllocationLedger:
             if self._charged > self.limit:
                 self._stopped = True
                 self._reasons.add("reported_cost_exceeds_allocation")
+            if self._effective_cost() > self.limit:
+                self._stopped = True
+                self._reasons.add("effective_cost_exceeds_allocation")
         self._sequence = len(rows)
+        # A long-lived object must not overlook removal/replacement of proof
+        # after it released a reservation. Reopen and every admission recheck it.
+        for reconciliation in self._reconciliations.values():
+            self._validate_reconciliation(reconciliation, expected_tip=reconciliation["previous"])
+
+    def _effective_cost(self) -> Decimal:
+        with localcontext(currency_context()):
+            return self._charged + self._externally_verified
+
+    def _check_proof_reuse(self, proposal: dict[str, Any]) -> None:
+        for existing in (self._proof_claims.get((proposal["authority"], proposal["reference"])),
+                         self._proof_documents.get(proposal["document_sha256"])):
+            if existing is not None and existing != proposal["attempt_id"]:
+                raise ValueError("provider reference/document already attributed to another attempt")
+
+    def _legacy_structural_stop(self, binding: LegacyRunBinding) -> bool:
+        store = RunStore(binding.directory, read_only=True)
+        rows = store.events()
+        ledger = SpendLedger(store, limit=str(store.manifest.get("budget_usd", "25")))
+        return (any(row.get("event") == "accounting_rejected" for row in rows)
+                or ledger.charged > ledger.limit
+                or any(row.get("event") == "attempt_finished"
+                       and row["receipt"]["cost_status"] == "reported"
+                       and usd(row["receipt"]["cost_usd"]) > usd(ledger.admissions[row["receipt"]["attempt_id"]]["liability_usd"])
+                       for row in rows))
 
     def _required_complete(self) -> bool:
         return all(b.manifest_hash in self._imports and self._imports[b.manifest_hash]["binding"] == b.to_dict() for b in self.required_imports)
+
+    def _reconciliation_target(self, manifest_hash: str, attempt_id: str, tip: str) -> dict[str, Any]:
+        imported = self._imports.get(_digest(manifest_hash))
+        if imported is None:
+            raise ValueError("reconciliation requires an imported legacy run")
+        binding = LegacyRunBinding.from_dict(imported["binding"])
+        if LegacyRunBinding.capture(binding.directory) != binding:
+            raise ValueError("legacy original changed")
+        store = RunStore(binding.directory, read_only=True)
+        rows = store.events()
+        starts = [r for r in rows if r.get("event") == "attempt_started" and r.get("attempt_id") == attempt_id]
+        finishes = [r for r in rows if r.get("event") == "attempt_finished" and r.get("receipt", {}).get("attempt_id") == attempt_id]
+        if len(starts) != 1 or len(finishes) != 1 or starts[0]["hosted"] is not True:
+            raise ValueError("reconciliation requires exactly one finished hosted legacy attempt")
+        start, finish = starts[0], finishes[0]
+        receipt = finish["receipt"]
+        if receipt["cost_status"] != "unknown" or receipt["cost_usd"] is not None:
+            raise ValueError("only original finished UNKNOWN billing is reconcilable")
+        return {"allocation": {"directory": str(self.directory), "allocation_id": self.allocation_id,
+                               "manifest_hash": self.store.manifest_hash, "journal_tip": _digest(tip)},
+                "legacy_run": binding.to_dict(), "import_event_hash": self._import_events[manifest_hash],
+                "attempt": {"attempt_id": attempt_id, "cell_id": start["cell_id"], "request_hash": start["request_hash"],
+                            "model": start["model"], "endpoint": start["endpoint"], "liability_usd": start["liability_usd"],
+                            "original_provider": receipt.get("provider"), "original_response_id": receipt.get("response_id"),
+                            "timestamp": receipt["timestamp"], "start_event_hash": start["hash"],
+                            "finish_event_hash": finish["hash"], "receipt_sha256": content_hash(receipt)}}
+
+    def reconciliation_target(self, manifest_hash: str, attempt_id: str) -> dict[str, Any]:
+        """Read an exact target; this supplies no provider evidence or approval."""
+        with self.transaction():
+            self._sync()
+            rows = self.store._read()
+            tip = rows[-1]["hash"] if rows else self.store.manifest_hash
+            return self._reconciliation_target(manifest_hash, _text(attempt_id, "attempt_id"), tip)
+
+    def _validate_reconciliation(self, row: Mapping[str, Any], *, expected_tip: str) -> dict[str, Any]:
+        evidence_ref = _retained_proof(row["evidence"])
+        review_ref = _retained_proof(row["review"])
+        document_ref = _retained_proof(row["document"])
+        evidence, _ = _proof(Path(evidence_ref["path"]), evidence_ref["sha256"], evidence_ref)
+        review, _ = _proof(Path(review_ref["path"]), review_ref["sha256"], review_ref)
+        document, _ = _proof(Path(document_ref["path"]), document_ref["sha256"], document_ref)
+        evidence = _object(evidence, {"format", "scope", "target", "source_kind", "document", "authority", "reference", "collected_by", "currency", "cost_usd"}, "external billing evidence")
+        if evidence["format"] != "dafjev.external-billing-evidence/1" or evidence["scope"] != "exact_attempt_account_charge" or evidence["currency"] != "USD":
+            raise ValueError("billing evidence must establish an exact USD attempt charge")
+        if not isinstance(evidence["cost_usd"], str):
+            raise ValueError("external charge must be an exact decimal string")
+        cost = usd(evidence["cost_usd"])
+        for name in ("authority", "reference", "collected_by"):
+            if len(_text(evidence[name], name)) > 512:
+                raise ValueError("billing evidence text exceeds limit")
+        target = _object(evidence["target"], {"allocation", "legacy_run", "import_event_hash", "attempt"}, "reconciliation target")
+        legacy = LegacyRunBinding.from_dict(target["legacy_run"])
+        attempt = target["attempt"]
+        if not isinstance(attempt, Mapping):
+            raise ValueError("invalid attempt target")
+        expected = self._reconciliation_target(legacy.manifest_hash, _text(attempt.get("attempt_id"), "attempt_id"), expected_tip)
+        if target != expected:
+            raise ValueError("external billing target does not match exact allocation/import/attempt cut")
+        declared_document = _object(evidence["document"], {"path", "sha256", "bytes"}, "provider document reference")
+        if dict(declared_document) != {k: document_ref[k] for k in ("path", "sha256", "bytes")}:
+            raise ValueError("provider document binding changed")
+        review = _object(review, {"format", "decision", "reviewer", "evidence_sha256", "document_sha256", "allocation_tip", "provider_origin_verified", "unique_exact_attempt_verified", "usd_account_charge_verified"}, "independent billing review")
+        if (review["format"] != "dafjev.external-billing-review/1" or review["decision"] != "approve_exact_attempt_charge"
+                or _text(review["reviewer"], "reviewer") == evidence["collected_by"]
+                or review["evidence_sha256"] != evidence_ref["sha256"] or review["document_sha256"] != document_ref["sha256"]
+                or review["allocation_tip"] != expected_tip
+                or any(review[name] is not True for name in ("provider_origin_verified", "unique_exact_attempt_verified", "usd_account_charge_verified"))):
+            raise ValueError("independent exact-attempt operator review is required")
+        if evidence["source_kind"] == "generation_metadata":
+            if not isinstance(document, Mapping) or set(document) != {"data"} or not isinstance(document["data"], Mapping):
+                raise ValueError("invalid generation metadata")
+            data = document["data"]
+            original_id = attempt["original_response_id"]
+            if (not isinstance(original_id, str) or not original_id or data.get("id") != original_id
+                    or data.get("id") != evidence["reference"] or data.get("model") != attempt["model"]
+                    or isinstance(data.get("total_cost"), bool) or usd(data.get("total_cost")) != cost):
+                raise ValueError("generation proof requires original response ID/model/exact charge")
+        elif evidence["source_kind"] == "provider_statement":
+            statement = _object(document, {"format", "scope", "authority", "reference", "request", "currency", "cost_usd"}, "exact provider statement")
+            request = dict(attempt)
+            if (statement["format"] != "dafjev.exact-provider-charge-statement/1" or statement["scope"] != "exact_attempt_account_charge"
+                    or statement["authority"] != evidence["authority"] or statement["reference"] != evidence["reference"]
+                    or statement["request"] != request or statement["currency"] != "USD"
+                    or not isinstance(statement["cost_usd"], str) or usd(statement["cost_usd"]) != cost):
+                raise ValueError("provider statement must uniquely attribute the exact attempt and USD charge")
+        else:
+            raise ValueError("unsupported billing evidence tier; aggregate/absence/tariff cannot reconcile")
+        return {"attempt_id": attempt["attempt_id"], "legacy_manifest_hash": legacy.manifest_hash,
+                "cost_usd": str(cost), "original_liability_usd": attempt["liability_usd"],
+                "authority": evidence["authority"], "reference": evidence["reference"], "document_sha256": document_ref["sha256"],
+                "provider_authentication": "trusted_independent_local_operator_attestation; not automatic authentication"}
+
+    def _reconciliation_proposal(self, *, evidence: Path, evidence_sha256: str,
+                                 review: Path, review_sha256: str) -> tuple[dict[str, Any], dict[str, Any], bool]:
+        value, evidence_ref = _proof(evidence, evidence_sha256)
+        _, review_ref = _proof(review, review_sha256)
+        if not isinstance(value, Mapping) or not isinstance(value.get("document"), Mapping):
+            raise ValueError("invalid external billing evidence")
+        declared = _object(value["document"], {"path", "sha256", "bytes"}, "provider document reference")
+        _, document_ref = _proof(Path(_text(declared["path"], "document path")), declared["sha256"])
+        candidate = {"event": "allocation_legacy_billing_reconciled", "evidence": evidence_ref,
+                     "review": review_ref, "document": document_ref}
+        existing = next((r for r in self._reconciliations.values() if all(r[n] == candidate[n] for n in ("evidence", "review", "document"))), None)
+        rows = self.store._read()
+        tip = existing["previous"] if existing is not None else rows[-1]["hash"] if rows else self.store.manifest_hash
+        proposal = self._validate_reconciliation(candidate, expected_tip=tip)
+        if proposal["attempt_id"] in self._reconciliations and existing is None:
+            raise ValueError("conflicting duplicate billing reconciliation")
+        self._check_proof_reuse(proposal)
+        return candidate, proposal, existing is not None
+
+    def preview_reconciliation(self, *, evidence: Path, evidence_sha256: str,
+                               review: Path, review_sha256: str) -> dict[str, Any]:
+        """Validate evidence offline without writes, leases, or admission changes."""
+        with self.transaction(), localcontext(currency_context()):
+            self._sync()
+            self._validate_retained_runs()
+            _, proposal, duplicate = self._reconciliation_proposal(evidence=evidence, evidence_sha256=evidence_sha256,
+                                                                  review=review, review_sha256=review_sha256)
+            return {"operation": "preview_reconciliation", "already_recorded": duplicate,
+                    **{k: v for k, v in proposal.items() if k not in {"authority", "reference"}},
+                    "would_exceed_original_bound": usd(proposal["cost_usd"]) > usd(proposal["original_liability_usd"]),
+                    "effective_cost_after_usd": str(self._effective_cost() + (Decimal(0) if duplicate else usd(proposal["cost_usd"]))),
+                    "evidence": "offline_local_attestation; no inference or provider lookup"}
+
+    def reconcile(self, *, evidence: Path, evidence_sha256: str,
+                  review: Path, review_sha256: str) -> dict[str, Any]:
+        """Explicit append-only recovery of one finished UNKNOWN legacy charge."""
+        if self.read_only or self._active_store is not None:
+            raise ValueError("reconciliation requires a writable inactive allocation")
+        with self.store.lease(), self.transaction():
+            self._sync()
+            self._validate_retained_runs()
+            candidate, proposal, duplicate = self._reconciliation_proposal(evidence=evidence, evidence_sha256=evidence_sha256,
+                                                                         review=review, review_sha256=review_sha256)
+            if not duplicate:
+                try:
+                    self.store.append(candidate)
+                    self._sync()
+                except BaseException:
+                    self.reject("reconciliation_durability_failure")
+                    raise
+            return {"operation": "reconcile", "already_recorded": duplicate,
+                    **{k: v for k, v in proposal.items() if k not in {"authority", "reference"}}, "accounting": self.snapshot()}
 
     def require_execution(self, store: RunStore) -> None:
         if self.read_only or self._active_store is not store or not self.store._lease_active or not store._lease_active:
@@ -542,10 +808,10 @@ class AllocationLedger:
             except (ValueError, OSError, TypeError):
                 self.reject("admission_pair_mismatch")
                 raise
-            if self._stopped or not self._required_complete() or liability is None:
+            if self._stopped or self._unknown or not self._required_complete() or liability is None:
                 raise BudgetStopped("shared admission stopped: unknown or unbounded liability")
             bound = usd(liability)
-            if self._charged + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
+            if self._effective_cost() + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
                 raise BudgetStopped("shared USD allocation exhausted")
             if attempt_id in self._all_attempts:
                 raise ValueError("duplicate global attempt identity")
@@ -610,6 +876,8 @@ class AllocationLedger:
             self._validate_retained_runs()
             complete = self._required_complete()
             reasons = set(self._reasons)
+            if any(set(value["accounting"]["attempt_ids"]) & set(self._reservations) for value in self._imports.values()):
+                reasons.add("legacy_accounting_stopped")
             if not complete:
                 reasons.add("required_legacy_imports_missing")
             if self._reservations and self._active_store is None:
@@ -617,8 +885,12 @@ class AllocationLedger:
             rows = self.store._read()
             return {"allocation_id": self.allocation_id, "manifest_hash": self.store.manifest_hash,
                 "limit_usd": str(self.limit), "reported_cost_usd": str(self._charged),
+                "externally_verified_cost_usd": str(self._externally_verified),
+                "effective_cost_usd": str(self._effective_cost()),
                 "reserved_usd": str(sum(self._reservations.values(), Decimal(0))),
                 "pending_attempts": sorted(self._reservations), "unknown_attempts": sorted(self._unknown),
+                "historical_unknown_attempts": sorted(self._historical_unknown),
+                "externally_reconciled_attempts": sorted(self._reconciliations),
                 "required_imports_complete": complete,
                 "admission_stopped": self._stopped or not complete or bool(self._reservations and self._active_store is None),
                 "stop_reasons": sorted(reasons), "bound_runs": len(self._runs), "imported_runs": len(self._imports),

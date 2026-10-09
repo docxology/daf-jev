@@ -2,7 +2,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![v0.6.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.6.0-1F77B4)](https://zenodo.org/records/22921974)
+[![v0.7.1 on Zenodo](https://img.shields.io/badge/Zenodo-v0.7.1-1F77B4)](https://zenodo.org/records/23266335)
 
 
 Modular, composable Python client and decision toolkit for the **TypeSafe Jev
@@ -998,12 +998,23 @@ readiness or ship the documentation snapshot.
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
+- **v0.7.1 published version (verified 2026-10-09)**:
+  [23266335](https://zenodo.org/records/23266335), version DOI
+  [10.5281/zenodo.23266335](https://doi.org/10.5281/zenodo.23266335).
+  Its source, wheel, sdist, manuscript, selected evidence, release manifest and
+  checksums are the seven verified GitHub v0.7.1 assets. New source changes
+  described in the unreleased changelog are separate from that archived tag.
 - **v0.6.0 historical version record (recorded 2026-09-23)**:
   [22921974](https://zenodo.org/records/22921974), version DOI
   `10.5281/zenodo.22921974`; earlier versions remain in the same concept family.
+  [![v0.6.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.6.0-1F77B4)](https://zenodo.org/records/22921974)
+  identifies this historical archive.
   A new version DOI is added only after the corresponding version record is created and verified.
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Reviewed scholarship PDF**:
+  [Billing recovery and bibliography follow-up](output/pdf/billing-recovery-scholarship-20261009.pdf)
+  documents the current unreleased source and its selected verification evidence.
+  The archived release PDF is
   [Modular Decision Models, v0.7.1](output/pdf/daf-jev-0.7.1-manuscript.pdf).
   The [v0.7.0 GitHub release](https://github.com/docxology/daf-jev/releases/tag/v0.7.0)
   and its [reviewed PDF](output/pdf/daf-jev-0.7.0-manuscript.pdf) remain retained.
@@ -1123,7 +1134,7 @@ Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 | [`bayes_experiment.py`](scripts/bayes_experiment.py) | Asia experiment runner — elicits, walks posteriors, writes the five artifacts (+ the two GIFs with `--animate`) |
 | [`generate_figures.py`](scripts/generate_figures.py) | renders legacy figures; `--include-study` adds six empirical figures, data and vector copies |
 | [`capture_verification.py`](scripts/capture_verification.py) | fresh retained unit coverage/JUnit + live collection capture; no live execution |
-| [`render_pdf.py`](scripts/render_pdf.py) | fresh PDF + optional retained TeX/log artifacts; four gates and completeness review |
+| [`render_pdf.py`](scripts/render_pdf.py) | fresh PDF + retained TeX/log artifacts; warning-free BibTeX, five render gates and completeness review |
 | [`scrape_docs.py`](scripts/scrape_docs.py) | remote snapshot scrape/check; explicit-manifest check is offline |
 | [`z_generate_manuscript_variables.py`](scripts/z_generate_manuscript_variables.py) | regenerates legacy and selected-study variables |
 

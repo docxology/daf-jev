@@ -1,0 +1,505 @@
+{
+  "additional_mac314": "runtime-mac314-summary.json",
+  "format": "dafjev.manuscript-reproduction/1",
+  "generation": {
+    "actual_platform": "macOS-27.0.1-arm64-arm-64bit",
+    "actual_python_version": "3.10.20",
+    "external_template_invoked": false,
+    "generation_and_render_used_accepted_mac310_interpreter": true,
+    "interpreter_binary_sha256": "a82a1bdbbda93dfa083f64b157b0d048379a330c2bc6d9e1f4e8fcec7276b65d",
+    "pytest_or_raw_coverage_fallback": false,
+    "resolved_sections_method": "exact token replacement in ordered source sections; combined is two-newline section join; web is same exact combined",
+    "source_epoch_pinned": true,
+    "strict_offline_repeat_byte_equal": true,
+    "strict_token_count": 66
+  },
+  "pdf": {
+    "bytes": 1669985,
+    "cross_platform_byte_equality_established": false,
+    "page_count": 28,
+    "path": "output/pdf/billing-recovery-scholarship-20261009.pdf",
+    "same_host_canonical310_repeat_byte_equal": true,
+    "sha256": "d768a812ffcdeeab13efec7178cd7ac8b048a8d64bfdfd8c41a1fe35b8501604"
+  },
+  "presentation": {
+    "all15_figure_numbers_present": true,
+    "all28_pages_inspected": true,
+    "all52_headings_present": true,
+    "intermediate_tex_and_page_images_retained_privately": true,
+    "new_billing_recovery_paragraph_present": true,
+    "privacy_markers": 0,
+    "references_unresolved": 0,
+    "safe_uri_annotations": 39,
+    "tokens_unresolved": 0
+  },
+  "preservation": {
+    "all_old_pdf_and_figure_and_report_bytes_unchanged": true,
+    "benchmark_runs_selection_empty_and_unchanged": true,
+    "earlier_failed_partial_native_captures_retained": true,
+    "four_historical_benchmark_selections_unchanged": true,
+    "initial_py314_pdf_diagnostic_preserved_privately": true,
+    "mac314_standard_projection_failure_retained_without_privacy_exception": true,
+    "two_study_summary_selections_unchanged": true
+  },
+  "publication_scope": "Zenodo23266335 archives exact previously accepted v0.7.1 assets. It does not contain this newer source or working PDF. Public GitHub follow-up publication is a separate root-owned action; this receipt records local generation and review, not remote merge acceptance.",
+  "recorded_utc": "2026-10-09T16:43:57.212576+00:00",
+  "render": {
+    "bibliography_entry_count": 31,
+    "bibtex_exit_code": 0,
+    "converted_crossrefs": 34,
+    "gates": {
+      "bibtex_missing": 0,
+      "bibtex_warnings": 0,
+      "overfull_vertical_boxes": 0,
+      "undefined_references": 0,
+      "unloadable_images": 0
+    },
+    "missing_character_diagnostics": 0,
+    "native_exit_code": 0,
+    "overfull_horizontal_box_diagnostics": 0,
+    "rendered_cited_entries": 27
+  },
+  "reproduction": "Check out source_build_commit. Overlay this edition saved selection, exact selected native projection, selected historical/study receipts, figure inputs and variable map. Prepare the locked Mac/Python3.10 extras. Set SOURCE_DATE_EPOCH to source_date_epoch; run strict scripts/z_generate_manuscript_variables.py and scripts/render_pdf.py with fresh output/artifacts paths under that actual interpreter. Artifact commit HEAD has a later timestamp; use source_build_commit for renderer epoch. Cross-platform PDF byte equality is not established.",
+  "scientific_scope": {
+    "full_comparative_study_complete": false,
+    "historical_selected_studies_unchanged": true,
+    "hosted_billing_reconciled": false,
+    "new_model_requests": 0
+  },
+  "selected_inputs": {
+    "manuscript/00_abstract.md": {
+      "bytes": 3282,
+      "path": "manuscript/00_abstract.md",
+      "sha256": "fea037443e066a7007b4ba9d3e4f8e9e6cb9801de2bbb76a3ffd4d3614cc5acb"
+    },
+    "manuscript/01_introduction.md": {
+      "bytes": 4339,
+      "path": "manuscript/01_introduction.md",
+      "sha256": "1c5eea0f67cfabc88ee8b7fd0cdf3edccd72e7c0d1db8b172da3cc3500c1c7ba"
+    },
+    "manuscript/02_the_jev_model.md": {
+      "bytes": 5563,
+      "path": "manuscript/02_the_jev_model.md",
+      "sha256": "398bdc3543dea84e0e081d6d86deb9cb72a0b0b0f12dbdb8a0e627267ea05a63"
+    },
+    "manuscript/03_methodology.md": {
+      "bytes": 20693,
+      "path": "manuscript/03_methodology.md",
+      "sha256": "beecc940070a9b04217154e3a5bafaa71e7c1f638551d3122aab75d126468653"
+    },
+    "manuscript/04_integration_surfaces.md": {
+      "bytes": 7946,
+      "path": "manuscript/04_integration_surfaces.md",
+      "sha256": "a8ae602de9943cde45dad320ad05c32db865dad21c29e6d23b283aa1c3944830"
+    },
+    "manuscript/05_results.md": {
+      "bytes": 18689,
+      "path": "manuscript/05_results.md",
+      "sha256": "335d356545be8c5bd513aaf657eb17391fea52968e0ae2a129fd3bff2d8340a6"
+    },
+    "manuscript/06_experimental_setup.md": {
+      "bytes": 12142,
+      "path": "manuscript/06_experimental_setup.md",
+      "sha256": "a53c6038a8c61d64e6558aef59575db709017684401e1aed68d5cfa20771c39f"
+    },
+    "manuscript/07_reproducibility.md": {
+      "bytes": 8866,
+      "path": "manuscript/07_reproducibility.md",
+      "sha256": "03e4a217430098cfe037e9d6e593d494e20f5ce54a8f5b2b41086cc8e6dac501"
+    },
+    "manuscript/08_scope_and_related_work.md": {
+      "bytes": 7718,
+      "path": "manuscript/08_scope_and_related_work.md",
+      "sha256": "394ac4733583cc831bfa775b936fadece298287d515a48182bbd672c6f0a87d4"
+    },
+    "manuscript/99_references.md": {
+      "bytes": 688,
+      "path": "manuscript/99_references.md",
+      "sha256": "be1d41973a554a870644b9f81979292735eb36f1d631b4502866681cdc7bc714"
+    },
+    "manuscript/evidence.json": {
+      "bytes": 1642,
+      "path": "manuscript/evidence.json",
+      "sha256": "590adbe4e7b919138a273a03c9f6ac774b2bf1832031deb4c22318274a2650ad"
+    },
+    "manuscript/preamble.md": {
+      "bytes": 2799,
+      "path": "manuscript/preamble.md",
+      "sha256": "dc35a2138f4681fe6925aecf235a6af69d1f742a2d9c422109d85df736145ff6"
+    },
+    "manuscript/references.bib": {
+      "bytes": 18684,
+      "path": "manuscript/references.bib",
+      "sha256": "c1b74b865044a2cfac91996109f9e558080d6a9b531cafba2704ae126b4d1e8d"
+    },
+    "manuscript/render/cover.tex": {
+      "bytes": 711,
+      "path": "manuscript/render/cover.tex",
+      "sha256": "9c052ba93fab6b857c53e39d43f1455f5f1479d67f9abefae1d29ce3cf5e00b5"
+    },
+    "manuscript/render/preamble.tex": {
+      "bytes": 1463,
+      "path": "manuscript/render/preamble.tex",
+      "sha256": "d9d3a88badcda177d3fb754ff137fc06d119ea392c8ffcaae2c0a538854df3fa"
+    },
+    "output/benchmarks/batching_20260916.json": {
+      "bytes": 1124,
+      "path": "output/benchmarks/batching_20260916.json",
+      "sha256": "06990754d64b7452529a347f49ee98a3bb320753e616972056b0dd6e7124ec55"
+    },
+    "output/benchmarks/calibration_20260916.json": {
+      "bytes": 805,
+      "path": "output/benchmarks/calibration_20260916.json",
+      "sha256": "deef17fbd564bbd4d7775d34558ed11037ae074473842785ccad88d33e866507"
+    },
+    "output/benchmarks/jaggedness_20260924.json": {
+      "bytes": 5786,
+      "path": "output/benchmarks/jaggedness_20260924.json",
+      "sha256": "e187188f3a39a06b9a5cd1153b15a2482393d80480e452ed69a9c8f63729f620"
+    },
+    "output/benchmarks/patterns_20260916.json": {
+      "bytes": 556,
+      "path": "output/benchmarks/patterns_20260916.json",
+      "sha256": "ebba6eae325fbc4b61453abfdd82723da4179bd8b49100daa402ad613309b662"
+    },
+    "output/data/manuscript_variables.json": {
+      "bytes": 3626,
+      "path": "output/data/manuscript_variables.json",
+      "sha256": "45eb8fb65625887f7e131c0df4288c06438ea1eda8512a93a76f61708eb0428a"
+    },
+    "output/figures/architecture.mmd": {
+      "bytes": 882,
+      "path": "output/figures/architecture.mmd",
+      "sha256": "1a221e8ad0f1cc6e79bf3e66616e983856dfcbf6c2bb5085bc582e7ef5549196"
+    },
+    "output/figures/architecture.pdf": {
+      "bytes": 24873,
+      "path": "output/figures/architecture.pdf",
+      "sha256": "931f9490a2b7d523e8980598332e2694ba71f7ce9c1c6a38306f234c32a16b21"
+    },
+    "output/figures/architecture.png": {
+      "bytes": 95662,
+      "path": "output/figures/architecture.png",
+      "sha256": "a4482a5ff4b1054dbd30601a9f6e62bdc0ad12f95e15b7880d63cc00a388ac1e"
+    },
+    "output/figures/batching_speedup.pdf": {
+      "bytes": 17621,
+      "path": "output/figures/batching_speedup.pdf",
+      "sha256": "dddd50be38352b14a2f873f9b64745ad0f029634012ab98021711ba514860a45"
+    },
+    "output/figures/batching_speedup.png": {
+      "bytes": 79115,
+      "path": "output/figures/batching_speedup.png",
+      "sha256": "037da45b14f7c5f6ba032e7b462f597e6e3623388b600435e715146d30b31b6e"
+    },
+    "output/figures/calibration_reliability.pdf": {
+      "bytes": 18072,
+      "path": "output/figures/calibration_reliability.pdf",
+      "sha256": "796563eab2fc01e27f63d4f41bfa8ba6e44de39a6b5b2c69742ab099420e1279"
+    },
+    "output/figures/calibration_reliability.png": {
+      "bytes": 81952,
+      "path": "output/figures/calibration_reliability.png",
+      "sha256": "1b341c5a28fab40459f34842ab4b7ea76237f3cf12294c546e2b08e6092d052a"
+    },
+    "output/figures/cohort_sensitivity.data.json": {
+      "bytes": 1698,
+      "path": "output/figures/cohort_sensitivity.data.json",
+      "sha256": "966e7fbe67540544c17d8a6bf245763628077e3930e5b38f8820a25d756b95f8"
+    },
+    "output/figures/cohort_sensitivity.pdf": {
+      "bytes": 27537,
+      "path": "output/figures/cohort_sensitivity.pdf",
+      "sha256": "9340feb418a3da19a5a91b150d3744aeddbdf8ccbc03ba6805685b8cbbf4f850"
+    },
+    "output/figures/cohort_sensitivity.png": {
+      "bytes": 139895,
+      "path": "output/figures/cohort_sensitivity.png",
+      "sha256": "dad609e24c162c9b60925a484f938c3b5ac79e955680428e568478a478fb37c9"
+    },
+    "output/figures/confidence_bands.pdf": {
+      "bytes": 15050,
+      "path": "output/figures/confidence_bands.pdf",
+      "sha256": "0dc5b94cf2bf06c8344253aed724010cbe7c2045b6adf8c52616ddc42f744702"
+    },
+    "output/figures/confidence_bands.png": {
+      "bytes": 58856,
+      "path": "output/figures/confidence_bands.png",
+      "sha256": "7267622498a1d96825475b47b0d35fddc525d148adfa78a38b3dc6e163b3cf43"
+    },
+    "output/figures/cpu_quality.data.json": {
+      "bytes": 1858,
+      "path": "output/figures/cpu_quality.data.json",
+      "sha256": "4ae1f1395012a46afdef1edefb0bb0580f3cfc6f7d56d171b7086833889d1d25"
+    },
+    "output/figures/cpu_quality.pdf": {
+      "bytes": 22295,
+      "path": "output/figures/cpu_quality.pdf",
+      "sha256": "2c10cbb39d2ffbbe51dcde988112ded82bce5721549edc0fccae4d4e52d631af"
+    },
+    "output/figures/cpu_quality.png": {
+      "bytes": 87030,
+      "path": "output/figures/cpu_quality.png",
+      "sha256": "890c39e0ad4343953c0a79c112a8dfcb249ced71d92a28d5c19ba0f1f11c053c"
+    },
+    "output/figures/execution_coverage.data.json": {
+      "bytes": 1332,
+      "path": "output/figures/execution_coverage.data.json",
+      "sha256": "587dc43e2bd4b74d9401c1871919961e3cac718fe5186ae70a9bb6ed6a2df85f"
+    },
+    "output/figures/execution_coverage.pdf": {
+      "bytes": 22245,
+      "path": "output/figures/execution_coverage.pdf",
+      "sha256": "4cddecbfc2f5c03d207bdaed6155b674e0b1e8ef13122651f267193f6f9ee03e"
+    },
+    "output/figures/execution_coverage.png": {
+      "bytes": 118527,
+      "path": "output/figures/execution_coverage.png",
+      "sha256": "a41cfa8cb10c5d0757ffc9d5f14ee89035408e07873c15a3a1b19bdbb245ac64"
+    },
+    "output/figures/figure_registry.json": {
+      "bytes": 14672,
+      "path": "output/figures/figure_registry.json",
+      "sha256": "8925cccfce3be5ee4314c66478032f1606d5a39ad924cabbf98113a4bbdae308"
+    },
+    "output/figures/graphical_abstract.data.json": {
+      "bytes": 1172,
+      "path": "output/figures/graphical_abstract.data.json",
+      "sha256": "0d21e95ae8ad67af04b884ce75121ccb1b95514147339ac942a784f2d33f419a"
+    },
+    "output/figures/graphical_abstract.pdf": {
+      "bytes": 33773,
+      "path": "output/figures/graphical_abstract.pdf",
+      "sha256": "925dc75a820b6f3126f1851e2cf06b4b45150c99009a58d3b84ace2cca09c77b"
+    },
+    "output/figures/graphical_abstract.png": {
+      "bytes": 183153,
+      "path": "output/figures/graphical_abstract.png",
+      "sha256": "c1ee93694effc81d4d51b7d7dbd52c5813b99b2be316b9db80c3ac645adc76ba"
+    },
+    "output/figures/hosted_admission.pdf": {
+      "bytes": 22659,
+      "path": "output/figures/hosted_admission.pdf",
+      "sha256": "5cb080958b18af0d762f94d1a62d7282bb28789ef2a73a8380802fdce843382c"
+    },
+    "output/figures/hosted_admission.png": {
+      "bytes": 90525,
+      "path": "output/figures/hosted_admission.png",
+      "sha256": "78ef31783fd788deb8cbdd5907b03f4e0d8225c45d2c3cbfb27791d40196db14"
+    },
+    "output/figures/latency_percentiles.pdf": {
+      "bytes": 14623,
+      "path": "output/figures/latency_percentiles.pdf",
+      "sha256": "7845fe0344ea59d082247ad6b1d0738c8ec3e88e6c0206b55741c247ef4970eb"
+    },
+    "output/figures/latency_percentiles.png": {
+      "bytes": 48763,
+      "path": "output/figures/latency_percentiles.png",
+      "sha256": "7450b4d8f350699d8989899f21d768dceae7c4255fdf4d13b3351262f18ea3cb"
+    },
+    "output/figures/primitives_overview.pdf": {
+      "bytes": 21326,
+      "path": "output/figures/primitives_overview.pdf",
+      "sha256": "ece4e016ff3b8f1f5d040f24a7b7ddeaee77d76681f691eb6077c3c755e4bb72"
+    },
+    "output/figures/primitives_overview.png": {
+      "bytes": 70064,
+      "path": "output/figures/primitives_overview.png",
+      "sha256": "08f2d8c1bd5149131aed825ba9bdfbdb7b31cc9b44930cfde74bf6eedebdcd65"
+    },
+    "output/figures/selective_validation.data.json": {
+      "bytes": 3977,
+      "path": "output/figures/selective_validation.data.json",
+      "sha256": "84a493f41b0f702e633f37073ea0796cbd7871a6109e2ebd813520ea86b3ab1d"
+    },
+    "output/figures/selective_validation.pdf": {
+      "bytes": 24045,
+      "path": "output/figures/selective_validation.pdf",
+      "sha256": "a56f3b01da9f74c7264aedea5a3e832a8b28d2bed96ca90ab0df4ed3481acd34"
+    },
+    "output/figures/selective_validation.png": {
+      "bytes": 163828,
+      "path": "output/figures/selective_validation.png",
+      "sha256": "c74a61999de59be3a185f9e4ca4be0ce50504397fe9294ff43e84145aecd9a4d"
+    },
+    "output/figures/validation_folds.data.json": {
+      "bytes": 1160,
+      "path": "output/figures/validation_folds.data.json",
+      "sha256": "7043e8811d9128549f2fcb5be4645fe96ae3fcf3650fa3c82169a8f3cef69f50"
+    },
+    "output/figures/validation_folds.pdf": {
+      "bytes": 20581,
+      "path": "output/figures/validation_folds.pdf",
+      "sha256": "1100bb1aa518154818b537af0dc7f46987f04e04471bd285d0eadc80b39a3c9d"
+    },
+    "output/figures/validation_folds.png": {
+      "bytes": 76391,
+      "path": "output/figures/validation_folds.png",
+      "sha256": "c98687a2d0e21e55160c63cf20f75c14518e06f0969abd9b41dceaf65f162606"
+    },
+    "output/figures/wine_ordinal.data.json": {
+      "bytes": 1062,
+      "path": "output/figures/wine_ordinal.data.json",
+      "sha256": "0a6e17a2e10555c12fd6668431863afb97eee0aaef840eda5e1e9efe957f8b82"
+    },
+    "output/figures/wine_ordinal.pdf": {
+      "bytes": 21971,
+      "path": "output/figures/wine_ordinal.pdf",
+      "sha256": "a45a252b3df1fb4c6384d89e99b65b8fd23a98fc372305cadcf689999462ef43"
+    },
+    "output/figures/wine_ordinal.png": {
+      "bytes": 101443,
+      "path": "output/figures/wine_ordinal.png",
+      "sha256": "e82382300bf4a012a1384830fea09650d487d49b1d6884ee701dffc0c8ce3882"
+    },
+    "output/reports/billing-recovery-scholarship-20261009/runtime-mac314-summary.json": {
+      "bytes": 1982,
+      "path": "output/reports/billing-recovery-scholarship-20261009/runtime-mac314-summary.json",
+      "sha256": "2937da1d32eced0f8d2da4b9f67ecb1f87a0fa72ed85266620d28016e097c3b4"
+    },
+    "output/reports/billing-recovery-scholarship-20261009/zenodo-v071-publication.json": {
+      "bytes": 6066,
+      "path": "output/reports/billing-recovery-scholarship-20261009/zenodo-v071-publication.json",
+      "sha256": "2a701a7b964434b108de712f569c2bb8224700dab4eab44a2d0e7196ad287d17"
+    },
+    "output/reports/full-offline-20261008/full-offline-comparison.json": {
+      "bytes": 156741,
+      "path": "output/reports/full-offline-20261008/full-offline-comparison.json",
+      "sha256": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7"
+    },
+    "output/reports/hosted-pilot-20261008/summary.json": {
+      "bytes": 7960,
+      "path": "output/reports/hosted-pilot-20261008/summary.json",
+      "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+    },
+    "output/verification/billing-recovery-20261009-mac310-57ff1cd1/coverage.json": {
+      "bytes": 809165,
+      "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/coverage.json",
+      "sha256": "70450193bcdc619aef42bb11df89fc54f3287a6d7d254f257aee604fc9e96ed7"
+    },
+    "output/verification/billing-recovery-20261009-mac310-57ff1cd1/junit.xml": {
+      "bytes": 261433,
+      "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/junit.xml",
+      "sha256": "fa7849e1ef87489076efe5b0cbd6f78ba1eabae47d8a6225e78d6474f8a892be"
+    },
+    "output/verification/billing-recovery-20261009-mac310-57ff1cd1/live-collection.txt": {
+      "bytes": 582,
+      "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/live-collection.txt",
+      "sha256": "9e7707f18667935764fd1098cbeb33023bb03b16c753eef8a5cb54f353d85329"
+    },
+    "output/verification/billing-recovery-20261009-mac310-57ff1cd1/unit.txt": {
+      "bytes": 219065,
+      "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/unit.txt",
+      "sha256": "1f1fa4af850668427e5dd02e73fcbc976148f0e0c4201c71db786cebba536f7f"
+    },
+    "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json": {
+      "bytes": 96606,
+      "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json",
+      "sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b"
+    },
+    "scripts/render_pdf.py": {
+      "bytes": 8320,
+      "path": "scripts/render_pdf.py",
+      "sha256": "b40cfe2890b5dcee2c20d625fa6404bd104945810b14723a48b10a33bfdfeea7"
+    },
+    "scripts/z_generate_manuscript_variables.py": {
+      "bytes": 3121,
+      "path": "scripts/z_generate_manuscript_variables.py",
+      "sha256": "aa8760dab7cfb4cd769c3ac263784d3b4883b204c5e9d834035b5ab06b8c0bca"
+    }
+  },
+  "selected_verification": {
+    "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json",
+    "sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b"
+  },
+  "source_build_commit": "281fc5c8144a7b104de1bd911dd2bab699f47940",
+  "source_date_epoch": 1791562323,
+  "source_input_count": 299,
+  "source_input_map_sha256": "238516fe0c7d41c891446e298196f23ba11669de8405e8ed94bb107db7ce8c10",
+  "source_inputs_held": true,
+  "toolchain": {
+    "binary_inputs_held": true,
+    "fonts": {
+      "Menlo.ttc": {
+        "bytes": 2134132,
+        "sha256": "f2d400484a6aace67980730ec0a9ef24ce9e535a2604f118e6fdc2510021b85f"
+      },
+      "Times New Roman Bold Italic.ttf": {
+        "bytes": 620008,
+        "sha256": "906157e8294fdf168d83002eaabde01c2d30fc3f44977be89e33fa22f262002a"
+      },
+      "Times New Roman Bold.ttf": {
+        "bytes": 832472,
+        "sha256": "50f5b1f27b7d34621090e437e8b1dd4510a22d2823fc876b3286bed327b64bbb"
+      },
+      "Times New Roman Italic.ttf": {
+        "bytes": 660268,
+        "sha256": "7bb99c3a67697fbce15ab66d806d9a2151432ce1dab2eaba4156e1251da486c0"
+      },
+      "Times New Roman.ttf": {
+        "bytes": 824920,
+        "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+      },
+      "latinmodern-math.otf": {
+        "bytes": 733736,
+        "sha256": "6075562b771f8b82f0c179e363389684f2dd09de30038269e2628e504bd7be0f"
+      }
+    },
+    "fonts_not_distributed": true,
+    "tools": {
+      "bibtex": {
+        "sha256": "90a989e7fb16a2ba300024f607494ae487bd653e0e0c8167e16de9f4274deb7f",
+        "version": [
+          "BibTeX 0.99e (TeX Live 2026)",
+          "kpathsea version 6.4.2",
+          "Copyright 2026 Oren Patashnik."
+        ]
+      },
+      "mutool": {
+        "sha256": "a3c12cd7515d457dbbfd0d07e6802993977638cb2c3d5c6a4b61616f2190b2c9",
+        "version": [
+          "mutool version 1.28.5",
+          "usage: mutool <command> [options]",
+          "\trun\t-- run javascript"
+        ]
+      },
+      "pandoc": {
+        "sha256": "573925418f44d2d377d33d1170dd9eeac2fb671fd5a2260be034e7a6ab97eb40",
+        "version": [
+          "pandoc 3.12",
+          "Features: +server +lua",
+          "Scripting engine: Lua 5.4"
+        ]
+      },
+      "pdftoppm": {
+        "sha256": "c4a597b71ecb039c1d38dfa7c956acd8ff648b82147a4f47be97842dcef4c3f6",
+        "version": [
+          "pdftoppm version 26.10.0",
+          "Copyright 2005-2026 The Poppler Developers - http://poppler.freedesktop.org",
+          "Copyright 1996-2011, 2022 Glyph & Cog, LLC"
+        ]
+      },
+      "xelatex": {
+        "sha256": "593df4b2c196aa1cdeabcb6b4fafd20af3b182e05a3cee030418f14707597f0e",
+        "version": [
+          "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)",
+          "kpathsea version 6.4.2",
+          "Copyright 2026 SIL International, Jonathan Kew and Khaled Hosny."
+        ]
+      }
+    }
+  },
+  "verification": {
+    "combined_coverage_percent": 92.71041898405636,
+    "coverage_method": "Branch-enabled combined statement and branch opportunities; not branch-only percentage",
+    "live_tests_collected": 2,
+    "live_tests_executed": 0,
+    "native_capture_sha256": "a35fc784f12a9961ae3ff5d3d0da222037033666d94a7933199d3221980839b3",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "public_capture_is_declared_privacy_derivative": true,
+    "python_version": "3.10.20",
+    "unit_failures_errors_skips": 0,
+    "unit_passed": 1868
+  },
+  "working_edition": "Unreleased billing-recovery and scholarship follow-up; declared package version0.7.1"
+}
