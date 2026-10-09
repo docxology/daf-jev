@@ -613,6 +613,7 @@ def test_report_conflicts_refuse_without_output(bundle, mutation):
         "sk-or-public-synthetic-marker",
         "Bearer synthetic-fixture-token",
     ],
+    ids=["user-path", "home-path", "temporary-path", "windows-user-path", "synthetic-key", "synthetic-bearer"],
 )
 def test_unrecognized_private_strings_refuse_without_broad_replacement(
     bundle, location, private

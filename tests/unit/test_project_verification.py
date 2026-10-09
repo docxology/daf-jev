@@ -90,7 +90,11 @@ def test_exact_captured_stdlib_relocation_declares_transformation_and_preserves_
     "/Users/private/lib/python0.1", "/Users/private/lib/python3.14-other",
     "/Users/private/data/python3.14", "/Users/private/lib/python3.14\n",
     "//Users/private/lib/python3.14",
-    "/Users/sk-or-public-fixture/lib/python3.14"])
+    "/Users/sk-or-public-fixture/lib/python3.14"], ids=[
+    "none", "boolean", "integer", "mapping", "empty", "root", "user-root", "home-root",
+    "relative", "non-versioned-library", "trailing-separator", "parent-traversal", "dot-component",
+    "mismatched-version", "version-sibling", "wrong-library-parent", "newline",
+    "double-leading-separator", "credential-marker"])
 def test_malformed_or_overbroad_stdlib_prefix_refuses_before_output(projection_fixture, value):
     root, path, record, _ = projection_fixture
     record["environment"]["stdlib_directory"] = value
@@ -101,7 +105,8 @@ def test_malformed_or_overbroad_stdlib_prefix_refuses_before_output(projection_f
     assert not out.exists()
 
 
-@pytest.mark.parametrize("version", [None, True, "", "3", "3.99.0", "/Users/private/3.14.4"])
+@pytest.mark.parametrize("version", [None, True, "", "3", "3.99.0", "/Users/private/3.14.4"],
+                         ids=["none", "boolean", "empty", "major-only", "mismatched-minor", "private-path"])
 def test_stdlib_version_must_match_capture_not_ambient_interpreter(projection_fixture, version):
     root, path, record, _ = projection_fixture
     record["environment"]["python_version"] = version
@@ -113,7 +118,8 @@ def test_stdlib_version_must_match_capture_not_ambient_interpreter(projection_fi
 
 
 @pytest.mark.parametrize("suffix", ["-other/socket.py", "/../private.py", "//socket.py",
-    "/site-packages/private_package.py", "/dist-packages/private_package.py"])
+    "/site-packages/private_package.py", "/dist-packages/private_package.py"],
+                         ids=["sibling", "parent-traversal", "double-separator", "site-packages", "dist-packages"])
 def test_stdlib_sibling_traversal_and_third_party_paths_are_not_relocated(projection_fixture, suffix):
     root, path, record, stdlib = projection_fixture
     _replace_log(root, path, record, f'File "{stdlib}{suffix}", line 1\n')
@@ -132,7 +138,8 @@ def test_other_private_paths_remain_refused_after_known_stdlib_relocation(projec
     assert not out.exists()
 
 
-@pytest.mark.parametrize("suffix", ["/http\\..\\private.py", "/socket\x00.py", "/http/../../private.py"])
+@pytest.mark.parametrize("suffix", ["/http\\..\\private.py", "/socket\x00.py", "/http/../../private.py"],
+                         ids=["backslash", "nul", "nested-traversal"])
 def test_stdlib_backslashes_controls_and_nested_traversal_refuse(projection_fixture, suffix):
     root, path, record, stdlib = projection_fixture
     _replace_log(root, path, record, f'File "{stdlib}{suffix}", line 1\n')
@@ -153,7 +160,8 @@ def test_relative_prepend_does_not_convert_unknown_paths_to_known_prefixes(proje
     assert not out.exists()
 
 
-@pytest.mark.parametrize("suffix", ["-sibling/private.py", "/../outside.py", "/http\\..\\private.py", "//private.py"])
+@pytest.mark.parametrize("suffix", ["-sibling/private.py", "/../outside.py", "/http\\..\\private.py", "//private.py"],
+                         ids=["sibling", "parent-traversal", "backslash", "double-separator"])
 def test_project_prefix_siblings_and_escaped_children_refuse(projection_fixture, suffix):
     root, path, record, _ = projection_fixture
     _replace_log(root, path, record, str(root) + suffix + "\n")
@@ -164,7 +172,8 @@ def test_project_prefix_siblings_and_escaped_children_refuse(projection_fixture,
 
 
 @pytest.mark.parametrize("directory", ["/Users/private/site-packages/vendor/lib/python",
-                                      "/Users/private/DiSt-PaCkAgEs/vendor/lib/python"])
+                                      "/Users/private/DiSt-PaCkAgEs/vendor/lib/python"],
+                         ids=["site-packages-ancestor", "dist-packages-ancestor"])
 def test_stdlib_ancestry_cannot_include_third_party_packages(projection_fixture, directory):
     root, path, record, _ = projection_fixture
     version = ".".join(platform.python_version().split(".")[:2])
@@ -178,7 +187,10 @@ def test_stdlib_ancestry_cannot_include_third_party_packages(projection_fixture,
 
 @pytest.mark.parametrize("command", ["/", "/Users", "/Users/private/bin", "/opt/bin", "python",
                                      "/opt/bin/python-other", "/opt/bin/../python", "/opt/bin/python\\private",
-                                     "/opt/bin/python\x00", "/opt/bin/python/", "/python", "//opt/cpython/bin/python"])
+                                     "/opt/bin/python\x00", "/opt/bin/python/", "/python", "//opt/cpython/bin/python"],
+                         ids=["root", "user-root", "private-bin-directory", "bin-directory", "relative",
+                              "executable-sibling", "parent-traversal", "backslash", "nul",
+                              "trailing-separator", "bare-executable", "double-leading-separator"])
 def test_captured_interpreter_must_be_narrow_canonical_python_executable(projection_fixture, command):
     root, path, record, _ = projection_fixture
     record["unit_command"][0] = record["live_collection_command"][0] = command
@@ -203,7 +215,8 @@ def _replace_coverage(root: Path, path: Path, record: dict[str, Any], raw: bytes
     b'{"fixture":"/private/tmp/unrelated/person.py"}',
     b'{"fixture":NaN}',
     b'{"fixture":1,"fixture":2}',
-])
+], ids=["escaped-private-key", "escaped-credential-marker", "escaped-nested-private-path",
+        "literal-private-path", "nonfinite-number", "duplicate-key"])
 def test_coverage_is_strictly_decoded_before_recursive_privacy_scan(projection_fixture, raw):
     root, path, record, _ = projection_fixture
     _replace_coverage(root, path, record, raw)
