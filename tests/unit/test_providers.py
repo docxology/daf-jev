@@ -139,6 +139,13 @@ def _models_body() -> dict:
     }
 
 
+def _billing_body(model: str = "jev-latest") -> dict:
+    """Response for the single billing question used by dispatch tests."""
+    body = _answers_body(model)
+    body["answers"] = {"billing": body["answers"]["billing"]}
+    return body
+
+
 def _spec(key: str = "acme", **overrides):
     """A fully valid ProviderSpec for registration-error tests."""
     from daf_jev.providers import ProviderSpec
@@ -450,7 +457,7 @@ def test_load_settings_accepts_provider_spec_instance() -> None:
 def test_for_provider_kev_uses_kev_env_and_default_model(stub) -> None:
     from daf_jev import JevClient, NoulQuestion, RetryPolicy
 
-    stub.enqueue(body=_answers_body(model="kev-latest"))
+    stub.enqueue(body=_billing_body(model="kev-latest"))
     client = JevClient.for_provider(
         "kev",
         env={"KEV_API_KEY": "kev-key", "KEV_BASE_URL": stub.base_url},
@@ -470,7 +477,7 @@ def test_for_provider_kev_uses_kev_env_and_default_model(stub) -> None:
 def test_for_provider_jeff_uses_jeff_env(stub) -> None:
     from daf_jev import JevClient, NoulQuestion, RetryPolicy
 
-    stub.enqueue(body=_answers_body())
+    stub.enqueue(body=_billing_body())
     client = JevClient.for_provider(
         "jeff",
         env={"JEFF_API_KEY": "jeff-key", "JEFF_BASE_URL": stub.base_url},
@@ -498,7 +505,7 @@ def test_for_provider_localjev_and_openthai_wiring(stub) -> None:
             "openthai-latest",
         ),
     ):
-        stub.enqueue(body=_answers_body(model=default_model))
+        stub.enqueue(body=_billing_body(model=default_model))
         client = JevClient.for_provider(
             key,
             env={key_var: "wire-key", base_var: stub.base_url},
@@ -531,7 +538,7 @@ def test_for_provider_injected_transport_removes_key_requirement(stub) -> None:
     from daf_jev import JevClient, NoulQuestion, RetryPolicy
     from daf_jev._http import HttpxTransport
 
-    stub.enqueue(body=_answers_body())
+    stub.enqueue(body=_billing_body())
     transport = HttpxTransport(base_url=stub.base_url, timeout=5.0)
     client = JevClient.for_provider("jeff", transport=transport, retry=RetryPolicy(jitter=0.0))
     try:
@@ -546,7 +553,7 @@ def test_for_provider_injected_transport_removes_key_requirement(stub) -> None:
 def test_client_explicit_args_beat_provider_env(stub) -> None:
     from daf_jev import JevClient, NoulQuestion, RetryPolicy
 
-    stub.enqueue(body=_answers_body(model="explicit-model"))
+    stub.enqueue(body=_billing_body(model="explicit-model"))
     client = JevClient.for_provider(
         "kev",
         api_key="explicit-key",
@@ -595,7 +602,7 @@ def test_open_client_forwards_provider_and_kwargs(stub) -> None:
 def test_open_async_client_forwards_provider(stub) -> None:
     from daf_jev import NoulQuestion, RetryPolicy, open_async_client
 
-    stub.enqueue(body=_answers_body(model="kev-latest"))
+    stub.enqueue(body=_billing_body(model="kev-latest"))
 
     async def flow():
         client = open_async_client(
@@ -707,7 +714,7 @@ def test_mcp_tools_plumb_provider_arg_kev(stub, clean_provider_env) -> None:
     result = _run(ms.jev_models(provider="kev"))
     assert stub.hits[0]["path"] == "/v1/models"
     json.dumps(result)  # tool output stays JSON-safe across the wire
-    stub.enqueue(body=_answers_body(model="kev-latest"))
+    stub.enqueue(body=_billing_body(model="kev-latest"))
     result = _run(
         ms.jev_ask(
             "state",
@@ -757,7 +764,13 @@ def test_parse_response_tolerates_extra_top_level_latency_ms() -> None:
 
 
 def test_client_ask_tolerates_kev_latency_ms_field(stub) -> None:
-    from daf_jev import JevClient, NoulQuestion, RetryPolicy
+    from daf_jev import (
+        ChoiceQuestion,
+        JevClient,
+        NoulQuestion,
+        RetryPolicy,
+        ScoreQuestion,
+    )
 
     stub.enqueue(body={**_answers_body(), "latency_ms": 123})
     client = JevClient(
@@ -767,7 +780,11 @@ def test_client_ask_tolerates_kev_latency_ms_field(stub) -> None:
         sleep=lambda _seconds: None,
     )
     try:
-        resp = client.ask("state", {"billing": NoulQuestion(instructions="q")})
+        resp = client.ask("state", {
+            "billing": NoulQuestion(instructions="q"),
+            "tone": ChoiceQuestion("tone?", {"calm": None, "angry": "hostile"}),
+            "severity": ScoreQuestion("severity?", ["low", "high"]),
+        })
     finally:
         client.close()
     assert resp.nouls["billing"].noul == 0.87

@@ -1,0 +1,17 @@
+{
+  "from_sdist_wheel_sha256": "a61b5e96059c9094e54cabe6301fcb3e54b84a63e47d2be2fe90f4ecf4b8e78e",
+  "installed": {
+    "async_connection_reused": true,
+    "core_only": true,
+    "hosted_requests": 0,
+    "loopback_requests": 3,
+    "python": "3.10.20",
+    "source_bytes_equal": true
+  },
+  "source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
+  "source_date_epoch": "1791503951",
+  "source_unchanged": true,
+  "wheel_bytes_equal": true,
+  "wheel_from_sdist_checked": true,
+  "wheel_sha256": "a61b5e96059c9094e54cabe6301fcb3e54b84a63e47d2be2fe90f4ecf4b8e78e"
+}

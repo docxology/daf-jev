@@ -1,8 +1,8 @@
 {
-  "title": "daf-jev: A Composable Python Decision Toolkit for the TypeSafe Jev (System One) API",
+  "title": "daf-jev: Modular Decision Models, Orchestration, and Reproducible Evaluation",
   "upload_type": "software",
-  "version": "0.6.0",
-  "publication_date": "2026-09-23",
+  "version": "0.7.0",
+  "publication_date": "2026-10-08",
   "creators": [
     {
       "name": "Friedman, Daniel Ari",
@@ -11,19 +11,16 @@
       "email": "daniel@activeinference.institute"
     }
   ],
-  "description": "<p>daf-jev is a modular, composable Python client and decision toolkit for the <strong>TypeSafe Jev (System One) API</strong>, which turns generated text into typed machine decisions.</p><p>One HTTP endpoint (<code>POST https://api.typesafe.ai/v1/systemone</code>) exposes three question primitives &mdash; <strong>noul</strong> (a 0&ndash;1 probability), <strong>choice</strong> (an option drawn from a probability distribution), and <strong>score</strong> (a rating on ordered rubric levels). On top of the typed answers the package provides pure-logic composition patterns (<code>composite_score</code>, <code>confidence_gate</code>, <code>route</code>, <code>pick</code>), a concurrent batch <code>Evaluator</code>, confidence-calibration statistics, a CLI (<code>ask</code> / <code>evaluate</code> / <code>models</code> / <code>docs-verify</code> / <code>serve</code>), a Model Context Protocol (MCP) server exposing seven tools plus a <code>jev://docs/snapshot</code> resource over stdio, an agent skill, six runnable examples, a live-API benchmark suite (batching speedups, pipeline latency, confidence calibration), a matplotlib figure registry, and a reproducible {{TOKEN}}-parameterized manuscript pipeline.</p><p>Released as open-source software under the MIT license at <a href=\"https://github.com/docxology/daf-jev\">https://github.com/docxology/daf-jev</a>.</p>",
+  "description": "<p>daf-jev provides typed binary, categorical and ordinal decision interfaces, provider adapters, pure composition and exact discrete Bayes inference. A reproducible benchmark framework separates native decision distributions from generated labels or scores, freezes datasets, models and policies, and retains quality, coverage, runtime and cost evidence. The release includes selected historical API observations, completed CPU comparator studies, partial local model observations and a failed hosted capability probe with unresolved billing. Numerical validity and model agreement do not establish probability calibration or decision correctness. Source, installed-package, runtime, hosted and publication acceptance remain distinct. The repository contains documentation, examples, optional MCP and figure surfaces, and an evidence-selected manuscript.</p><p>Source and reproducible artifacts: <a href=\"https://github.com/docxology/daf-jev\">GitHub repository</a>. This software release does not establish completion of the proposed full local or hosted study.</p>",
   "access_right": "open",
   "license": "mit",
   "keywords": [
-    "jev",
-    "system-one",
-    "machine-decisions",
-    "structured-output",
-    "calibration",
-    "confidence",
-    "mcp",
-    "llm-toolkit",
-    "decision-making"
+    "decision-models",
+    "benchmarking",
+    "typed-interfaces",
+    "reproducibility",
+    "bayesian-inference",
+    "selective-prediction"
   ],
   "related_identifiers": [
     {

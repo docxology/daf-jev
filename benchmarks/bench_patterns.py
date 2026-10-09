@@ -104,6 +104,8 @@ def pipeline_routing(client: JevClient) -> tuple[float, int, dict]:
 
 
 def measure(pipeline, client, runs: int) -> dict:
+    if runs < 1:
+        raise ValueError("runs must be >= 1")
     walls, tokens, last = [], 0, {}
     for _ in range(runs):
         wall, tok, info = pipeline(client)
@@ -115,6 +117,9 @@ def measure(pipeline, client, runs: int) -> dict:
 
 def run_async(settings, model: str, runs: int) -> tuple[float, int]:
     """All runs of both pipelines concurrently via AsyncJevClient + gather."""
+
+    if runs < 1:
+        raise ValueError("runs must be >= 1")
 
     async def a_composite(client):
         response = await client.ask(TICKET_STATE, QUALITY_QUESTION)
@@ -155,6 +160,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="also run all repetitions concurrently via "
                              "AsyncJevClient + asyncio.gather and compare")
     args = parser.parse_args(argv)
+    if args.runs < 1:
+        parser.error("--runs must be >= 1")
 
     settings = settings_or_skip()
     if settings is None:

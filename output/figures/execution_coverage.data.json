@@ -1,0 +1,45 @@
+{
+  "figure": "execution_coverage",
+  "format": "dafjev.study-figure-data/1",
+  "full_hosted_proposed_cells": 376155,
+  "rows": [
+    {
+      "cohort": "CPU baselines",
+      "counts": {
+        "completed": 68894,
+        "failed": 0,
+        "unattempted": 0,
+        "unresolved": 0,
+        "unsupported": 24152
+      },
+      "planned_cells": 93046
+    },
+    {
+      "cohort": "Older native study",
+      "counts": {
+        "completed": 2005,
+        "failed": 3,
+        "unattempted": 288,
+        "unresolved": 1,
+        "unsupported": 495
+      },
+      "planned_cells": 2792
+    },
+    {
+      "cohort": "Hosted pilot",
+      "counts": {
+        "completed": 0,
+        "failed": 1,
+        "unattempted": 18045,
+        "unresolved": 0,
+        "unsupported": 19
+      },
+      "planned_cells": 18065
+    }
+  ],
+  "scope": "Status fractions preserve each distinct study denominator. CPU studies, the older partial native study and the hosted pilot have different cohorts and source identities. The full hosted proposal is unexecuted. Completion counts include capability work and cannot be read as quality sample counts.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

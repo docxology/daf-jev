@@ -1,0 +1,26 @@
+{
+  "figure": "graphical_abstract",
+  "format": "dafjev.study-figure-data/1",
+  "panels": [
+    [
+      "Independent targets\nPublic labels \u2022 rules \u2022 exact Bayes nets",
+      "Frozen design\nSplits \u2022 model profiles \u2022 options \u2022 policy",
+      "Typed request\nState + questions + execution settings"
+    ],
+    [
+      "Admission + scheduling\nBudget \u2022 clock \u2022 timeout \u2022 cancellation",
+      "Backend interface\nCPU \u2022 local native/chat \u2022 hosted native/chat",
+      "Validated result + attempt receipt\nPredictions \u2022 meaning \u2022 usage \u2022 failures"
+    ],
+    [
+      "CPU comparator studies\n68,894 completed cells / 93,046",
+      "Older partial native study\n2,005 / 2,792 cells completed",
+      "Hosted pilot\n1 transport attempt(s); 0 quality predictions\n1 billing unresolved"
+    ]
+  ],
+  "scope": "Schematic workflow and separate retained execution counts; no comparable model-quality or billing conclusion.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

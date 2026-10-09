@@ -8,6 +8,7 @@ is headless (the module selects the Agg backend itself).
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -151,6 +152,13 @@ def _write_benchmark(root: Path, name: str, payload: dict) -> None:
     bench_dir = root / "output" / "benchmarks"
     bench_dir.mkdir(parents=True, exist_ok=True)
     (bench_dir / f"{name}_20260916.json").write_text(json.dumps(payload), encoding="utf-8")
+    selection = root / "manuscript" / "evidence.json"
+    selection.parent.mkdir(parents=True, exist_ok=True)
+    spec = json.loads(selection.read_text()) if selection.exists() else {"format": "dafjev.publication-evidence/1", "historical_benchmarks": {}}
+    path = bench_dir / f"{name}_20260916.json"
+    spec["historical_benchmarks"][name] = {"path": str(path.relative_to(root)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    selection.write_text(json.dumps(spec))
+
 
 
 def _write_benchmarks(root: Path) -> None:
@@ -334,12 +342,12 @@ def test_missing_patterns_benchmark_raises_file_not_found(tmp_path: Path) -> Non
     assert str(root / "output" / "benchmarks") in str(excinfo.value)
 
 
-def test_latest_benchmark_prefers_newest_date_stamped_file(tmp_path: Path) -> None:
-    """Newest filename wins: the 20260916 stamp sorts after the 20260101 stamp."""
+def test_selected_benchmark_ignores_unselected_file(tmp_path: Path) -> None:
+    """Shared evidence selection wins independently of filename."""
     root = tmp_path / "mixed"
     _write_benchmark(root, "batching", _batching_payload())  # batching_20260916.json
     bench_dir = root / "output" / "benchmarks"
-    (bench_dir / "batching_20260101.json").write_text('{"older": true}', encoding="utf-8")
+    (bench_dir / "batching_20990101.json").write_text('{"older": true}', encoding="utf-8")
 
     assert _latest_benchmark(root, "batching") == bench_dir / "batching_20260916.json"
 
@@ -465,7 +473,8 @@ def test_figure_registry_schema_and_values(generated_project: Path) -> None:
         assert entry["width"] == EXPECTED_REGISTRY_WIDTHS.get(label, "0.85\\textwidth")
         assert entry["placement"] == "h"
         assert entry["generated_by"] == "daf_jev.figures"
-        assert set(entry["metadata"]) == {"alt_text", "source"}
+        assert set(entry["metadata"]) == {"alt_text", "source", "evidence_selection"}
+        assert entry["metadata"]["evidence_selection"] == "manuscript/evidence.json"
         assert len(entry["metadata"]["alt_text"]) > 40, label
         assert entry["metadata"]["source"] == "daf-jev benchmark/figure pipeline"
         assert entry["caption"] and entry["caption"].isprintable()

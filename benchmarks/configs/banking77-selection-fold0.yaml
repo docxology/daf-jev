@@ -1,0 +1,21 @@
+# Selection-only: official test omitted; no warm or graphical observations.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '0'
+sampling: all
+capability_probes: true
+graphical_experiments: false
+execution_selection:
+  phase: quality
+timeout_s: 60
+local_time_limit_s: 7200
+backends:
+- id: prior-banking-fold0
+  kind: prior
+  hosted: false
+- id: tfidf-logistic-C1-banking-fold0
+  kind: sklearn_text
+  hosted: false
+datasets:
+- id: banking77-selection-fold0
+  path: ../../.benchmarks/full-study-inputs/banking77-selection-fold0.json

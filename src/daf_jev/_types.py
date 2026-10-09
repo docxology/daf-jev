@@ -8,6 +8,7 @@ b79c9cd6008489f1).
 from __future__ import annotations
 
 import dataclasses
+import math
 from collections.abc import Mapping, Sequence
 from functools import cached_property
 from typing import ClassVar
@@ -28,7 +29,12 @@ __all__ = [
     "Usage",
     "answer_from_wire",
     "parse_response",
+    "validate_probability_row",
+    "validate_response",
 ]
+
+PROBABILITY_ROW_TOLERANCE = 1e-6
+NATIVE_PROBABILITY_ROUNDING_DIGITS = 2
 
 
 # ---------------------------------------------------------------------------
@@ -175,9 +181,58 @@ def _as_float(value: object, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field} must be a number, got {value!r}")
     try:
-        return float(value)
+        number = float(value)
     except OverflowError as exc:
         raise ValueError(f"{field} must be a number, got {value!r}") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"{field} must be finite, got {value!r}")
+    return number
+
+
+def _as_unit_interval(value: object, field: str) -> float:
+    number = _as_float(value, field)
+    if not 0.0 <= number <= 1.0:
+        raise ValueError(f"{field} must be in [0, 1], got {value!r}")
+    return number
+
+
+def validate_probability_row(
+    probabilities: Mapping[str, float],
+    *,
+    rounding_digits: int | None = None,
+    context: str = "probabilities",
+) -> None:
+    """Validate a complete probability row without changing its values.
+
+    The strict mass budget is 1e-6. An explicitly declared decimal precision
+    adds half a rounding quantum per entry only when every entry matches that
+    precision. Native System One rows use two decimal places; callers with
+    generated or full-precision probabilities should leave ``rounding_digits``
+    unset. This allowance does not apply to CPTs or posterior sidecars.
+    """
+    if rounding_digits is not None and (
+        isinstance(rounding_digits, bool)
+        or not isinstance(rounding_digits, int)
+        or not 0 <= rounding_digits <= 15
+    ):
+        raise ValueError("rounding_digits must be None or an integer in [0, 15]")
+    if not isinstance(probabilities, Mapping) or not probabilities:
+        raise ValueError(f"{context} must be a non-empty mapping")
+    values = [
+        _as_unit_interval(value, f"{context}[{option!r}]")
+        for option, value in probabilities.items()
+    ]
+    tolerance = PROBABILITY_ROW_TOLERANCE
+    if rounding_digits is not None and all(
+        abs(value - round(value, rounding_digits)) <= 1e-12 for value in values
+    ):
+        tolerance += len(values) * 0.5 * 10.0 ** -rounding_digits
+    mass = math.fsum(values)
+    if mass <= 0.0 or abs(mass - 1.0) > tolerance:
+        raise ValueError(
+            f"{context} sum {mass!r} differs from 1 by {abs(mass - 1.0)!r}; "
+            f"allowed deviation is {tolerance!r}"
+        )
 
 
 def _require_str(payload: dict, field: str) -> str:
@@ -188,17 +243,21 @@ def _require_str(payload: dict, field: str) -> str:
     return value
 
 
-def _as_probabilities(probabilities: object) -> dict[str, float]:
+def _as_probabilities(
+    probabilities: object, rounding_digits: int | None
+) -> dict[str, float]:
     """Parse a strict ``{option: number}`` mapping or raise ValueError."""
     if not isinstance(probabilities, dict):
         raise ValueError(
             "probabilities must be a dict of option -> number, "
             f"got {type(probabilities).__name__}"
         )
-    return {
+    parsed = {
         str(option): _as_float(value, f"probabilities[{option!r}]")
         for option, value in probabilities.items()
     }
+    validate_probability_row(parsed, rounding_digits=rounding_digits)
+    return parsed
 
 
 def _as_legend(legend: object) -> dict[str, str]:
@@ -235,17 +294,28 @@ def _as_int(usage: dict, key: str) -> int:
     if isinstance(value, bool):
         raise ValueError(f"{key} must be an integer number, got {value!r}")
     if isinstance(value, int):
-        return value
-    if isinstance(value, float) and value.is_integer():
-        return int(value)
-    raise ValueError(f"{key} must be an integer number, got {value!r}")
+        number = value
+    elif isinstance(value, float) and value.is_integer():
+        number = int(value)
+    else:
+        raise ValueError(f"{key} must be an integer number, got {value!r}")
+    if number < 0:
+        raise ValueError(f"{key} must be non-negative, got {value!r}")
+    return number
 
 
-def answer_from_wire(payload: dict) -> Answer:
+def answer_from_wire(
+    payload: dict,
+    *,
+    probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
+) -> Answer:
     """Parse a strict wire answer dict into its dataclass.
 
     Raises ValueError for an unknown answer type, a missing key, or a
     malformed value (wrong type for a string, mapping, or numeric field).
+    Unit-interval fields and probability mass are validated. The native
+    rounding allowance defaults to two decimal places; pass
+    ``probability_rounding_digits=None`` for the strict 1e-6 mass budget.
     """
     if not isinstance(payload, dict):
         raise ValueError(f"answer must be a dict, got {type(payload).__name__}")
@@ -257,18 +327,18 @@ def answer_from_wire(payload: dict) -> Answer:
         raise ValueError(f"unknown answer type: {answer_type!r}")
     _require(payload, cls, answer_type)
     if cls is NoulAnswer:
-        return NoulAnswer(noul=_as_float(payload["noul"], "noul"))
+        return NoulAnswer(noul=_as_unit_interval(payload["noul"], "noul"))
     if cls is ChoiceAnswer:
         return ChoiceAnswer(
             choice=_require_str(payload, "choice"),
-            probabilities=_as_probabilities(payload["probabilities"]),
-            confidence=_as_float(payload["confidence"], "confidence"),
+            probabilities=_as_probabilities(payload["probabilities"], probability_rounding_digits),
+            confidence=_as_unit_interval(payload["confidence"], "confidence"),
         )
     return ScoreAnswer(
         score=_as_float(payload["score"], "score"),
         legend=_as_legend(payload["legend"]),
-        probabilities=_as_probabilities(payload["probabilities"]),
-        confidence=_as_float(payload["confidence"], "confidence"),
+        probabilities=_as_probabilities(payload["probabilities"], probability_rounding_digits),
+        confidence=_as_unit_interval(payload["confidence"], "confidence"),
     )
 
 
@@ -315,14 +385,21 @@ class SystemOneResponse:
         }
 
 
-def parse_response(payload: dict, request_id: str | None = None) -> SystemOneResponse:
+def parse_response(
+    payload: dict,
+    request_id: str | None = None,
+    *,
+    probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
+) -> SystemOneResponse:
     """Parse a strict System One response payload.
 
     Unknown extra top-level fields (e.g. kev's ``latency_ms``) are
     tolerated and ignored.
     Raises ValueError when the top-level keys are missing or malformed, an
     answer has an unknown type, or an answer or usage value has the wrong
-    type.
+    type. Token counts must be non-negative. Native probability rows are
+    retained verbatim under the declared rounding allowance; pass
+    ``probability_rounding_digits=None`` for strict full-precision rows.
     """
     if not isinstance(payload, dict):
         raise ValueError(
@@ -341,7 +418,10 @@ def parse_response(payload: dict, request_id: str | None = None) -> SystemOneRes
     if not isinstance(usage_raw, dict):
         raise ValueError(f"usage must be a dict, got {type(usage_raw).__name__}")
     answers = {
-        str(qid): answer_from_wire(answer) for qid, answer in answers_raw.items()
+        str(qid): answer_from_wire(
+            answer, probability_rounding_digits=probability_rounding_digits
+        )
+        for qid, answer in answers_raw.items()
     }
     return SystemOneResponse(
         model=model,
@@ -352,3 +432,54 @@ def parse_response(payload: dict, request_id: str | None = None) -> SystemOneRes
         ),
         request_id=request_id,
     )
+
+
+def validate_response(
+    response: SystemOneResponse,
+    questions: Mapping[str, Question | dict],
+    *,
+    probability_rounding_digits: int | None = NATIVE_PROBABILITY_ROUNDING_DIGITS,
+) -> None:
+    """Bind native answers to the exact request; never repair a response."""
+    expected_ids = set(questions)
+    received_ids = set(response.answers)
+    if expected_ids != received_ids:
+        raise ValueError(
+            f"answer IDs do not match questions: missing {sorted(expected_ids - received_ids)!r}, "
+            f"unexpected {sorted(received_ids - expected_ids)!r}"
+        )
+    _as_int(dataclasses.asdict(response.usage), "input_tokens")
+    _as_int(dataclasses.asdict(response.usage), "output_tokens")
+    for qid, question in questions.items():
+        wire = question if isinstance(question, dict) else question.to_wire()
+        answer = response.answers[qid]
+        qtype = wire.get("type")
+        if qtype != answer.type:
+            raise ValueError(
+                f"question {qid!r} requires a {qtype!r} answer, got {answer.type!r}"
+            )
+        if isinstance(answer, NoulAnswer):
+            _as_unit_interval(answer.noul, f"answer {qid!r} noul")
+            continue
+        _as_unit_interval(answer.confidence, f"answer {qid!r} confidence")
+        validate_probability_row(
+            answer.probabilities,
+            rounding_digits=probability_rounding_digits,
+            context=f"answer {qid!r} probabilities",
+        )
+        if isinstance(answer, ChoiceAnswer):
+            expected_options = set(wire["criteria"])
+            if set(answer.probabilities) != expected_options:
+                raise ValueError(f"answer {qid!r} probabilities must match every choice option")
+            if answer.choice not in expected_options:
+                raise ValueError(f"answer {qid!r} choice {answer.choice!r} is not a declared option")
+        elif isinstance(answer, ScoreAnswer):
+            levels = wire["criteria"]
+            expected_levels = {str(index) for index in range(len(levels))}
+            if set(answer.probabilities) != expected_levels or set(answer.legend) != expected_levels:
+                raise ValueError(f"answer {qid!r} probabilities and legend must match every score level")
+            if answer.legend != {str(index): text for index, text in enumerate(levels)}:
+                raise ValueError(f"answer {qid!r} legend does not match the declared score levels")
+            score = _as_float(answer.score, f"answer {qid!r} score")
+            if not 0.0 <= score <= len(levels) - 1:
+                raise ValueError(f"answer {qid!r} score must be in [0, {len(levels) - 1}]")

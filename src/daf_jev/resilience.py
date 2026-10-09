@@ -22,7 +22,7 @@ from __future__ import annotations
 import enum
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from daf_jev._errors import TypeSafeError
@@ -109,6 +109,35 @@ class CircuitBreaker:
         — the counter increments and may trip the breaker; the exception
         is always re-raised, never swallowed.
         """
+        self._admit()
+        try:
+            result = fn(*args, **kwargs)
+        except BaseException:
+            self.record_failure()
+            raise
+        self.record_success()
+        return result
+
+    async def call_async(
+        self, fn: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
+    ) -> T:
+        """Await a callable behind the same admission and failure policy.
+
+        Success is recorded only after the await completes. Cancellation
+        and every other ``BaseException`` record failure and propagate,
+        releasing a HALF_OPEN probe by reopening the circuit.
+        """
+        self._admit()
+        try:
+            result = await fn(*args, **kwargs)
+        except BaseException:
+            self.record_failure()
+            raise
+        self.record_success()
+        return result
+
+    def _admit(self) -> None:
+        """Reserve a probe or reject a call under the shared state lock."""
         with self._lock:
             now = self._clock()
             if self._state is CircuitState.OPEN:
@@ -130,19 +159,6 @@ class CircuitBreaker:
                     "circuit is half-open: a probe is already in flight",
                     remaining_seconds=0.0,
                 )
-        try:
-            result = fn(*args, **kwargs)
-        except BaseException:
-            # Counts BaseException too (KeyboardInterrupt, SystemExit,
-            # asyncio.CancelledError): a HALF_OPEN probe that dies this way
-            # would otherwise never record, wedging the breaker half-open
-            # forever ("a probe is already in flight"). record_failure()
-            # from HALF_OPEN reopens with a fresh stamp. Re-raised, never
-            # swallowed.
-            self.record_failure()
-            raise
-        self.record_success()
-        return result
 
     def record_success(self) -> None:
         """Record a success manually (same transitions as :meth:`call`).

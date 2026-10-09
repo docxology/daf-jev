@@ -1,0 +1,168 @@
+{
+  "format": "dafjev.study-continuation-status/1",
+  "date": "2026-10-08",
+  "scientific_full_study_complete": false,
+  "sdk_source_file_map_sha256": "9b69c7c064113869ab9304e782262cbfc4aa8c5b4ecd6766d55b10c4a3fa2282",
+  "inference_git_head": "4394fb12ec34414a5fad64477962ec93db7a6172",
+  "source_verification": {
+    "unit_passed": 1508,
+    "combined_line_branch_coverage_percent": 93.14265090679419,
+    "branch_measurement_enabled": true,
+    "live_tests_collected": 2,
+    "live_tests_executed": 0,
+    "ruff": true,
+    "mypy": true,
+    "docs_snapshot_pages_verified": 111,
+    "installed_core_python": "3.10.20",
+    "installed_core_scope": "Core wheel byte/import/owned HTTP/keyless examples and packed serialization checks; no installed-wheel executor or model/hosted acceptance."
+  },
+  "cpu_studies": {
+    "jobs": 9,
+    "planned_cells": 93046,
+    "completed": 68894,
+    "unsupported": 24152,
+    "failed": 0,
+    "unresolved": 0,
+    "unattempted": 0,
+    "primary_quality_completed": 68870,
+    "capability_probe_completed": 24,
+    "hosted_inference_attempts": 0,
+    "local_monetary_expense_usd": null,
+    "reports_independently_regenerated": 9,
+    "scope": "Fixed references and supervised baselines. Prior official-test exposure, label-dependent leakage sensitivity, correlated fitting and sparse Wine extremes disclosed."
+  },
+  "historical_native_study": {
+    "planned_cells": 2792,
+    "completed": 2005,
+    "unsupported": 495,
+    "failed": 3,
+    "unresolved": 1,
+    "unattempted": 288,
+    "scope": "Separate retained partial four-profile study under older SDK/input identity. No primary reuse or time reset for the new full-cohort proposal."
+  },
+  "new_native_full_proposal": {
+    "planned_profiles": 3,
+    "planned_cells_per_profile": 25137,
+    "planned_cells": 75411,
+    "actual_inference_attempts": 0,
+    "materialized_study": false,
+    "proposal_status": "PROPOSED_UNATTEMPTED",
+    "original_requested_profiles": 4,
+    "scope": "Jeff/Kev/Qwen0.8 proposal retains all new cells; Qwen4 original obligation is separately excluded under raw UNKNOWN/exhausted cumulative allowance. Static compatibility is not a terminal model outcome."
+  },
+  "native_required_preparation": {
+    "status": "STOPPED_WITH_INCOMPLETE_CLOCK_EVIDENCE",
+    "model_server_started": false,
+    "model_predictions": 0,
+    "tokenizer_audits_completed": 0,
+    "new_study_frozen": false,
+    "owned_processes_independently_observed_absent": true,
+    "sigint_deliveries": 1,
+    "observed_stop_reason": "descendant_memory_unavailable_ZombieProcess",
+    "proved_rss_or_disk_cap_excess": false,
+    "accounting": {
+      "allocation_scope": "Known minimum charges only: full shared input/carry adapter + dispatch setup/common to both K/J; failed Kev profile interval to Kev. Parent wall overlaps these intervals and is not added again. Unallocated launch/guardian/cleanup timing and raw inner UNKNOWN prevent a current admissible balance or new carry.",
+      "known_common_plus_failed_profile_s": "18.572277626022696",
+      "no_clock_repair_or_refund": true,
+      "no_exact_outer_begin_or_end_monotonic_retained": true,
+      "parent_elapsed_plus_setup_s": "19.821266084036324555",
+      "parent_elapsed_wall_s": "19.802142667002045",
+      "parent_unallocated_overlap_remainder_s": "1.229865040979349",
+      "per_profile": {
+        "jeff-gliformer-large-v1-mps": {
+          "base_closed_carried_consumed_s": "2130.2146624150337",
+          "current_admissible_remaining_s": null,
+          "dispatch_setup_s": "0.019123417034279555",
+          "failed_profile_window_s": null,
+          "known_minimum_consumed_s": "2230.092548916116385555",
+          "new_closed_common_s": "8.459166958986316",
+          "prior_new_shared_adapter_s": "91.39959612506209",
+          "remaining_upper_bound_s": "4969.907451083883614445"
+        },
+        "kev-0.8b-v1.0-mlx": {
+          "base_closed_carried_consumed_s": "3424.182420247991",
+          "current_admissible_remaining_s": null,
+          "dispatch_setup_s": "0.019123417034279555",
+          "failed_profile_window_s": "10.11311066703638",
+          "known_minimum_consumed_s": "3534.173417416110065555",
+          "new_closed_common_s": "8.459166958986316",
+          "prior_new_shared_adapter_s": "91.39959612506209",
+          "remaining_upper_bound_s": "3665.826582583889934445"
+        }
+      },
+      "raw_UNKNOWN_preserved": true
+    },
+    "next_step": "Review a fresh sampling implementation and reconcile the failed charged interval before new preparation; retain raw missing inner exit and do not retry/reset automatically."
+  },
+  "hosted_full_proposal": {
+    "profiles": 15,
+    "planned_cells": 376155,
+    "actual_inference_attempts": 0,
+    "reported_spend_usd": "0",
+    "reserved_usd": "0",
+    "authorized_allocation_id": "first-authorized-hosted-usd25",
+    "authorized_total_usd": "25",
+    "materialized_sdk_run": false,
+    "status": "PROPOSED_UNATTEMPTED",
+    "missing_openrouter_credential": true,
+    "paid_native_aggregate_billing_unverified": true,
+    "scope": "Public catalog/endpoint metadata and bounded static geometry, not successful inference. Existing allocation is shared by all probes/failed attempts/retries and cannot be duplicated."
+  },
+  "selected_public_artifacts": [
+    {
+      "path": "output/reports/full-offline-20261008/full-offline-comparison.json",
+      "sha256": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7"
+    },
+    {
+      "path": "output/reports/full-offline-20261008/full-offline-comparison.md",
+      "sha256": "ed2eebe69f3e855b34a6ff1369c4bb703fd3c10078e4bd85472cc486a6dcd19c"
+    },
+    {
+      "path": "output/reports/full-offline-20261008/full-offline-comparison-reviewed.pdf",
+      "sha256": "16485a2f6d81f6bc200ba1d54915fe1e3222091b3e7a0da62fce8d2627330d63"
+    },
+    {
+      "path": "output/reports/full-offline-20261008/hosted-full-proposal-summary.json",
+      "sha256": "77956522ffb5c25d5f504ac5456087a870649ef3cf3d7780556965e897a0b529"
+    },
+    {
+      "path": "output/reports/full-offline-20261008/hosted-profile-cohort.json",
+      "sha256": "e8d7cbe81d56e99f7f8d8d62dcf97e0aecb8ed849eb7b651d4eef94979316e45"
+    },
+    {
+      "path": "output/pdf/modular-methods-reproduction-20261008-full-study-source.pdf",
+      "sha256": "4ddded5b6d39ef9450192e12c9d75fdd76e48fca3a47da8bccdd6111e87aa50c"
+    },
+    {
+      "path": "output/verification/20261008-full-study-packed-9eced2020c0a45a5ba7f7186679caacf/verification.json",
+      "sha256": "d562d8897b135f2bece1057ada77af448054475991bf6e7d34e3341a3a43ff51"
+    }
+  ],
+  "selected_local_review_receipts": [
+    {
+      "path": ".benchmarks/full-offline-independent-root-4615f8d1d4ea473285db8a1ea8f5b902/review.json",
+      "sha256": "f79f724e4479f12548060f1846897c5ba1ba903dcdddff84879d50a9daf9d66e"
+    },
+    {
+      "path": ".benchmarks/reviews/cpu-public-export-independent-methods-4184acf67a95455f9eca808d42ab6dca/numeric-review.json",
+      "sha256": "63cbade828b8ebfee45a7910e6a6aa7a2bcbb35a986a0bad735869475cbab691"
+    },
+    {
+      "path": ".benchmarks/reviews/full-offline-reviewed-pdf-documentation-5041121d2a66499294c9fe498441c030/review.json",
+      "sha256": "af863ce24e0485ffaa919569ce136129ceafc3d012a8768214058eb2b0c228fc"
+    },
+    {
+      "path": ".benchmarks/reviews/full-study-manuscript-documentation-0a9cfa7540cb48de8b79c98c358354b4/review.json",
+      "sha256": "82c968b45f5e25b39b409f46aee8d77ed7105c517392c380661e71173241fe17"
+    },
+    {
+      "path": ".benchmarks/reviews/native-preparation-stop-independent-methods-85a16b680dc646008a6ddb18d9f5b4ef/review.json",
+      "sha256": "aac605c111028ba38a4a7a282ba78fb035ee7f46f0a2619db8d08cdd2a2211d1"
+    }
+  ],
+  "custody_scope": "Selected public aggregates and reproduction guides are selected for a scoped local commit. Complete observations/source snapshots and review receipts remain retained in the local ignored .benchmarks archive; they are not a remotely published evidence bundle. No publishing or push occurred. Changed Git identity requires fresh execution admission even when SDK file bytes match.",
+  "supersedes_status_metadata": {
+    "sha256": "0f9e8f0e46e459aeff208de6302e13e12a02550186373fcc23675e6e6376f5e2",
+    "reason": "Replaced prospective local-commit wording with an explicit selection statement before Git commit; all measurements and evidence references unchanged. Original draft retained locally."
+  }
+}

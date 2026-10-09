@@ -4,7 +4,7 @@ One ``generate_<name>()`` function per manuscript figure plus
 :func:`generate_all`, orchestrated by the thin
 ``scripts/generate_figures.py``. The graphical abstract opens the registry
 as figure 1; figures 2-3 (architecture, primitives) are data-free
-diagrams; figures 4-5 (batching, latency) read the latest benchmark JSONs
+diagrams; figures 4-5 (batching, latency) read the selected benchmark JSONs
 from ``output/benchmarks/`` at generation time; figure 6 (confidence) is
 a parametric illustration of confidence-gated routing; figure 7
 (calibration) plots the live reliability benchmark.
@@ -182,8 +182,12 @@ def _save(fig: plt.Figure, out_dir: Path, filename: str, *, tight: bool = True) 
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / filename
-    fig.savefig(path, dpi=DPI, bbox_inches="tight" if tight else None)
-    plt.close(fig)
+    try:
+        fig.savefig(path, dpi=DPI, bbox_inches="tight" if tight else None)
+        fig.savefig(path.with_suffix(".pdf"), bbox_inches="tight" if tight else None,
+                    metadata={"Creator": "daf-jev", "CreationDate": None, "ModDate": None})
+    finally:
+        plt.close(fig)
     return path
 
 
@@ -193,24 +197,18 @@ def _save(fig: plt.Figure, out_dir: Path, filename: str, *, tight: bool = True) 
 
 
 def _latest_benchmark(project_root: Path, prefix: str) -> Path:
-    """Return the path of the newest ``<prefix>_*.json`` under ``output/benchmarks``.
-
-    Raises :class:`FileNotFoundError` naming the missing file when none exist.
-    """
-    bench_dir = project_root / BENCHMARK_DIR
-    matches = sorted(bench_dir.glob(f"{prefix}_*.json"))
-    if not matches:
-        raise FileNotFoundError(
-            f"Missing benchmark data: no {bench_dir / f'{prefix}_*.json'} found "
-            f"(expected e.g. '{prefix}_20260916.json'). Run the benchmark script first."
-        )
-    return matches[-1]
+    """Compatibility helper name; selects exact shared evidence, never latest."""
+    from daf_jev.evidence import selected_benchmark
+    return selected_benchmark(project_root, prefix)
 
 
 def _load_benchmark(project_root: Path, prefix: str) -> dict[str, Any]:
-    path = _latest_benchmark(project_root, prefix)
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    from daf_jev._json import strict_json_loads
+    from daf_jev.evidence import selected_benchmark_bytes
+    value = strict_json_loads(selected_benchmark_bytes(project_root, prefix))
+    if not isinstance(value, dict):
+        raise ValueError("publication benchmark JSON must contain an object")
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +323,7 @@ def generate_primitives(out_dir: Path, project_root: Path | None = None) -> Path
     fig, ax = _new_diagram("Jev question primitives and typed answers")
 
     columns = [
-        ("noul", "NoulQuestion", "NoulAnswer", "free-text content\n(no confidence axis)"),
+        ("noul", "NoulQuestion", "NoulAnswer", "declared yes/no probability\n(calibration requires evidence)"),
         ("choice", "ChoiceQuestion", "ChoiceAnswer", "choice + probabilities\n+ confidence"),
         ("score", "ScoreQuestion", "ScoreAnswer", "score + probabilities\n+ legend + confidence"),
     ]
@@ -348,60 +346,29 @@ def generate_primitives(out_dir: Path, project_root: Path | None = None) -> Path
 
 
 def generate_batching(out_dir: Path, project_root: Path | None = None) -> Path:
-    """Bar chart of batching speedup vs N, with token-cost ratio overlay."""
+    """Separate wall-clock and token-ratio panels over selected historical data."""
     _style()
     root = Path.cwd() if project_root is None else project_root
     data = _load_benchmark(root, "batching")
-
     results = sorted(data["results"], key=lambda r: r["n"])
     ns = [str(r["n"]) for r in results]
-    speedups = [float(r["speedup_ratio"]) for r in results]
-    token_ratios = [float(r["token_cost_ratio"]) for r in results]
-    # token_cost_ratio = sequential tokens / batched tokens: values above one
-    # mean the sequential strategy costs MORE tokens (it re-sends the state).
-
-    fig, ax = plt.subplots(figsize=SIZE_CHART)
-    ax.set_ylim(0, max(speedups) * 1.14)  # headroom so labels clear the overlay
-    bars = ax.bar(ns, speedups, width=0.55, color=COLOR_LAYER_MAIN, label="wall-clock speedup")
-    for bar, value in zip(bars, speedups, strict=True):  # same results list
-        ax.annotate(
-            f"{value:.1f}x",
-            (bar.get_x() + bar.get_width() / 2, bar.get_height()),
-            textcoords="offset points",
-            xytext=(0, 4),
-            ha="center",
-            fontsize=FONT_ANNOTATE,
-            color=COLOR_TEXT,
-        )
-
-    ax.set_xlabel("batch size N", fontsize=FONT_AXIS)
-    ax.set_ylabel("speedup vs single calls (x)", fontsize=FONT_AXIS)
-    ax.tick_params(labelsize=FONT_AXIS)
-
-    ax2 = ax.twinx()
-    ax2.plot(ns, token_ratios, color=COLOR_ACCENT, marker="o", linewidth=1.6, label="sequential token cost relative to batched")
-    # Margins keep the markers and their labels clear of the bar tops.
-    ax2.set_ylim(min(token_ratios) * 0.92, max(token_ratios) * 1.14)
-    for x_pos, value in zip(range(len(ns)), token_ratios, strict=True):  # same results list
-        ax2.annotate(
-            f"{value:.2f}",
-            (x_pos, value),
-            textcoords="offset points",
-            xytext=(8, -10),
-            fontsize=FONT_ANNOTATE - 1,
-            color=COLOR_ACCENT,
-        )
-    ax2.set_ylabel("sequential ÷ batched tokens", fontsize=FONT_AXIS, color=COLOR_ACCENT)
-    ax2.tick_params(labelsize=FONT_AXIS, colors=COLOR_ACCENT)
-
-    # Title reads model + run date from the benchmark JSON, never hardcoded.
-    ax.set_title(f"Batching speedup — {data['model']} ({data['date']})", fontsize=FONT_TITLE, color=COLOR_TEXT)
-
-    # BarContainer and Line2D both expose get_label(); matplotlib's artist
-    # typing is loose here, so the handle list is explicitly Any-typed.
-    handles: list[Any] = [bars, ax2.lines[0]]
-    ax.legend(handles, [h.get_label() for h in handles], loc="upper left", fontsize=FONT_ANNOTATE)
-
+    fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.0))
+    for ax, key, color, title, ylabel in zip(
+            axes, ("speedup_ratio", "token_cost_ratio"), (COLOR_LAYER_MAIN, COLOR_ACCENT),
+            ("a  Wall-clock speedup", "b  Token ratio"),
+            ("Sequential / batched wall time", "Sequential / batched tokens"), strict=True):
+        values = [float(r[key]) for r in results]
+        bars = ax.bar(ns, values, width=.55, color=color)
+        ax.axhline(1, color=COLOR_EXTERNAL, linestyle="--", linewidth=1)
+        for bar, value in zip(bars, values, strict=True):
+            ax.annotate(f"{value:.2f}", (bar.get_x() + bar.get_width()/2, bar.get_height()),
+                        xytext=(0, 4), textcoords="offset points", ha="center", fontsize=FONT_ANNOTATE)
+        ax.set_ylim(0, max(max(values), 1) * 1.18)
+        ax.set_xlabel("Batch size N")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title, loc="left")
+        ax.spines[["top", "right"]].set_visible(False)
+    fig.suptitle(f"Selected historical batching: {data['model']} ({data['date']})", fontsize=FONT_TITLE)
     fig.tight_layout()
     return _save(fig, out_dir, "batching_speedup.png")
 
@@ -612,7 +579,7 @@ def generate_graphical_abstract(out_dir: Path, project_root: Path | None = None)
     Three zones: (a) the decision state and the three typed question
     primitives; (b) the daf-jev processing stack; (c) live benchmark outputs
     (batching speedup, pipeline p50 latency, calibration reliability) read at
-    generation time from the latest benchmark JSONs. Arrows trace state →
+    generation time from the selected benchmark JSONs. Arrows trace state →
     typed answers → routed decisions. Missing benchmark data raises
     :class:`FileNotFoundError` naming the missing file.
     """
@@ -637,7 +604,7 @@ def generate_graphical_abstract(out_dir: Path, project_root: Path | None = None)
     ax_cal = fig.add_subplot(gs_live[2])
 
     fig.suptitle(
-        "daf-jev: typed questions, routed decisions, measured trust",
+        "daf-jev: typed questions, orchestration, retained evidence",
         fontsize=FONT_TITLE, fontweight="bold", color=COLOR_TEXT, y=0.97,
     )
 
@@ -739,7 +706,7 @@ def generate_graphical_abstract(out_dir: Path, project_root: Path | None = None)
             0.03, 0.10, f"ECE {float(ece):.3f}",
             transform=ax_cal.transAxes, ha="left", va="bottom",
         )
-    ax_cal.set_title("calibration reliability", loc="left", fontsize=FONT_MINI, color=COLOR_TEXT)
+    ax_cal.set_title("modal-agreement proxy", loc="left", fontsize=FONT_MINI, color=COLOR_TEXT)
     ax_cal.tick_params(labelsize=FONT_MINI - 1)
     ax_cal.legend(loc="lower right", fontsize=FONT_MINI - 2)
 
@@ -767,12 +734,18 @@ FIGURE_FILENAMES: dict[str, str] = {
 }
 
 
-def generate_one(name: str, out_dir: Path, project_root: Path | None = None) -> Path:
+def generate_one(name: str, out_dir: Path, project_root: Path | None = None, *, include_study: bool = False) -> Path:
     """Render a single registered figure by name.
 
     Raises :class:`ValueError` naming the valid choices for an unknown name.
     """
+    if include_study and name == "graphical_abstract":
+        from .study_figures import generate_overview
+        return generate_overview(out_dir, project_root or Path.cwd())
     if name not in _REGISTRY:
+        from .study_figures import FILENAMES, generate
+        if name in FILENAMES:
+            return generate(name, out_dir, project_root or Path.cwd())
         raise ValueError(f"unknown figure name {name!r}; valid names: {', '.join(sorted(_REGISTRY))}")
     return _REGISTRY[name](out_dir, project_root)
 
@@ -793,7 +766,7 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
             "processing stack, from the typed client through the composition "
             "layer with its confidence gates and routing patterns and the "
             "evaluator with its calibration machinery up to the surfaced entry "
-            "points (CLI, MCP server, agent skill). Right: live benchmark "
+            "points (CLI, MCP server, agent skill). Right: selected historical benchmark "
             "outputs read at figure-generation time from the benchmark JSONs — "
             "batching wall-clock speedup with the benchmarked model and run "
             "date, per-pipeline median latency, and the confidence reliability "
@@ -842,8 +815,8 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
         "caption": (
             "The three question primitives of the System One surface and the typed "
             "answer shapes daf-jev parses them into. A noul question yields a "
-            "calibrated yes/no probability; a choice question yields a selected label, "
-            "a full probability distribution over the named options, and a scalar "
+            "declared yes/no probability; a choice question yields a selected label, "
+            "a probability distribution over the named options, and a scalar "
             "confidence; a score question yields a probability-weighted score over "
             "ordered levels together with the level legend, the level distribution, "
             "and a confidence. The diagram is a schematic of shapes only — it carries "
@@ -866,8 +839,8 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
             "Batching speedup of the benchmark model versus sequential "
             "single-question calls, measured by benchmarks/bench_batching.py. Bars "
             "give the wall-time speedup of one batched call over one sequential call "
-            "per question for each configured batch width; the secondary axis "
-            "shows the token-cost ratio — sequential tokens divided by batched "
+            "per question for each configured batch width; a separate panel "
+            "shows the token ratio — sequential tokens divided by batched "
             "tokens — which exceeds unity because the sequential "
             "strategy re-sends the state once per question. Bars are annotated with "
             "their values; the title carries the model and run date read from the "
@@ -875,7 +848,7 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
         ),
         "alt_text": (
             "Bar chart of wall-time speedup versus sequential calls for each "
-            "configured batch width, with a secondary-axis token-cost ratio "
+            "configured batch width, with a separate token-ratio panel "
             "measuring sequential tokens relative to batched tokens; the "
             "speedup grows with batch width while the sequential strategy "
             "costs proportionally more tokens than the single batched call."
@@ -946,7 +919,7 @@ _FIGURE_META: tuple[dict[str, str], ...] = (
 )
 
 
-def write_figure_registry(out_dir: Path, project_root: Path | None = None) -> Path:
+def write_figure_registry(out_dir: Path, project_root: Path | None = None, *, include_study: bool = False) -> Path:
     """Write ``figure_registry.json`` describing every manuscript figure.
 
     The registry is the engine-facing manifest consumed by template
@@ -965,7 +938,14 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None) -> Pa
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     registry: dict[str, Any] = {}
-    for index, meta in enumerate(_FIGURE_META, start=1):
+    entries = _FIGURE_META
+    if include_study:
+        from .study_figures import metadata
+        entries += metadata()
+    for index, meta in enumerate(entries, start=1):
+        if include_study and meta["label"] == "fig:graphical_abstract":
+            meta = {**meta, "caption": "Modular decision workflow from independent targets and frozen requests through admission, declared backends and validated results to retained evidence. CPU, older native and hosted pilot counts describe separate cohorts; completion includes capability work. The full comparative study remains unfinished.",
+                    "alt_text": "Three panels show independent targets and a frozen design, budgeted backend execution, and distinct retained CPU/native/hosted evidence."}
         registry[meta["label"]] = {
             "figure_id": f"figure_{index:03d}",
             "filename": meta["filename"],
@@ -978,6 +958,7 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None) -> Pa
             "metadata": {
                 "alt_text": meta["alt_text"],
                 "source": "daf-jev benchmark/figure pipeline",
+                "evidence_selection": "manuscript/evidence.json",
             },
         }
     path = out_dir / FIGURE_REGISTRY_FILENAME
@@ -988,7 +969,7 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None) -> Pa
     return path
 
 
-def generate_all(out_dir: Path, project_root: Path | None = None) -> list[Path]:
+def generate_all(out_dir: Path, project_root: Path | None = None, *, include_study: bool = False) -> list[Path]:
     """Render every registered figure as a PNG into *out_dir*.
 
     Args:
@@ -1008,6 +989,9 @@ def generate_all(out_dir: Path, project_root: Path | None = None) -> list[Path]:
             JSONs; the architecture, primitives, and confidence figures are
             data-free and never trigger this.
     """
-    paths = [_REGISTRY[name](out_dir, project_root) for name in _REGISTRY]
-    write_figure_registry(out_dir, project_root)
+    paths = [generate_one(name, out_dir, project_root, include_study=include_study) for name in _REGISTRY]
+    if include_study:
+        from .study_figures import FILENAMES, generate
+        paths.extend(generate(name, out_dir, project_root or Path.cwd()) for name in FILENAMES)
+    write_figure_registry(out_dir, project_root, include_study=include_study)
     return paths

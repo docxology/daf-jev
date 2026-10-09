@@ -9,7 +9,9 @@ Modular, composable Python client and decision toolkit for the **TypeSafe Jev
 (System One) API**. One HTTP endpoint, three question primitives, and a set of
 pure-logic composition patterns built on top of the answers — plus a
 concurrent batch evaluation harness, an MCP server, a figure registry, and a
-reproducible manuscript pipeline.
+reproducible manuscript pipeline. An explicit benchmark backend interface adds
+local priors/classifiers, local model servers and OpenRouter decision candidates,
+with prepared datasets, durable attempt receipts and separate quality/cost evidence.
 
 **Contents**: [What it provides](#what-it-provides) ·
 [Architecture at a glance](#architecture-at-a-glance) ·
@@ -21,6 +23,7 @@ reproducible manuscript pipeline.
 [Jev to RxInfer.jl pipeline](#jev-to-rxinferjl-pipeline) · [CLI](#cli) ·
 [MCP server](#mcp-server) · [Configuration](#configuration) ·
 [Providers](#providers) · [Figures and manuscript](#figures-and-manuscript) ·
+[Decision-model benchmarks](#decision-model-benchmarks) ·
 [Tests and benchmarks](#tests-and-benchmarks) · [Map](#map) ·
 [Documentation](#documentation)
 
@@ -29,7 +32,7 @@ reproducible manuscript pipeline.
 - **Primitives** — `noul` (yes/no), `choice` (pick an option from a
   probability distribution), `score` (rated on ordered levels). Build
   questions with `noul()` / `choice()` / `score()` and group them in a
-  `QuestionSet`; batch any number of questions into a single API call.
+  `QuestionSet`; batch questions within the selected backend's capacity.
 - **Client** — `JevClient` / `AsyncJevClient` wrapping
   `POST https://api.typesafe.ai/v1/systemone`, with retries (429/529,
   exponential backoff, `Retry-After`), typed error mapping, and a
@@ -86,15 +89,16 @@ reproducible manuscript pipeline.
   `position_slope`, `noul_choice_delta`) over repeated stochastic prompts
   (coin, d6), plus a live multi-provider jaggedness benchmark
   (`benchmarks/bench_jaggedness.py`).
-- **Figures & manuscript** — a matplotlib figure registry (7 figures +
+- **Figures & manuscript** — a matplotlib figure registry (seven legacy figures, six selected empirical figures +
   `figure_registry.json`) and a `{{TOKEN}}` variable pipeline that keep the
   10-section manuscript in `manuscript/` free of hardcoded results.
-- **MCP server** — `daf-jev serve` exposes the toolkit as seven MCP tools
+- **MCP server** — `daf-jev serve` exposes the toolkit as nine MCP tools
   (`jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
-  `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`) plus a
+  `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`,
+  `jev_posteriors_load`, `jev_reask_plan`) plus a
   `jev://docs/snapshot` resource, over stdio (see [MCP server](#mcp-server)).
 
-Dependencies: Python >= 3.10, `httpx`, `pyyaml` (plus `matplotlib` +
+Dependencies: Python >= 3.10, `httpx`, `pyyaml`, and `tomli` on Python 3.10 (plus `matplotlib` +
 `pillow` for figures). Managed with `uv`.
 
 ## Architecture at a glance
@@ -118,7 +122,7 @@ flowchart TB
         PR --> CL
         SUP --> CL
     end
-    subgraph pure["pure logic — no I/O, provider-agnostic"]
+    subgraph pure["composition and orchestration — provider-agnostic"]
         direction LR
         CP["compose.py<br/>composite_score · gates · route"]
         EV["evaluate.py<br/>Evaluator"]
@@ -159,7 +163,8 @@ flowchart TB
     class CI,MC,QU,EX surf;
 ```
 
-The core runs on stdlib + `httpx` (+ `pyyaml`); `matplotlib` is optional
+The core uses `httpx` and `pyyaml`, with `tomli` for TOML parsing on Python 3.10;
+Python 3.11 and newer use standard-library `tomllib`. `matplotlib` is optional
 (the `figures` extra). Inference in `graphical.py` is pure-stdlib
 variable elimination — no numpy, no network at query time.
 
@@ -179,10 +184,11 @@ flowchart LR
     EV --> CAL["calibration<br/>ECE · Brier · reliability"]
 ```
 
-The batched call carries *all* questions at once — live benchmarks show it
-running up to ~18× faster than sequential single-question calls while the
-sequential strategy consumes up to ~4× more tokens (see
-[Tests and benchmarks](#tests-and-benchmarks)).
+The batched call carries all questions at once. The retained September receipt
+measured up to 18.55× shorter wall time and a 4.22× total-token ratio for its
+specific task and model alias. It did not retain paired answers or reported USD
+charges, so these results establish timing and token measurements for that run.
+See [Tests and benchmarks](#tests-and-benchmarks) for the selected receipt.
 
 
 ## Quickstart
@@ -224,10 +230,11 @@ verdict = confidence_gate(resp.choices["tone"], threshold=0.6, below="review")
 
 ## Examples
 
-Eight runnable scripts live in `examples/` (walkthrough per script in
+Thirteen runnable scripts live in `examples/` (walkthrough per script in
 [`examples/README.md`](examples/README.md)). Each resolves the API key from
 the environment or `.env` and — when no key is found — prints
-`SKIP: JEV_API_KEY not set` and exits 0, so all eight are offline-safe:
+`SKIP: JEV_API_KEY not set` and exits 0. The provider example uses an injected
+transport and makes no network call:
 
 ```bash
 python examples/quickstart.py         # one mixed ask call; answers, usage, request id
@@ -238,9 +245,14 @@ python examples/gated_fallback.py     # heuristic-first: model called only when 
 python examples/decider_loop.py       # decision-point loop: gate, budget, fail-open fallback
 python examples/providers_example.py  # provider registry + dispatch; injected transport, no network
 python examples/asia_bayes.py         # Bayes net from Jev factors: CPT elicitation, structure proposal, posterior walkthrough
+python examples/decider_resilience.py # decision loop with a circuit breaker
+python examples/evaluate_async.py     # evaluation from an existing async loop
+python examples/calibration_walkthrough.py # calibration statistics walkthrough
+python examples/retry_policies.py     # explicit retry policies
+python examples/reask_policy.py       # posterior plan wired into a provider ask
 ```
 
-All eight take `--model NAME` (default: provider-resolved — for the
+Model-backed walkthroughs take `--model NAME` (default: provider-resolved — for the
 default `jev` provider: `JEV_MODEL`, then `TYPESAFE_DEFAULT_MODEL`, then
 `jev-latest`); `asia_bayes.py` also takes `--provider KEY` (default
 `jev`); `evaluate_corpus.py` also takes `--concurrency N` (default 2).
@@ -321,7 +333,11 @@ except CircuitOpenError as exc:
     ...                               # fail fast while the circuit is open
 ```
 
-`CircuitBreaker` wraps any callable: `failure_threshold` consecutive
+`await breaker.call_async(async_callable, ...)` awaits async completion before
+recording success; cancellation and any `BaseException` record failure and
+re-raise, including recovery probes.
+
+`CircuitBreaker` wraps a synchronous callable: `failure_threshold` consecutive
 failures open the circuit for `cooldown_seconds`, after which a single
 probe is admitted. It never sleeps — wait out the cooldown in your own loop
 (`exc.remaining_seconds` reports what is left) — and composes with the
@@ -389,7 +405,7 @@ requests cover a whole discrete network — one asks for **every CPT at
 once** (`elicit_cpts`: an 8-variable binary net is 18 rows in a single
 call), the other proposes the **topology itself** via pairwise three-way
 choices (`propose_structure`: `a->b` / `b->a` / `no-edge` over all
-n(n-1)/2 pairs, scored into a DAG by log-probability). Inference is
+n(n-1)/2 pairs, scored into a DAG by log(edge/no-edge) gain and an edge penalty). Inference is
 local and exact: `BayesNet.query` / `.posterior` run pure-Python variable
 elimination over the elicited factors — stdlib only, no numpy, no API
 calls at query time.
@@ -425,6 +441,7 @@ spec = net.to_json()                     # GraphSpec interchange
 | `BayesNet.to_json()` / `.from_json(data)` | GraphSpec `dafjev.bayesnet/1` interchange (lossless round-trip) |
 | `elicit_cpts(variables, edges, *, client, ...)` | every CPT row as one batched ask; deterministic question ids and state options; chunking via `max_questions_per_request` |
 | `propose_structure(variables, *, client, ...)` | one batched ask over all variable pairs -> DAG proposal (edges only); exact ordering search up to `exact_limit=8`, greedy above with `edge_penalty` |
+| `elicit_cpts_async(...)` / `propose_structure_async(...)` | awaited requests on the caller loop; caller owns client closure |
 
 `to_json()` emits **GraphSpec** (`"format": "dafjev.bayesnet/1"`), the
 interchange between this client and downstream graphical-model engines:
@@ -434,7 +451,7 @@ types. The format string is a cross-repo contract — it changes only
 together with the consuming bridges in the same wave (see `AGENTS.md`).
 
 End-to-end walkthrough: [`examples/asia_bayes.py`](examples/asia_bayes.py)
-— the eighth example (keyless skip; `--provider` / `--model` flags) builds
+— a runnable example (keyless skip; `--provider` / `--model` flags) builds
 the Asia variables, runs both batched requests, walks the posterior
 trajectory from the experiment (`asia=false`, then `+xray=true`, then
 `+dysp=true`, printing the tub/lung/bronc marginals at each step), and
@@ -638,6 +655,8 @@ Tools (each returns JSON-safe values; keys resolve per call from env or
 | `jev_confidence_gate` | one-threshold confidence routing (no API call) |
 | `jev_tiered_gate` | two-threshold automate/review/escalate routing (no API call) |
 | `jev_docs_verify` | re-hash `docs/reference/` against its manifest (no API call) |
+| `jev_posteriors_load` | validate a posterior sidecar, optionally against a GraphSpec (no API call) |
+| `jev_reask_plan` | max-entropy plan over an evidence-bearing posterior sidecar (no API call) |
 | resource `jev://docs/snapshot` | `{page_count, snapshot_id, scraped_at, index_sha256}` summary of the docs manifest |
 
 Schema note: `jev_evaluate` accepts string, JSON-object, or JSON-array
@@ -693,8 +712,8 @@ that call.
 
 One wire contract — `POST /v1/systemone` — many backends. daf-jev ships a
 provider registry (`src/daf_jev/providers.py`) that parameterizes config
-resolution, client construction, and CLI/MCP dispatch; the pure-logic
-layers (`compose`, `evaluate`, `decider`, `calibration`, `resilience`) are
+resolution, client construction, and CLI/MCP dispatch. Composition and
+calibration are pure; evaluator and decider orchestrate injected I/O. All are
 provider-agnostic. `daf-jev providers` prints the registry as JSON
 (keyless, no network):
 
@@ -705,7 +724,7 @@ provider-agnostic. `daf-jev providers` prints the registry as JSON
 | `kev` | Qwen3.5 0.8B/4B/9B (self-hosted) | `http://localhost:8009` | `kev-latest` | `KEV_API_KEY` / `KEV_BASE_URL` / `KEV_MODEL` | responses add a top-level `latency_ms` (parsed and ignored) — [jaredpalmer/kev](https://github.com/jaredpalmer/kev) |
 | `localjev` | GitHub Next GLiFormer proxy — TS/Bun server over any OpenAI-compatible chat endpoint (self-hosted, MIT) | `http://127.0.0.1:8080` | `localjev-latest` | `LOCALJEV_API_KEY` / `LOCALJEV_BASE_URL` / `LOCALJEV_MODEL` | upstream is any OpenAI-compatible chat endpoint |
 | `openthai-systemone` | Thai/English Qwen3.5-0.8B slot-softmax (self-hosted, Apache-2.0) | `http://localhost:8077` | `openthai-latest` | `OPENTHAI_API_KEY` / `OPENTHAI_BASE_URL` / `OPENTHAI_MODEL` | no server auth; no `/v1/models` — the `models` command is unsupported |
-| `openrouter` | hosted proxy | `https://openrouter.ai/api` | `jev-latest` | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL` | responses add `id` / `provider` / `usage.cost` extras (parsed and ignored); `/v1/models` returns the OpenRouter shape, so `models` is unsupported |
+| `openrouter` | legacy hosted registry entry | `https://openrouter.ai/api` | `jev-latest` | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL` | retained for API compatibility; benchmark adapters use the explicit native/chat endpoints and canonical IDs described below; `models` is unsupported |
 
 The `jev` provider additionally falls back to `TYPESAFE_DEFAULT_MODEL` for
 its model (see [Configuration](#configuration) for the naming convention).
@@ -743,6 +762,94 @@ between daf-jev's wire layer and anything upstream or downstream. Provider
 keys are stable API: adding a built-in updates this section, the
 architecture contract, and the agent skill in the same commit.
 
+For new OpenRouter experiments use the explicit `DecisionBackend` profiles,
+not the legacy registry defaults. OpenRouter documents native Jev at
+`POST https://openrouter.ai/api/alpha/decisions` with canonical IDs such as
+`typesafe/jev-1.13`; Tev candidates use chat completions and return letters.
+[Native endpoint](https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request),
+[Jev integration guide](https://openrouter.ai/docs/guides/community/jev)
+(reviewed 2026-10-07). [The provider guide](docs/providers.md) covers output
+semantics, pinned local setup evidence, discovery, limits and cost receipts.
+
+## Decision-model benchmarks
+
+The `benchmark` commands separate data preparation, public catalog discovery,
+immutable planning, actual inference, resume and offline reporting. They compare
+complete task vocabularies across native probability arms, generated labels and
+training-only priors/classifiers. Reports retain failures, unsupported and
+unattempted arms, unresolved attempts and unknown cost.
+Dataset configuration IDs, inventory indices and prepared input hashes distinguish
+cohorts sharing a family name. Reports keep wholly unavailable arms and separate
+coverage among attempted outcomes from coverage over all planned decisions.
+
+The [full-study guide](docs/full_study.md) documents five-fold validation,
+separate final refits and leakage sensitivity, nine portable CPU recipes and
+native/hosted admission. The [recorded CPU comparison](output/reports/full-offline-20261008/full-offline-comparison.md)
+contains 68,894 completed cells (68,870 quality decisions and 24 probes) and
+24,152 unsupported cells across nine jobs. Full native and hosted studies remain
+unfinished; their proposal and continuation limits are stated alongside the
+results. The separate
+[first hosted probe report](output/reports/hosted-pilot-20261008/summary.md)
+records an HTTP 404 and unknown billing; further hosted admission is stopped
+under the shared USD 25 allocation. It supplies no hosted quality result.
+
+```bash
+uv sync --extra benchmark
+mkdir -p .benchmarks/data .benchmarks/runs
+uv run daf-jev benchmark dataset synthetic --kind binary --samples 150 \
+  --seed 20261007 --output .benchmarks/data/binary-v3.json
+uv run daf-jev benchmark dataset synthetic --kind categorical --samples 150 \
+  --seed 20261007 --output .benchmarks/data/categorical-v3.json
+uv run daf-jev benchmark dataset synthetic --kind ordinal --samples 150 \
+  --seed 20261007 --output .benchmarks/data/ordinal-v3.json
+uv run daf-jev benchmark dataset synthetic --kind bayes --samples 150 \
+  --seed 20261007 --output .benchmarks/data/bayes-v3.json
+uv run daf-jev benchmark plan --config benchmarks/configs/synthetic.yaml \
+  --out-dir .benchmarks/runs
+uv run daf-jev benchmark run .benchmarks/runs/RUN_UUID
+uv run daf-jev benchmark report .benchmarks/runs/RUN_UUID \
+  --output .benchmarks/report.json
+```
+
+Replace `RUN_UUID` with the returned run directory. The offline profile tests
+the labeled harness; it is not evidence of local language-model inference.
+The four prepared pools supply enough independent ordinary test groups for the
+global 100-example timing pack. The committed
+[`synthetic.yaml`](benchmarks/configs/synthetic.yaml) freezes uniform and exact
+rule controls for all four tasks. Save new prepared files rather than replacing
+retained inputs from earlier runs.
+Exact rules use state fields only; hard labels/levels have no fabricated
+probabilities or confidence, while the Bayes reference reports its analytical
+distribution.
+Local/hosted model claims require exact execution receipts. Catalog listings
+are declared candidates, generated labels have no invented probability vectors,
+confidence concentration is not P(correct), and unknown monetary cost is not free.
+A refreshed discovery snapshot does not extend an earlier frozen executable
+cohort or establish inference access for newly listed models.
+
+The requested repeated-timing protocol uses 100 shared test examples overall
+and five additional rounds. The current default `timing_sampling_scope: cohort`
+freezes an exact target-free global ID pack; insufficient input groups fail
+before planning. Matched cyclic Choice controls remain a separate quality
+cohort. The retained expanded Mac study used a legacy
+per-dataset selector and therefore an expanded 368-ID timing cohort; it stopped
+at a clean boundary before later rounds. Preserve that evidence and its future
+unattempted rows separately. Correcting scope or ordered prompt presentation
+requires a new accepted source and manifest, without resetting the cumulative
+profile allowance. See the [timing scope and compatibility rules](docs/decision_benchmarking.md#shared-timing-cohort-and-the-retained-scope-deviation).
+Probability provenance identifies where values came from; it does not establish
+posterior meaning or calibration. The [semantic reference](docs/providers.md#probability-meaning-and-confidence)
+distinguishes normalized compatibility scores, class estimates, training
+frequencies, analytical conditionals and generated judgments.
+
+Read the [protocol and commands](docs/decision_benchmarking.md),
+[synthetic and real dataset contracts](docs/datasets.md),
+[provider abstraction](docs/providers.md),
+[local serving and Mac execution](docs/local_serving.md),
+[reproducibility gates](docs/reproducibility.md) and
+[reproduced methods review](docs/methods_review.md). The existing four scripts
+in [benchmarks/](benchmarks/README.md) preserve their historical receipt lane.
+
 ## Figures and manuscript
 
 The repo renders its own paper: 10 manuscript sections under `manuscript/`,
@@ -750,45 +857,51 @@ with every measured number injected as a `{{TOKEN}}` placeholder — nothing is
 hardcoded in the prose.
 
 ```bash
-uv sync --extra figures
-uv run python scripts/generate_figures.py    # 7 figures + figure_registry.json -> output/figures/
+uv sync --extra dev --extra figures --extra benchmark
+uv run python scripts/generate_figures.py --include-study  # selected 13-figure manuscript registry
 uv run python scripts/generate_figures.py --only batching   # single figure by name
 ```
 
 Figures `architecture`, `primitives`, and `confidence` are drawn from code;
-`batching`, `latency`, `calibration`, and `graphical_abstract` read the newest
-`output/benchmarks/*.json`.
+`batching`, `latency`, `calibration`, and `graphical_abstract` read the reviewed
+benchmark evidence selected for the manuscript. Source identities must match
+the variable pipeline; an independently chosen newest file is not a coherent cohort.
 
 ```bash
+uv run python scripts/capture_verification.py --out-dir .benchmarks/verification-new
+# Deliberately select verification.json path + SHA-256 in manuscript/evidence.json.
 uv run python scripts/z_generate_manuscript_variables.py
-# 49 tokens -> output/data/manuscript_variables.json, then {{TOKEN}}
-# substitution into output/manuscript/ (inside the template checkout)
+# tokens -> output/data/manuscript_variables.json
+uv run python scripts/render_pdf.py --output output/pdf/reproduction-new.pdf \
+    --artifacts-dir .benchmarks/reproduction-build-new
 ```
 
-Rendering and validation run from the template checkout, which previously
-resolved the project through a **leaf symlink**
-`template/projects/ongoing/daf-jev -> ../../../projects/ongoing/Code_Tools/daf-jev`
-(created 2026-09-16; intermediate symlinks are rejected by design). The
-leaf symlink was **removed 2026-09-18 by owner decision**, so
-template-pipeline render/validate is currently blocked (see AGENTS.md,
-render-path invariant):
+The capture runs unit tests with coverage/JUnit and collects live tests without
+executing them. Its retained, source/test/script/config-bound selection permits
+offline token regeneration without raw coverage or a new pytest collection.
+Malformed/stale explicit verification fails even in draft mode. It does not
+select itself or publish anything; keep the historical benchmark selection
+intact. See [retained verification](docs/reproducibility.md#retained-verification-for-exact-offline-regeneration)
+for the record and selection format. The legacy unselected raw-coverage path
+remains available; retain its fresh raw data through token custody. A layout-only
+rerender can reuse the unchanged validated saved map.
 
-```bash
-cd /Volumes/external_drive/Git/template
-uv run python scripts/pipeline/stage_03_render.py --project ongoing/daf-jev
-uv run python scripts/pipeline/stage_04_validate.py --project ongoing/daf-jev
-```
-
-Stage 04 runs 9 validation checks (including the figure registry and rendered
-provenance); re-run render + validate after any manuscript or figure change.
-The rendered PDF lands at `output/pdf/daf-jev_combined.pdf`.
+The in-repository renderer consumes manuscript sources and the generated token
+map, uses Pandoc/TeX, and checks unresolved citations, references, images and
+overfull vertical boxes. Retain intermediate TeX/log inputs with `--artifacts-dir`
+and inspect all headings/prose and pages; marker/bounds checks alone can miss
+clipped content. The reproducible build timestamp is separate from render time.
+It writes the selected fresh PDF path and preserves existing outputs; `--install` explicitly refreshes
+the root PDF. The optional external template integration has additional path
+and provenance requirements and is not needed for standalone rendering. See
+[reproducibility](docs/reproducibility.md) for evidence selection and final checks.
 
 ## Tests and benchmarks
 
 ```bash
-uv sync --extra dev --extra figures   # figures extra ships matplotlib/pillow — graphical animation tests importorskip silently without it
+uv sync --extra dev --extra figures --extra benchmark   # matches CI; optional comparators/resources included
 uv run pytest tests/unit --cov=src          # unit tests — counts live in output/data/manuscript_variables.json (refresh: uv run python scripts/z_generate_manuscript_variables.py); coverage gate >= 90%
-JEV_API_KEY=... uv run pytest tests/live    # 2 live tests against the real API
+JEV_API_KEY=... uv run pytest tests/live    # live tests against the real API
 ```
 
 Unit tests need no key: they run against a real local HTTP stub server
@@ -800,9 +913,11 @@ uv run python benchmarks/bench_batching.py --runs 3   # 1 call with N questions 
 uv run python benchmarks/bench_patterns.py --runs 10  # composite-score / routing latency
 ```
 
-Latest recorded results (2026-09-16, `output/benchmarks/`): batching is
-4.0x–18.6x faster (N=5→20) and 2.8x–4.2x cheaper in tokens; decision-pattern
+Historical receipts (2026-09-16, `output/benchmarks/`): batching is
+4.0x–18.6x faster (N=5→20) and uses 2.8x–4.2x fewer total tokens; decision-pattern
 pipelines run at ~0.13 s p50.
+These receipts do not establish dollar savings, paired answer equivalence,
+isolated composition overhead or a current cross-model result.
 
 ### Calibration benchmark
 
@@ -822,7 +937,7 @@ confidence-vs-correctness. The `(confidence, correct)` pairs feed the pure
 `daf_jev.calibration` functions; a noul question repeated the same way
 yields a mean pairwise |Δnoul| stability metric. Results land in
 `output/benchmarks/calibration_<YYYYMMDD>.json` (latest recorded:
-2026-09-16, `jev-latest`, 6 states x 5 repeats — ECE 0.0730, Brier 0.0252,
+historical 2026-09-16, `jev-latest`, 6 states x 5 repeats — ECE 0.0730, Brier 0.0252,
 mean pairwise noul gap 0.0050). Without an API key (env or project `.env`)
 it prints `SKIP: JEV_API_KEY not set` and exits 0; a failing call drops that
 state's repeats into `n_errors` instead of aborting the batch.
@@ -852,49 +967,65 @@ a provider without its key prints `SKIP[<provider>]` and the run
 continues. Results land in
 `output/benchmarks/jaggedness_<YYYYMMDD>.json`. **Caveat:** the numbers
 quantify stated-distribution deviation, NOT accuracy; local self-hosted
-servers (jeff: temperature-scaled sigmoids; kev: calibrated pointer head)
+servers (jeff: normalized sigmoid compatibility scores; kev: discriminative pointer head)
 behave differently from the hosted jev endpoint.
 
-Releases are tagged on GitHub and archived as version deposits on the same
-Zenodo concept — v0.3.0 as deposit 22817425 (released 2026-09-17); the
-v0.4.x deposits publish on that concept, so the concept DOI below always
-resolves to the latest published version.
+## Package and releases
+
+The v0.7.0 source prepares a modular decision-evaluation release: typed native
+and constrained-chat adapters, frozen datasets and policies, exact graphical
+inference, explicit execution coverage and cost accounting, and an
+evidence-selected manuscript. It preserves the native client API and separates
+completed CPU studies from partial local observations and the failed hosted
+capability probe. Publication status is established by the remote tag and
+published Zenodo record; a local version number is not that confirmation.
+
+Install the reviewed wheel or a tagged source checkout. Core dependencies are
+small; optional `benchmark`, `figures` and `mcp` extras enable their respective
+surfaces. The wheel includes the PEP 561 `py.typed` marker. Dataset/model weights,
+private run journals and local server runtimes are not bundled. Benchmark
+execution and manuscript reproduction require the documented source checkout
+and its selected inputs; installing the core wheel does not establish model
+readiness or ship the documentation snapshot.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
 
 - **Concept DOI** (all versions, stable):
   [10.5281/zenodo.22816187](https://doi.org/10.5281/zenodo.22816187)
-- **v0.6.0 version record (latest)**: https://zenodo.org/records/22921974
-  (version DOI `10.5281/zenodo.22921974`; earlier: v0.5.0 at
-  [22921963](https://zenodo.org/records/22921963), v0.4.2 at
-  [22921823](https://zenodo.org/records/22921823), v0.4.1 at
-  [22884676](https://zenodo.org/records/22884676)
-  (version DOI `10.5281/zenodo.22884676`; earlier: v0.4.0 at
-  [22884305](https://zenodo.org/records/22884305), v0.3.0 at
-  [22817425](https://zenodo.org/records/22817425)).
+- **v0.6.0 historical version record (recorded 2026-09-23)**:
+  [22921974](https://zenodo.org/records/22921974), version DOI
+  `10.5281/zenodo.22921974`; earlier versions remain in the same concept family.
+  A new version DOI is added only after the v0.7.0 record is created and verified.
 - **Public repository**: https://github.com/docxology/daf-jev
-- **Rendered manuscript PDF**: [`daf-jev_combined.pdf`](daf-jev_combined.pdf)
-  at the repo root (regenerated to `output/pdf/daf-jev_combined.pdf` by the
-  template render pipeline; the root copy is refreshed at each release).
-- Machine-readable release metadata: [`CITATION.cff`](CITATION.cff) and
-  [`.zenodo.json`](.zenodo.json) at the repo root.
+- **Reviewed scholarship PDF**:
+  [Modular Decision Models, v0.7.0](output/pdf/daf-jev-0.7.0-manuscript.pdf).
+  The [prior scholarship edition](output/pdf/modular-methods-scholarship-20261008-final.pdf)
+  remains retained separately.
+  The historical [root PDF](daf-jev_combined.pdf) remains a separate artifact;
+  release rendering chooses a fresh output and retains the prior bytes.
+- **Release protocol and asset boundaries**: [docs/release.md](docs/release.md).
+- **Machine-readable metadata**: [CITATION.cff](CITATION.cff) and
+  [.zenodo.json](.zenodo.json).
 
-To cite daf-jev, use the metadata in `CITATION.cff` (cffconvert and Zenodo
-both render it), or paste this BibTeX:
+The concept citation below identifies the software family. A version-specific
+citation must use the DOI confirmed for the published version:
 
 ```bibtex
 @software{friedman2026dafjev,
-  title   = {daf-jev: A Composable Python Decision Toolkit for the TypeSafe Jev (System One) API},
+  title   = {daf-jev: Modular Decision Models, Orchestration, and Reproducible Evaluation},
   author  = {Friedman, Daniel Ari},
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.6.0}
+  version = {0.7.0}
 }
 ```
 
-New releases are added as new version deposits on the same Zenodo concept, so
-the concept DOI always resolves to the latest published version.
+New releases are new version records in the same Zenodo concept. Preserve
+historical receipts and distinguish the software version from each observation's
+inference source, dataset and runtime. The selected empirical status reports
+remain descriptive; no release turns an unattempted study or unknown charge into
+a completed experiment.
 
 
 ## Map
@@ -907,7 +1038,11 @@ source to contract. Module contracts live in
 
 | Module | Source | Purpose |
 | --- | --- | --- |
+| `__init__` | [`__init__.py`](src/daf_jev/__init__.py) | public package exports and version metadata |
 | `_types` | [`_types.py`](src/daf_jev/_types.py) | wire dataclasses — questions, answers, `Usage`; strict response parsing |
+| `_json` | [`_json.py`](src/daf_jev/_json.py) | ordered strict decoding; rejects duplicate keys/nonstandard constants |
+| `_yaml` | [`_yaml.py`](src/daf_jev/_yaml.py) | private safe literal configuration; rejects ambiguous mappings, aliases, unsafe tags and nonfinite numbers |
+| `_cancellation` | [`_cancellation.py`](src/daf_jev/_cancellation.py) | private task/timeout evidence recovery bound to the current owned cancellation |
 | `_errors` | [`_errors.py`](src/daf_jev/_errors.py) | typed error hierarchy mirroring the API's status codes |
 | `_retry` | [`_retry.py`](src/daf_jev/_retry.py) | `RetryPolicy` — 429/529 backoff with jitter, `Retry-After` aware |
 | `_http` | [`_http.py`](src/daf_jev/_http.py) | `Transport` / `AsyncTransport` protocols + httpx implementations |
@@ -926,13 +1061,31 @@ source to contract. Module contracts live in
 | `models` | [`models.py`](src/daf_jev/models.py) | `pick_model` over the models listing |
 | `docs_verify` | [`docs_verify.py`](src/daf_jev/docs_verify.py) | docs-snapshot manifest verifier (CLI `docs-verify`, MCP `jev_docs_verify`) |
 | `cli` | [`cli.py`](src/daf_jev/cli.py) | the `daf-jev` argparse CLI (JSON out, exit 0/1/2) |
-| `mcp_server` | [`mcp_server.py`](src/daf_jev/mcp_server.py) | FastMCP stdio server — seven tools + docs resource |
+| `mcp_server` | [`mcp_server.py`](src/daf_jev/mcp_server.py) | FastMCP stdio server — nine tools + docs resource |
 | `graphical` | [`graphical.py`](src/daf_jev/graphical.py) | `Variable` / `Edge` / `CPT` / `BayesNet` — exact VE, GraphSpec round-trip |
 | `graphical_elicitation` | [`graphical_elicitation.py`](src/daf_jev/graphical_elicitation.py) | `elicit_cpts` / `propose_structure` — Jev as factor source |
 | `graphical_viz` | [`graphical_viz.py`](src/daf_jev/graphical_viz.py) | `to_mermaid`, `plot_network`, `plot_posterior_trajectory` |
 | `graphical_animation` | [`graphical_animation.py`](src/daf_jev/graphical_animation.py) | `animate_posterior` / `animate_network` — GIF renders of the posterior trajectory and network walkthroughs |
-| `figures` | [`figures.py`](src/daf_jev/figures.py) | matplotlib figure registry (7 figures + registry JSON) |
-| `manuscript_variables` | [`manuscript_variables.py`](src/daf_jev/manuscript_variables.py) | 49 `{{TOKEN}}` manuscript variables generated from the tree |
+| `bayesnet_posteriors` | [`bayesnet_posteriors.py`](src/daf_jev/bayesnet_posteriors.py) | fail-closed posterior sidecar ingest and explicit truth pairing |
+| `reask` | [`reask.py`](src/daf_jev/reask.py) | pure max-entropy plan over evidence-bearing posterior sidecars |
+| `decision_backends` | [`decision_backends.py`](src/daf_jev/decision_backends.py) | provider-neutral sync/async contracts, native/chat/letter HTTP, genuine beliefs and attempt receipts |
+| `benchmark_cli` | [`benchmark_cli.py`](src/daf_jev/benchmark_cli.py) | dataset/catalog/plan/run/resume/report command dispatch |
+| `benchmark_datasets` | [`benchmark_datasets.py`](src/daf_jev/benchmark_datasets.py) | pinned synthetic and real data, labels/splits/duplicate groups |
+| `benchmark_sampling` | [`benchmark_sampling.py`](src/daf_jev/benchmark_sampling.py) | exact target-free global timing packs, group/task balance and legacy scope |
+| `benchmark_models` | [`benchmark_models.py`](src/daf_jev/benchmark_models.py) | synthetic exact rules, train-only prior and supervised comparators |
+| `benchmark_metrics` | [`benchmark_metrics.py`](src/daf_jev/benchmark_metrics.py) | quality, calibration, grouped uncertainty, latency and costs |
+| `benchmark_policies` | [`benchmark_policies.py`](src/daf_jev/benchmark_policies.py) | validation gate fitting and explicit offline policy replay |
+| `benchmark_workflows` | [`benchmark_workflows.py`](src/daf_jev/benchmark_workflows.py) | executed weak-to-strong cascades with child receipts |
+| `benchmark_runner` | [`benchmark_runner.py`](src/daf_jev/benchmark_runner.py) | frozen cohorts, bounded execution/resume and offline report |
+| `benchmark_store` | [`benchmark_store.py`](src/daf_jev/benchmark_store.py) | immutable manifests, hash journals, locks and spend admission |
+| `benchmark_resources` | [`benchmark_resources.py`](src/daf_jev/benchmark_resources.py) | hardware identity and scoped process RSS sampling |
+| `benchmark_graphical` | [`benchmark_graphical.py`](src/daf_jev/benchmark_graphical.py) | disclosed reference factors and coupled synthetic evidence/model re-asks |
+| `benchmark_publication` | [`benchmark_publication.py`](src/daf_jev/benchmark_publication.py) | standalone offline Markdown/PDF report exports |
+| `evidence` | [`evidence.py`](src/daf_jev/evidence.py) | hash-bound manuscript benchmark/verification selection and input inventories |
+| `figures` | [`figures.py`](src/daf_jev/figures.py) | matplotlib legacy registry + optional selected empirical figures |
+| `study_evidence` | [`study_evidence.py`](src/daf_jev/study_evidence.py) | validated, SHA-bound retained study summaries and optional measured tokens |
+| `study_figures` | [`study_figures.py`](src/daf_jev/study_figures.py) | six empirical PNG/vector figures with plotted-data sidecars |
+| `manuscript_variables` | [`manuscript_variables.py`](src/daf_jev/manuscript_variables.py) | legacy and optional study `{{TOKEN}}` variables derived from selected evidence |
 
 ### Example scripts
 
@@ -946,6 +1099,11 @@ source to contract. Module contracts live in
 | decider_loop | [`decider_loop.py`](examples/decider_loop.py) | decision-point loop — gate, budget, fail-open fallback |
 | providers_example | [`providers_example.py`](examples/providers_example.py) | registry + dispatch via injected transport (no network) |
 | asia_bayes | [`asia_bayes.py`](examples/asia_bayes.py) | Bayes net from Jev factors; GraphSpec + experiment artifacts |
+| decider_resilience | [`decider_resilience.py`](examples/decider_resilience.py) | circuit isolation and fail-open decision events |
+| evaluate_async | [`evaluate_async.py`](examples/evaluate_async.py) | caller-loop async batch evaluation and explicit legacy closure |
+| calibration_walkthrough | [`calibration_walkthrough.py`](examples/calibration_walkthrough.py) | injected confidence/gate-agreement proxy; no ground-truth calibration |
+| retry_policies | [`retry_policies.py`](examples/retry_policies.py) | pure retry delay math and environment resolution |
+| reask_policy | [`reask_policy.py`](examples/reask_policy.py) | evidence-bearing posterior re-ask planning and provider wiring |
 
 Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 
@@ -954,10 +1112,11 @@ Per-script walkthroughs: [`examples/README.md`](examples/README.md#at-a-glance).
 | Script | Purpose |
 | --- | --- |
 | [`bayes_experiment.py`](scripts/bayes_experiment.py) | Asia experiment runner — elicits, walks posteriors, writes the five artifacts (+ the two GIFs with `--animate`) |
-| [`generate_figures.py`](scripts/generate_figures.py) | renders the 7 figures + `figure_registry.json` |
-| [`render_pdf.py`](scripts/render_pdf.py) | in-repo pandoc PDF render with validation gates |
-| [`scrape_docs.py`](scripts/scrape_docs.py) | re-scrapes the docs snapshot; `--check` verifies the manifest |
-| [`z_generate_manuscript_variables.py`](scripts/z_generate_manuscript_variables.py) | regenerates the 49-token variable map |
+| [`generate_figures.py`](scripts/generate_figures.py) | renders legacy figures; `--include-study` adds six empirical figures, data and vector copies |
+| [`capture_verification.py`](scripts/capture_verification.py) | fresh retained unit coverage/JUnit + live collection capture; no live execution |
+| [`render_pdf.py`](scripts/render_pdf.py) | fresh PDF + optional retained TeX/log artifacts; four gates and completeness review |
+| [`scrape_docs.py`](scripts/scrape_docs.py) | remote snapshot scrape/check; explicit-manifest check is offline |
+| [`z_generate_manuscript_variables.py`](scripts/z_generate_manuscript_variables.py) | regenerates legacy and selected-study variables |
 
 ### Benchmarks
 
@@ -976,13 +1135,13 @@ Methodology and the committed-receipts policy:
 - Agent skill: [`skills/daf-jev/SKILL.md`](skills/daf-jev/SKILL.md)
   (install notes in [`skills/README.md`](skills/README.md)).
 - Test suite: the shared stub server [`tests/conftest.py`](tests/conftest.py),
-  26 unit modules under [`tests/unit/`](tests/unit/) — incl.
+  dynamically collected unit modules under [`tests/unit/`](tests/unit/) — incl.
   [`test_graphical_methods.py`](tests/unit/test_graphical_methods.py) and
   [`test_graphical_animation.py`](tests/unit/test_graphical_animation.py) —
   2 live tests in [`tests/live/test_live_api.py`](tests/live/test_live_api.py).
 - Docs: contract [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), model
   reference [`docs/models.md`](docs/models.md), index
-  [`docs/README.md`](docs/README.md), 108-page hashed snapshot under
+  [`docs/README.md`](docs/README.md), manifest-bound hashed snapshot under
   [`docs/reference/`](docs/reference/).
 - Manuscript: 10 sections under [`manuscript/`](manuscript/) +
   [`config.yaml`](manuscript/config.yaml); rendered PDF
@@ -999,7 +1158,7 @@ Methodology and the committed-receipts policy:
   contract (wire facts, module signatures, test and benchmark conventions).
 - [`docs/models.md`](docs/models.md) — sourced technical reference on System
   One models and Jev, with primary vs third-party claims flagged.
-- [`docs/`](docs/README.md) — index, including the 108-page hashed snapshot
+- [`docs/`](docs/README.md) — index, including the manifest-bound hashed snapshot
   of docs.typesafe.ai in `docs/reference/`.
 - [`skills/daf-jev/SKILL.md`](skills/daf-jev/SKILL.md) — the agent skill for
   this toolkit (when-to-use, API surface, CLI, MCP server, pitfalls). To use

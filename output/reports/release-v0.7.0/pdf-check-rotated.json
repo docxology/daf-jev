@@ -1,0 +1,300 @@
+{
+  "accepted": true,
+  "byte_equal_second_fresh_render": true,
+  "format": "dafjev.declared-independent-pdf-check/1",
+  "geometry_and_privacy_checks": {
+    "all27_rasters_inspected": true,
+    "allowed_annotation_action_types": [
+      "GoTo",
+      "URI"
+    ],
+    "annotation_rectangles_within_media_coordinates": true,
+    "annotations_count": 179,
+    "contact_sheet_count": 3,
+    "creation_date_matches_source_epoch": true,
+    "embedded_fonts": {
+      "/CIXXGX+Menlo-Regular": true,
+      "/CWPYCY+DejaVuSans": true,
+      "/GHOSLQ+TimesNewRomanPSMT": true,
+      "/GJWAMN+DejaVuSans": true,
+      "/IMQWAV+TimesNewRomanPS-ItalicMT": true,
+      "/OUODHE+TimesNewRomanPS-BoldMT": true,
+      "/SNTFNH+Menlo-Bold": true,
+      "/STKRLO+DejaVuSans-Bold": true,
+      "/TYGEOJ+LatinModernMath-Regular-Identity-H": true
+    },
+    "embedded_subset_Unicode_fonts": true,
+    "external_URI_schemes": [
+      "https"
+    ],
+    "font_count": 9,
+    "geometry": [
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 1,
+        "rotation": 0,
+        "words": 39
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 2,
+        "rotation": 0,
+        "words": 446
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 3,
+        "rotation": 0,
+        "words": 640
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 4,
+        "rotation": 0,
+        "words": 687
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 5,
+        "rotation": 0,
+        "words": 438
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 6,
+        "rotation": 0,
+        "words": 452
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 7,
+        "rotation": 0,
+        "words": 465
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 8,
+        "rotation": 0,
+        "words": 688
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 9,
+        "rotation": 0,
+        "words": 674
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 10,
+        "rotation": 0,
+        "words": 648
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 11,
+        "rotation": 0,
+        "words": 584
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 12,
+        "rotation": 0,
+        "words": 269
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 13,
+        "rotation": 0,
+        "words": 307
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 14,
+        "rotation": 0,
+        "words": 188
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 15,
+        "rotation": 0,
+        "words": 376
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 16,
+        "rotation": 0,
+        "words": 327
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 17,
+        "rotation": 0,
+        "words": 494
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 18,
+        "rotation": 0,
+        "words": 138
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 19,
+        "rotation": 0,
+        "words": 434
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 20,
+        "rotation": 0,
+        "words": 721
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 21,
+        "rotation": 0,
+        "words": 494
+      },
+      {
+        "effective_height": 612.0,
+        "effective_width": 792.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 22,
+        "rotation": 90,
+        "words": 284
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 23,
+        "rotation": 0,
+        "words": 577
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 24,
+        "rotation": 0,
+        "words": 657
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 25,
+        "rotation": 0,
+        "words": 712
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 26,
+        "rotation": 0,
+        "words": 509
+      },
+      {
+        "effective_height": 792.0,
+        "effective_width": 612.0,
+        "media_height": 792.0,
+        "media_width": 612.0,
+        "page": 27,
+        "rotation": 0,
+        "words": 474
+      }
+    ],
+    "initial_view": "Direct page destination/Fit; no executable action",
+    "metadata": {
+      "/CreationDate": "D:20261009004620Z",
+      "/Creator": "LaTeX via pandoc",
+      "/Producer": "xdvipdfmx (20260113)"
+    },
+    "no_JavaScript_EmbeddedFiles_or_additional_catalog_actions": true,
+    "no_URI_credentials_or_local_or_private_targets": true,
+    "out_of_page_bbox_words": 0,
+    "private_paths_or_credential_patterns_found": 0
+  },
+  "native_original_review_retained_privately": true,
+  "native_original_review_sha256": "0aee2f3c49b69a6c99002340dd0bc651bc6734388ab2a6e103dca55b18c21a81",
+  "page_count": 27,
+  "pdf_sha256": "d0fa9ce1ae61763cf12d33b1f2155effdb8852ba67273d46b10f7e77424420c0",
+  "poppler_bbox_method": "Unchanged text rectangles checked against effective rendered page dimensions. Rotate90/270 swaps display width/height; every72dpi raster matches those dimensions. Annotation rectangles separately checked in unrotated PDF media coordinates.",
+  "scope": "Exact G PDF geometry, complete-page pixels, font embedding, metadata and offline annotation/privacy review. No optionalPython3.10 full-runtime, LinuxCI, archive, publication, billing or model/scientific acceptance.",
+  "scope_limits": [
+    "Offline safe-link inspection does not establish current external link reachability.",
+    "Same-host PDF byte equality only; cross-platform equality not established.",
+    "This declaration derives solely from the closed exact G review and does not replace separate current archive/remoteCI/native/hosted acceptance."
+  ],
+  "source_build_commit": "e46d5ebf813cd1eb9d1919a2a7a57ae5456caa7b",
+  "source_date_epoch": "1791506780"
+}

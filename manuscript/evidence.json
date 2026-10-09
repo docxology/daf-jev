@@ -1,0 +1,40 @@
+{
+  "benchmark_runs": [],
+  "format": "dafjev.publication-evidence/1",
+  "historical_benchmarks": {
+    "batching": {
+      "path": "output/benchmarks/batching_20260916.json",
+      "provenance": "historical incomplete provenance; no backfill",
+      "sha256": "06990754d64b7452529a347f49ee98a3bb320753e616972056b0dd6e7124ec55"
+    },
+    "calibration": {
+      "path": "output/benchmarks/calibration_20260916.json",
+      "provenance": "historical incomplete provenance; no backfill",
+      "sha256": "deef17fbd564bbd4d7775d34558ed11037ae074473842785ccad88d33e866507"
+    },
+    "jaggedness": {
+      "path": "output/benchmarks/jaggedness_20260924.json",
+      "provenance": "historical incomplete provenance; no backfill",
+      "sha256": "e187188f3a39a06b9a5cd1153b15a2482393d80480e452ed69a9c8f63729f620"
+    },
+    "patterns": {
+      "path": "output/benchmarks/patterns_20260916.json",
+      "provenance": "historical incomplete provenance; no backfill",
+      "sha256": "ebba6eae325fbc4b61453abfdd82723da4179bd8b49100daa402ad613309b662"
+    }
+  },
+  "study_summaries": {
+    "cpu": {
+      "path": "output/reports/full-offline-20261008/full-offline-comparison.json",
+      "sha256": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7"
+    },
+    "hosted": {
+      "path": "output/reports/hosted-pilot-20261008/summary.json",
+      "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+    }
+  },
+  "verification": {
+    "path": "output/verification/v0.7.0-public-bounded-labels-20261008/verification.json",
+    "sha256": "fb5eb3262527fe8a9f145618da529fa0ccf4f6224ae1c21ca7dac2d1a9c6ad58"
+  }
+}

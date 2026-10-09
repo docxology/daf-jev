@@ -11,8 +11,8 @@ accompany the figures. It also always writes the sibling ``architecture.mmd``
 ``figure_registry.json`` keeps its template-validation schema). The
 ``--only`` choices are derived from the figure
 registry itself so the help text can never drift. Data-driven figures
-read the latest benchmark JSONs from ``output/benchmarks/`` at generation
-time; missing data raises a clear error naming the missing file (the
+read exact SHA-256-bound inputs from ``manuscript/evidence.json``; missing
+data raises a clear error naming the missing file (the
 architecture, primitives, and confidence figures are data-free and always
 render).
 
@@ -49,9 +49,10 @@ def _registry_names() -> str:
     """Sorted registered figure names, or a hint when matplotlib is absent."""
     try:
         from daf_jev.figures import FIGURE_FILENAMES
+        from daf_jev.study_figures import FILENAMES
     except ImportError:
         return "install the `figures` extra to list the valid names"
-    return ", ".join(sorted(FIGURE_FILENAMES))
+    return ", ".join(sorted(FIGURE_FILENAMES | FILENAMES))
 
 
 def main() -> int:
@@ -69,6 +70,8 @@ def main() -> int:
         metavar="NAME",
         help=f"Render a single figure instead of the full registry (one of: {_registry_names()})",
     )
+    parser.add_argument("--include-study", action="store_true",
+                        help="Append six selected empirical study figures and their data/vector companions")
     args = parser.parse_args()
 
     try:
@@ -87,12 +90,15 @@ def main() -> int:
 
     try:
         if args.only is not None:
-            written = [generate_one(args.only, args.out_dir, _PROJECT_ROOT)]
+            from daf_jev.study_figures import FILENAMES
+            if args.only in FILENAMES and not args.include_study:
+                raise ValueError("study figures require --include-study")
+            written = [generate_one(args.only, args.out_dir, _PROJECT_ROOT, include_study=args.include_study)]
         else:
-            written = generate_all(args.out_dir, _PROJECT_ROOT)
+            written = generate_all(args.out_dir, _PROJECT_ROOT, include_study=args.include_study)
         # The registry must accompany the figures on every path, including
         # --only runs; it mirrors the full static registry metadata either way.
-        write_figure_registry(args.out_dir, _PROJECT_ROOT)
+        write_figure_registry(args.out_dir, _PROJECT_ROOT, include_study=args.include_study)
         # The .mmd sibling is written on every path too — including --only
         # runs — and is deliberately NOT part of figure_registry.json (whose
         # schema is the template-validation contract).

@@ -1,0 +1,71 @@
+{
+  "figure": "cpu_quality",
+  "format": "dafjev.study-figure-data/1",
+  "rows": [
+    {
+      "accuracy": 0.8769480519480519,
+      "backend": "tfidf-logistic-C1",
+      "dataset": "banking77",
+      "interval": [
+        0.8649350649350649,
+        0.8886001948684638
+      ],
+      "n": 3080
+    },
+    {
+      "accuracy": 0.012987012987012988,
+      "backend": "prior",
+      "dataset": "banking77",
+      "interval": [
+        0.00909090909090909,
+        0.016883116883116882
+      ],
+      "n": 3080
+    },
+    {
+      "accuracy": 0.7983636363636364,
+      "backend": "tfidf-logistic-C1",
+      "dataset": "clinc150",
+      "interval": [
+        0.7878181818181819,
+        0.8089090909090909
+      ],
+      "n": 5500
+    },
+    {
+      "accuracy": 0.18181818181818182,
+      "backend": "prior",
+      "dataset": "clinc150",
+      "interval": [
+        0.17127272727272727,
+        0.19218181818181818
+      ],
+      "n": 5500
+    },
+    {
+      "accuracy": 0.7530769230769231,
+      "backend": "wine-hist-gradient-boosting",
+      "dataset": "wine",
+      "interval": [
+        0.723950233281493,
+        0.779788838612368
+      ],
+      "n": 1300
+    },
+    {
+      "accuracy": 0.7653846153846153,
+      "backend": "prior",
+      "dataset": "wine",
+      "interval": [
+        0.7355182926829268,
+        0.7935779816513762
+      ],
+      "n": 1300
+    }
+  ],
+  "scope": "Canonical test accuracy for applicable CPU comparators. Whiskers are retained 95% grouped bootstrap intervals for fixed predictions; they exclude refitting uncertainty. Wine accuracy uses probability argmax over bins. Unsupported comparator/task pairs supply no plotted estimate.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

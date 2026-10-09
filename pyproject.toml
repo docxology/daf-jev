@@ -1,12 +1,24 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "daf-jev"
-version = "0.6.0"
-license = {text = "MIT"}
-description = "Modular, composable Python client and decision toolkit for the TypeSafe Jev (System One) API"
+version = "0.7.0"
+license = "MIT"
+license-files = ["LICENSE"]
+description = "Typed decision interfaces, modular orchestration, and reproducible local and hosted model evaluation"
+readme = "README.md"
+keywords = ["decision-models", "benchmarking", "typed-interfaces", "reproducibility", "bayesian-inference"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 authors = [
     {name = "Daniel Ari Friedman"},
 ]
@@ -17,12 +29,29 @@ dependencies = [
     "tomli>=1.1.0; python_version < '3.11'",
 ]
 
+[project.urls]
+Homepage = "https://github.com/docxology/daf-jev"
+Documentation = "https://github.com/docxology/daf-jev/tree/main/docs"
+Repository = "https://github.com/docxology/daf-jev"
+Issues = "https://github.com/docxology/daf-jev/issues"
+Changelog = "https://github.com/docxology/daf-jev/releases"
+Archive = "https://doi.org/10.5281/zenodo.22816187"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["daf_jev*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+daf_jev = ["py.typed"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=4.1.0",
     "pytest-timeout>=2.3.0",
     "matplotlib>=3.7",
+    "pypdf>=6,<7",
     "mcp>=1.2,<2",
     "mypy>=1.19",
     "types-PyYAML>=6.0",
@@ -34,6 +63,10 @@ figures = [
 ]
 mcp = [
     "mcp>=1.2,<2",
+]
+benchmark = [
+    "scikit-learn>=1.5,<2",
+    "psutil>=6,<8",
 ]
 
 [project.scripts]
@@ -103,3 +136,7 @@ follow_imports = "skip"
 module = ["tomllib", "tomli"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["sklearn", "sklearn.*", "psutil", "psutil.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

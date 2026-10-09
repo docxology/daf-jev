@@ -33,6 +33,8 @@ from daf_jev._types import (
     NoulAnswer,
     NoulQuestion,
     Question,
+    validate_probability_row,
+    validate_response,
 )
 
 __all__ = [
@@ -353,6 +355,7 @@ def _ask_once(
 ) -> Answer:
     """One duck-typed ask; the asked question_id must come back answered."""
     response = client.ask(state, {question_id: question}, timeout=timeout)
+    validate_response(response, {question_id: question})
     return response.answers[question_id]
 
 
@@ -375,6 +378,16 @@ def _choice_vector(
         raise ValueError(f"choice answer is missing probabilities for {missing}")
     if answer.choice not in question.criteria:
         raise ValueError(f"choice {answer.choice!r} is not one of {labels}")
+    if set(answer.probabilities) != set(labels):
+        raise ValueError("choice answer probabilities must match every declared option")
+    validate_probability_row(answer.probabilities, rounding_digits=2)
+    if (
+        isinstance(answer.confidence, bool)
+        or not isinstance(answer.confidence, (int, float))
+        or not 0.0 <= answer.confidence <= 1.0
+        or not math.isfinite(answer.confidence)
+    ):
+        raise ValueError("choice confidence must be finite and in [0, 1]")
     return answer.choice, {label: answer.probabilities[label] for label in labels}
 
 
@@ -382,6 +395,13 @@ def _noul_value(answer: Answer) -> float:
     """Extract the noul value from one answer, or raise ``ValueError``."""
     if not isinstance(answer, NoulAnswer):
         raise ValueError(f"expected a noul answer, got {type(answer).__name__}")
+    if (
+        isinstance(answer.noul, bool)
+        or not isinstance(answer.noul, (int, float))
+        or not 0.0 <= answer.noul <= 1.0
+        or not math.isfinite(answer.noul)
+    ):
+        raise ValueError("noul must be finite and in [0, 1]")
     return answer.noul
 
 

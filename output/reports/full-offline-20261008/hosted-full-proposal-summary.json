@@ -1,0 +1,176 @@
+{
+  "format": "dafjev.proposed-hosted-study-summary/1",
+  "status": "PROPOSED_NO_EXECUTION",
+  "source_sdk_sha256": "9b69c7c064113869ab9304e782262cbfc4aa8c5b4ecd6766d55b10c4a3fa2282",
+  "source_git_head": "4394fb12ec34414a5fad64477962ec93db7a6172",
+  "original_proposal_sha256": "dc9fadc912d9cfab5c2f88deee9e34632bd6798d00d36a26ef5e3e8999cfcf6d",
+  "original_projection_sha256": "9472403c448b2699975bfbc88b7486e973cd68015c9ca791216bdc41f3304b9c",
+  "original_profile_pool_sha256": "af375cc940fe4899d7994c8f6af413b69367e92442c7e07dd163dbd2d384f6c5",
+  "planned_cells": 376155,
+  "planned_phase_counts": {
+    "quality": 368460,
+    "warm_repeat": 7500,
+    "capability_probe": 180,
+    "graphical": 15
+  },
+  "profiles": 15,
+  "observed_model_attempts": 0,
+  "reported_spend_usd": "0",
+  "reserved_usd": "0",
+  "authorized_allocation_id": "first-authorized-hosted-usd25",
+  "authorized_total_usd": "25",
+  "materialized_sdk_run": false,
+  "static_financial_projection": [
+    {
+      "backend": "upstage/solar-decide-flash",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "perplexity/pplx-decider-v1.1-27b",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "openai/gpt-6-luna-decisions",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "liquid/d1",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "cloudflare/clef-flash",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "cloudflare/clef",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "togethercomputer/tev1-4b-experimental",
+      "liability_usd_per_attempt": "0.001376256",
+      "admission_reason": null,
+      "static_compatible_non_graph_cells": 305,
+      "compatible_probes": 3,
+      "one_attempt_non_graph_ceiling_usd": "0.419758080",
+      "two_attempt_non_graph_ceiling_usd": "0.839516160",
+      "two_attempt_compatible_probe_ceiling_usd": "0.008257536"
+    },
+    {
+      "backend": "inception/mercury-decide:free",
+      "liability_usd_per_attempt": "0",
+      "admission_reason": null,
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_compatible_probe_ceiling_usd": "0"
+    },
+    {
+      "backend": "upstage/solar-decide",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "respan/span-01",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 136,
+      "compatible_probes": 1,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "respan/span-01-lite",
+      "liability_usd_per_attempt": "0",
+      "admission_reason": null,
+      "static_compatible_non_graph_cells": 136,
+      "compatible_probes": 1,
+      "one_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_compatible_probe_ceiling_usd": "0"
+    },
+    {
+      "backend": "respan/span-01-lite:free",
+      "liability_usd_per_attempt": "0",
+      "admission_reason": null,
+      "static_compatible_non_graph_cells": 136,
+      "compatible_probes": 1,
+      "one_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_non_graph_ceiling_usd": "0",
+      "two_attempt_compatible_probe_ceiling_usd": "0"
+    },
+    {
+      "backend": "jaredpalmer/kev-4b",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "typesafe/jev-1.13",
+      "liability_usd_per_attempt": null,
+      "admission_reason": "native_aggregate_billing_unverified",
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_non_graph_ceiling_usd": null,
+      "two_attempt_compatible_probe_ceiling_usd": null
+    },
+    {
+      "backend": "qwen3.5-9b-chat",
+      "liability_usd_per_attempt": "0.02103808",
+      "admission_reason": null,
+      "static_compatible_non_graph_cells": 25076,
+      "compatible_probes": 12,
+      "one_attempt_non_graph_ceiling_usd": "527.55089408",
+      "two_attempt_non_graph_ceiling_usd": "1055.10178816",
+      "two_attempt_compatible_probe_ceiling_usd": "0.50491392"
+    }
+  ],
+  "scope": "Frozen-source proposal geometry and conditional tariff reservations only. These are not forecasts, authenticated capabilities, actual outcome classifications or spending authorization. Current source/input/capability/credential/route/accounting admission remains required before requests. Paid native aggregate billing remains unbounded; an existing USD25 allocation cannot be duplicated by materializing a new plan."
+}

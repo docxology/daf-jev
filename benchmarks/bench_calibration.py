@@ -73,7 +73,7 @@ def noul_questions() -> dict[str, object]:
 
 
 def collect_answers(
-    client: JevClient, repeats: int
+    client: JevClient, repeats: int, *, states: tuple[str, ...] = STATES
 ) -> tuple[dict[int, list], dict[int, list], int]:
     """Run R independent calls per state for both question kinds.
 
@@ -81,11 +81,15 @@ def collect_answers(
     error count. On the first failing call for a state, that state's repeats
     are dropped entirely from both metrics.
     """
-    choice_answers: dict[int, list] = {i: [] for i in range(len(STATES))}
-    noul_answers: dict[int, list] = {i: [] for i in range(len(STATES))}
+    if repeats < 1:
+        raise ValueError("repeats must be >= 1")
+    if not states:
+        raise ValueError("states must not be empty")
+    choice_answers: dict[int, list] = {i: [] for i in range(len(states))}
+    noul_answers: dict[int, list] = {i: [] for i in range(len(states))}
     n_errors = 0
     for _ in range(repeats):
-        for i, state in enumerate(STATES):
+        for i, state in enumerate(states):
             if i not in choice_answers:
                 continue  # state already dropped after an earlier error
             try:
@@ -158,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not 1 <= args.states <= len(STATES):
         parser.error(f"--states must be between 1 and {len(STATES)}")
+    if args.repeats < 1:
+        parser.error("--repeats must be >= 1")
 
     settings = settings_or_skip()
     if settings is None:
@@ -168,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"calibration: model={args.model} states={args.states} "
               f"repeats={args.repeats}")
         choice_answers, noul_answers, n_errors = collect_answers(
-            client, args.repeats
+            client, args.repeats, states=STATES[:args.states]
         )
 
     if not choice_answers:

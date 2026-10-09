@@ -1,0 +1,21 @@
+# Prepare all four files explicitly with benchmark dataset synthetic --samples 150 first.
+# Save new *-v3.json paths below; historical v2 corpora are never replaced.
+# At least 100 ordinary independent test groups are required globally.
+# These controls execute rules/priors locally and never launch a model or HTTP call.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '0'
+capability_probes: true
+timing_sampling_scope: cohort
+timing_samples: 100
+timing_repetitions: 5
+timeout_s: 60
+local_time_limit_s: 7200
+datasets:
+  - {id: binary, path: ../../.benchmarks/data/binary-v3.json}
+  - {id: categorical, path: ../../.benchmarks/data/categorical-v3.json}
+  - {id: ordinal, path: ../../.benchmarks/data/ordinal-v3.json}
+  - {id: bayes, path: ../../.benchmarks/data/bayes-v3.json}
+backends:
+  - {id: uniform-control, kind: uniform, hosted: false}
+  - {id: exact-rule, kind: rule, hosted: false}

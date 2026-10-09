@@ -463,11 +463,11 @@ class BayesNet:
         (the posterior is undefined there).
         """
         checked, domains, factors, order = self._prepare(evidence)
+        self._guard_evidence_probability(checked, domains, factors, order)
         marginals = {
             var.key: self._marginal(var, checked, domains, factors, order)
             for var in self.variables
         }
-        self._guard_fully_observed(checked, factors, evidence)
         return marginals
 
     def query(
@@ -481,11 +481,9 @@ class BayesNet:
         checked, domains, factors, order = self._prepare(
             {} if evidence is None else evidence
         )
-        marginal = self._marginal(
-            self.variable(variable), checked, domains, factors, order
-        )
-        self._guard_fully_observed(checked, factors, evidence or {})
-        return marginal
+        var = self.variable(variable)
+        self._guard_evidence_probability(checked, domains, factors, order)
+        return self._marginal(var, checked, domains, factors, order)
 
     def most_probable_explanation(self, evidence: Mapping[str, str]) -> dict[str, str]:
         """Most probable explanation: the single joint assignment over ALL
@@ -536,30 +534,28 @@ class BayesNet:
             )
         return dict(zip(keys, best, strict=True))
 
-    def _guard_fully_observed(
+    def _guard_evidence_probability(
         self,
         checked: Mapping[str, str],
+        domains: Mapping[str, tuple[str, ...]],
         factors: list[_Factor],
-        evidence: Mapping[str, str],
+        order: tuple[str, ...],
     ) -> None:
-        """Raise when the evidence is fully observed AND inconsistent.
+        """Reject impossible evidence before returning indicator marginals.
 
-        Observed variables short-circuit to indicator marginals before the
-        zero-total check in ``_marginal`` can run, so a fully-observed
-        inconsistent case would silently normalize fabricated indicators.
-        With at least one hidden variable, that hidden marginal's
-        zero-total check covers the whole evidence mass.
+        An observed query bypasses ``_marginal``'s normalization even when
+        other variables remain hidden. Sum those variables out to check
+        the complete evidence mass independently of the queried variable.
         """
-        if len(checked) != len(self.variables):
+        if not checked:
             return
-        domains = {
-            var.key: (checked[var.key],) if var.key in checked else var.states
-            for var in self.variables
-        }
-        _scope, table = _fold_multiply(list(factors), domains)
+        remaining = _eliminate(
+            list(factors), [key for key in order if key not in checked], domains
+        )
+        _scope, table = _fold_multiply(remaining, domains)
         if math.fsum(table.values()) <= 0.0:
             raise ValueError(
-                f"evidence {dict(evidence)!r} has zero probability; "
+                f"evidence {dict(checked)!r} has zero probability; "
                 "the posterior is undefined"
             )
 

@@ -38,7 +38,9 @@ try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10
     import tomli as tomllib
-import yaml
+from ._json import strict_json_loads
+from ._yaml import strict_yaml_loads
+from .evidence import selected_verification
 
 __all__ = ["generate_variables", "save_variables"]
 
@@ -136,13 +138,22 @@ def _load_config(project_root: Path, *, strict: bool) -> dict[str, Any]:
     config_path = project_root / _CONFIG_PATH
     if not _require(config_path.is_file(), "manuscript config", config_path, "Create manuscript/config.yaml first.", strict=strict):
         return {}
-    with config_path.open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    value = strict_yaml_loads(config_path.read_bytes())
+    if value is not None and not isinstance(value, dict):
+        raise ValueError("manuscript configuration must contain a mapping")
+    return value or {}
 
 
 def _load_package_metadata(project_root: Path) -> dict[str, Any]:
     with (project_root / "pyproject.toml").open("rb") as f:
         return tomllib.load(f)
+
+
+def _read_object(path: Path) -> dict[str, Any]:
+    value = strict_json_loads(path.read_bytes())
+    if not isinstance(value, dict):
+        raise ValueError(f"publication JSON must contain an object: {path}")
+    return value
 
 
 def _load_manifest(project_root: Path, *, strict: bool) -> dict[str, Any]:
@@ -155,8 +166,7 @@ def _load_manifest(project_root: Path, *, strict: bool) -> dict[str, Any]:
         strict=strict,
     ):
         return {}
-    with manifest_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    return _read_object(manifest_path)
 
 
 def _load_figure_registry(project_root: Path, *, strict: bool) -> dict[str, Any]:
@@ -169,8 +179,7 @@ def _load_figure_registry(project_root: Path, *, strict: bool) -> dict[str, Any]
         strict=strict,
     ):
         return {}
-    with registry_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    return _read_object(registry_path)
 
 
 def _code_stats(project_root: Path) -> dict[str, Any]:
@@ -284,25 +293,28 @@ def _coverage_percent(project_root: Path, *, strict: bool) -> float | None:
 
 
 def _latest_benchmark(project_root: Path, prefix: str, *, strict: bool) -> Path | None:
-    """Newest ``<prefix>_*.json`` under ``output/benchmarks``, or None."""
-    bench_dir = project_root / _BENCH_DIR
-    matches = sorted(bench_dir.glob(f"{prefix}_*.json"))
-    _require(
-        bool(matches),
-        f"{prefix} benchmark data",
-        bench_dir / f"{prefix}_*.json",
-        f"Expected e.g. '{prefix}_20260916.json'; run the benchmark script first.",
-        strict=strict,
-    )
-    return matches[-1] if matches else None
+    """Compatibility helper name; selects exact shared evidence, never latest."""
+    from daf_jev.evidence import selected_benchmark
+    try:
+        return selected_benchmark(project_root, prefix)
+    except FileNotFoundError:
+        if strict:
+            raise
+        return None
 
 
 def _load_benchmark(project_root: Path, prefix: str, *, strict: bool) -> dict[str, Any]:
-    path = _latest_benchmark(project_root, prefix, strict=strict)
-    if path is None:
+    from .evidence import selected_benchmark_bytes
+    try:
+        raw = selected_benchmark_bytes(project_root, prefix)
+    except FileNotFoundError:
+        if strict:
+            raise
         return {}
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    value = strict_json_loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError("publication benchmark JSON must contain an object")
+    return value
 
 
 def _bench_row(results: list[dict[str, Any]], n: int) -> dict[str, Any] | None:
@@ -412,11 +424,13 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["CODE_MODULE_LIST"] = ", ".join(code["modules"])
     variables["CODE_PUBLIC_EXPORTS"] = str(code["exports"])
 
-    # ---- Test statistics (pytest --collect-only; coverage API) ----
-    unit_count = _pytest_collected(project_root, "tests/unit")
-    live_count = _pytest_collected(project_root, "tests/live")
+    # Explicit retained evidence permits offline reproduction without importing
+    # pytest or coverage. Invalid explicit selections never fall back silently.
+    verification = selected_verification(project_root)
+    unit_count = verification.unit_count if verification else _pytest_collected(project_root, "tests/unit")
+    live_count = verification.live_count if verification else _pytest_collected(project_root, "tests/live")
     test_files = sorted((project_root / "tests").glob("**/test_*.py"))
-    coverage_pct = _coverage_percent(project_root, strict=strict)
+    coverage_pct = verification.coverage_percent if verification else _coverage_percent(project_root, strict=strict)
     variables["TEST_UNIT_COUNT"] = str(unit_count) if unit_count is not None else _NA
     variables["TEST_LIVE_COUNT"] = str(live_count) if live_count is not None else _NA
     variables["TEST_COVERAGE_PCT"] = _fmt(coverage_pct, ".2f")
@@ -431,7 +445,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["DOCS_SNAPSHOT_BYTES_HUMAN"] = _human_bytes(total_bytes) if manifest else _NA
     variables["DOCS_SNAPSHOT_DATE"] = str(manifest.get("scraped_at_utc", _NA))[:10] if manifest else _NA
 
-    # ---- Benchmarks (output/benchmarks/*.json, latest by filename date) ----
+    # ---- Benchmarks (output/benchmarks/*.json, explicitly selected by manuscript/evidence.json) ----
     batching = _load_benchmark(project_root, "batching", strict=strict)
     patterns = _load_benchmark(project_root, "patterns", strict=strict)
     model = batching.get("model") or patterns.get("model")
@@ -472,8 +486,8 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
 
     # ---- Provenance ----
     variables["GENERATION_TIMESTAMP"] = _build_timestamp(project_root)
-    variables["PLATFORM"] = platform.platform()
-    variables["PYTHON_VERSION"] = platform.python_version()
+    variables["PLATFORM"] = verification.platform if verification else platform.platform()
+    variables["PYTHON_VERSION"] = verification.python_version if verification else platform.python_version()
 
     # ---- Figure registry (output/figures/figure_registry.json) ----
     registry = _load_figure_registry(project_root, strict=strict)
@@ -483,6 +497,13 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
             raise ValueError(f"figure registry entry {label!r} has no filename string")
         filenames.append(entry["filename"])
     variables["FIGURES"] = ", ".join(sorted(filenames)) if registry else _NA
+
+    # Optional empirical study tokens preserve the legacy token set when absent.
+    # An explicit malformed or changed selection always fails, including drafts.
+    from .evidence import has_study_selection
+    if has_study_selection(project_root):
+        from .study_evidence import load_studies
+        variables.update(load_studies(project_root).tokens())
 
     return variables
 

@@ -1,0 +1,741 @@
+{
+  "format": "dafjev.proposed-hosted-profile-cohort/1",
+  "status": "PROPOSED_UNPROBED",
+  "source_profile_pool_sha256": "af375cc940fe4899d7994c8f6af413b69367e92442c7e07dd163dbd2d384f6c5",
+  "credential_values_included": false,
+  "model_attempts": 0,
+  "backends": [
+    {
+      "id": "upstage/solar-decide-flash",
+      "kind": "http",
+      "hosted": true,
+      "model": "upstage/solar-decide-flash",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 524288,
+      "artifact": {
+        "canonical_slug": "upstage/solar-decide-flash-20261008",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "input_cache_read": "0.00000005",
+          "prompt": "0.00000005"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.05,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "perplexity/pplx-decider-v1.1-27b",
+      "kind": "http",
+      "hosted": true,
+      "model": "perplexity/pplx-decider-v1.1-27b",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 262144,
+      "artifact": {
+        "canonical_slug": "perplexity/pplx-decider-v1.1-27b-20261006",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.00000002"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.02,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "openai/gpt-6-luna-decisions",
+      "kind": "http",
+      "hosted": true,
+      "model": "openai/gpt-6-luna-decisions",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 1050000,
+      "artifact": {
+        "canonical_slug": "openai/gpt-6-luna-decisions-20261006",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "input_cache_read": "0",
+          "input_cache_write": "0",
+          "prompt": "0.0000001",
+          "web_search": "0.01"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "liquid/d1",
+      "kind": "http",
+      "hosted": true,
+      "model": "liquid/d1",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 65536,
+      "artifact": {
+        "canonical_slug": "liquid/d1-20260930",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "input_cache_read": "0.00000004",
+          "prompt": "0.00000004"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.04,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "cloudflare/clef-flash",
+      "kind": "http",
+      "hosted": true,
+      "model": "cloudflare/clef-flash",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 65536,
+      "artifact": {
+        "canonical_slug": "cloudflare/clef-flash",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.00000009"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.09,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "cloudflare/clef",
+      "kind": "http",
+      "hosted": true,
+      "model": "cloudflare/clef",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 65536,
+      "artifact": {
+        "canonical_slug": "cloudflare/clef",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.00000024"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.24,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "togethercomputer/tev1-4b-experimental",
+      "kind": "http",
+      "hosted": true,
+      "model": "togethercomputer/tev1-4b-experimental",
+      "mode": "letter",
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "context_length": 32768,
+      "artifact": {
+        "canonical_slug": "togethercomputer/tev1-4b-experimental-20260923",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "choice"
+        ],
+        "max_options": 24,
+        "probability_source": null,
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.000000042"
+        }
+      },
+      "options": {
+        "max_tokens": 8,
+        "provider": {
+          "max_price": {
+            "prompt": 0.042,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "allow_fallbacks": false,
+          "require_parameters": true
+        }
+      },
+      "liability_usd": "0.001376256",
+      "admission_reason": null
+    },
+    {
+      "id": "inception/mercury-decide:free",
+      "kind": "http",
+      "hosted": true,
+      "model": "inception/mercury-decide:free",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 32768,
+      "artifact": {
+        "canonical_slug": "inception/mercury-decide-20260930",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.0,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": "0",
+      "admission_reason": null
+    },
+    {
+      "id": "upstage/solar-decide",
+      "kind": "http",
+      "hosted": true,
+      "model": "upstage/solar-decide",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 524288,
+      "artifact": {
+        "canonical_slug": "upstage/solar-decide-20260928",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "input_cache_read": "0.00000005",
+          "prompt": "0.00000005"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.05,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "respan/span-01",
+      "kind": "http",
+      "hosted": true,
+      "model": "respan/span-01",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 0,
+      "artifact": {
+        "canonical_slug": "respan/span-01-20260925",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.00000002"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.02,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "respan/span-01-lite",
+      "kind": "http",
+      "hosted": true,
+      "model": "respan/span-01-lite",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 0,
+      "artifact": {
+        "canonical_slug": "respan/span-01-lite-20260925",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.0,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": "0",
+      "admission_reason": null
+    },
+    {
+      "id": "respan/span-01-lite:free",
+      "kind": "http",
+      "hosted": true,
+      "model": "respan/span-01-lite:free",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 0,
+      "artifact": {
+        "canonical_slug": "respan/span-01-lite-20260925",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.0,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": "0",
+      "admission_reason": null
+    },
+    {
+      "id": "jaredpalmer/kev-4b",
+      "kind": "http",
+      "hosted": true,
+      "model": "jaredpalmer/kev-4b",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 8192,
+      "artifact": {
+        "canonical_slug": "jaredpalmer/kev-4b-20260924",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.000000042"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.042,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "typesafe/jev-1.13",
+      "kind": "http",
+      "hosted": true,
+      "model": "typesafe/jev-1.13",
+      "mode": "systemone",
+      "endpoint": "https://openrouter.ai/api/alpha/decisions",
+      "context_length": 32000,
+      "artifact": {
+        "canonical_slug": "typesafe/jev-1.13-20260917",
+        "declared_alias_target": null,
+        "license": "consult_model_card",
+        "model_training_overlap": "unknown"
+      },
+      "capabilities": {
+        "primitives": [
+          "noul",
+          "choice",
+          "score"
+        ],
+        "max_options": null,
+        "probability_source": "native",
+        "evidence": "catalog_only",
+        "authentication": "bearer",
+        "probability_semantics": null
+      },
+      "pricing": {
+        "source": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+        "snapshot_at": "2026-10-08T13:58:12.244080+00:00",
+        "rates": {
+          "completion": "0",
+          "prompt": "0.000000042"
+        }
+      },
+      "options": {
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "prompt": 0.042,
+            "completion": 0.0,
+            "request": 0,
+            "image": 0
+          },
+          "require_parameters": true
+        }
+      },
+      "liability_usd": null,
+      "admission_reason": "native_aggregate_billing_unverified"
+    },
+    {
+      "id": "qwen3.5-9b-chat",
+      "kind": "http",
+      "hosted": true,
+      "model": "qwen/qwen3.5-9b",
+      "mode": "chat",
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "context_length": 262144,
+      "artifact": {
+        "extraction": "current SDK complete per-request strict JSON schema; ordered prompt; remote support pending actual probe",
+        "license": "unknown_not_in_endpoint_metadata",
+        "metadata_sha256": "59b6945c9173047c8a4f3a051b81187e8ce1d56308b73bd66f2d1cfaeadc0cd0",
+        "model_training_overlap": "unknown",
+        "provider_selection": "price ceilings and required parameters; provider name is not pinned routing slug",
+        "published_endpoint_name": "Darkbloom | qwen/qwen3.5-9b-20260310",
+        "published_quantization": "fp4",
+        "tokenizer_sha256": "provider_opaque_unknown",
+        "weights_sha256": "provider_opaque_unknown"
+      },
+      "capabilities": {
+        "confidence_semantics": "unavailable",
+        "evidence": "published_endpoint_metadata_unprobed",
+        "probability_rounding_digits": null,
+        "probability_semantics": null,
+        "probability_source": null,
+        "authentication": "bearer"
+      },
+      "pricing": {
+        "rates": {
+          "completion": "0.00000013",
+          "input_cache_read": "0.00000004",
+          "prompt": "0.00000008"
+        },
+        "snapshot_at": "2026-10-08T14:00:10.681795+00:00",
+        "source": "https://openrouter.ai/api/v1/models/qwen/qwen3.5-9b/endpoints"
+      },
+      "options": {
+        "max_tokens": 512,
+        "provider": {
+          "allow_fallbacks": false,
+          "max_price": {
+            "completion": 0.13,
+            "image": 0,
+            "prompt": 0.08,
+            "request": 0
+          },
+          "require_parameters": true
+        },
+        "temperature": 0
+      },
+      "liability_usd": "0.02103808",
+      "admission_reason": null
+    }
+  ],
+  "scope": "Public catalog and endpoint metadata with frozen requested settings only. Resolved IDs/provider/usage/cost, remote artifacts and authenticated task capability require actual receipts. Local private metadata-file locations omitted; retained metadata hashes/primary URLs remain. Original frozen pool is unchanged."
+}

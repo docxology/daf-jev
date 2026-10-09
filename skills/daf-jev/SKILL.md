@@ -3,6 +3,8 @@ name: daf-jev
 description: >
   Build with the daf-jev Python client for the TypeSafe Jev (System One) API:
   typed question builders (noul/choice/score), sync and async clients,
+  provider-neutral decision backends, reproducible synthetic/real-data
+  benchmarks, validation gates, executed cascades, and auditable accounting,
   concurrent evaluation, composable decision patterns (composite scoring,
   confidence and tiered gates), usage accounting (UsageLedger), an opt-in
   circuit breaker, calibration utilities, a CLI, an MCP server,
@@ -20,7 +22,7 @@ description: >
 
 `daf-jev` is a thin, composable Python client for `POST /v1/systemone`. Code
 owns the workflow; Jev returns typed answers and probabilities. Package source
-of truth: `docs/ARCHITECTURE.md`; live-API facts: `docs/reference/`.
+of truth: `docs/ARCHITECTURE.md`; dated wire documentation: `docs/reference/`.
 
 ## Install
 
@@ -76,6 +78,9 @@ never be committed, printed, or read by tests.
   failures open for the cooldown, then one probe; `record_success()` /
   `record_failure()` drive it manually; states via `CircuitState`
   (closed/open/half_open).
+  Use `await cb.call_async(async_fn, *args, **kwargs)` for async work;
+  it records success only after completion and records/re-raises cancellation
+  or any other `BaseException`, including a half-open probe.
 - **Decider** (`daf_jev.decider`) — `Decider(client=None, *,
   render_state, questions, map_answers, fallback, gate, budget, breaker,
   ledger, cache, cache_key, ...)`: the fail-open decision-point loop.
@@ -118,6 +123,11 @@ never be committed, printed, or read by tests.
   client, ...)` proposes the DAG from one batched ask over all variable
   pairs (edges only; exact ordering search to `exact_limit=8`, greedy
   above with `edge_penalty`).
+  `await elicit_cpts_async(...)` / `await propose_structure_async(...)` use
+  the caller's loop and leave the client open. Sync compatibility with a fresh
+  async client is single-use and closes it on its bridge loop; do not call that
+  bridge from an already running loop. Structure gain is log(edge/no-edge)
+  minus the edge penalty; exact ordering and greedy search differ.
   `.most_probable_explanation(evidence)` (most probable joint assignment
   consistent with the evidence; deterministic lexicographic tiebreak),
   `.sample(n, rng=None)` (ancestral sampling in topological order), and
@@ -187,9 +197,9 @@ never be committed, printed, or read by tests.
   through `daf-jev docs-verify` and MCP `jev_docs_verify`.
 - **Figures** (`daf_jev.figures`, `figures` extra) — `generate_all()`
   writes the 7 registry-named PNGs + `figure_registry.json` into the
-  figures directory; data-driven figures read the newest
-  `output/benchmarks/*.json` and raise `FileNotFoundError` (naming the
-  missing JSON) rather than fabricating data.
+  figures directory; data-driven figures read the explicit hash-bound
+  selections in `manuscript/evidence.json` and fail if selected evidence is
+  missing or changed.
 - **Manuscript variables** (`daf_jev.manuscript_variables`) —
   `generate_variables` / `save_variables` derive the 49 `{{TOKEN}}`
   manuscript variables from pyproject, the docs MANIFEST, test counts,
@@ -202,6 +212,43 @@ never be committed, printed, or read by tests.
 - **Config** — package-root re-exports `load_settings`, `resolve_retry`,
   `resolve_timeout`; the API-key/base-URL resolvers live in
   `daf_jev.config` (`resolve_api_key`, `resolve_base_url`).
+
+## Benchmark modules and evidence contracts
+
+These modules implement the benchmark surface and its parsing/evidence helpers.
+Import the public modules from `daf_jev.<module>`; the authoritative signatures and wire formats are in
+[`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md). The CLI recipes and
+acceptance boundaries are in [`docs/decision_benchmarking.md`](../../docs/decision_benchmarking.md).
+
+| Module | Responsibility and boundary |
+|---|---|
+| `_json.py` | Shared private decoder preserves order and rejects duplicate keys, nonstandard constants and nonfinite float/Decimal results; numeric precision/recursion failures use the malformed-response path. Finite Decimal billing stays exact; consumer schemas enforce bounds. |
+| `_yaml.py` | Private safe literal benchmark/manuscript configuration; rejects duplicate/merge-colliding keys, aliases, unsafe tags, malformed input and nonfinite numbers. Global PyYAML remains unchanged; consumer schemas enforce their own supported keys/types/bounds. |
+| `_cancellation.py` | Private recovery of current owned cancellation evidence through task/timeout chaining. Stops at the owned origin; unrelated handled exception context cannot supply a previous request's workflow or receipt. Cancellation state and observer accounting remain unchanged. |
+| `decision_backends.py` | `DecisionBackend` / `AsyncDecisionBackend`, `DecisionRequest`, `DecisionPrediction`, `DecisionResult`, `BackendCapabilities`, and durable `CallReceipt`; native System One, generated JSON, bounded letter-choice HTTP, prior, and sync-to-async adapters. Sessions belong to the caller. Native scalar nouls yield a binary complement distribution and preserve missing confidence. |
+| `benchmark_cli.py` | Registers and dispatches `benchmark dataset`, `catalog`, `plan`, `run`, `resume`, and offline `report`; only explicit fetch/catalog or run operations use the network. |
+| `benchmark_datasets.py` | Deterministic synthetic binary/categorical/ordinal/Bayes controls and pinned BANKING77, CLINC150/OOS, Wine Quality preparation; exact hashes/vocabularies/splits, canonical duplicate leakage and sensitivity flags, five declared Wine ordinal bins. |
+| `benchmark_sampling.py` | Target-free global `timing_sample_pack`: exact physical test-example count, one representative per input group, dataset/task balance, quality-control exclusion and immutable pack identity; explicit legacy per-dataset scope. |
+| `benchmark_metrics.py` | Accuracy/F1/OOS detection, ordinal errors, proper losses/calibration, grouped uncertainty, latency and cost accounting with eligible denominators; target-free repeatability and full/planned duplicate/Wine-binning audits. Missing beliefs/costs remain unknown. |
+| `benchmark_comparisons.py` | Pure paired comparisons over complete frozen primary cohorts: exact input/target/group bindings, all planned statuses, shared group bootstrap accuracy/Brier/ordinal differences and recomputed full-vocabulary macro-F1. Probability order and missing beliefs are preserved; intervals concern fixed observed pairs, without refit, sequential, cost or serving claims. |
+| `benchmark_models.py` | Synthetic-only `RuleDecisionBackend(kind)` parses authoritative state fields without target access; hard outputs have no beliefs/confidence, Bayes has analytical provenance. Train-only priors and optional sklearn text/structured baselines retain frozen seeds and training identities. |
+| `benchmark_policies.py` | Validation-only confidence-gate fitting, aligned cascade replay, and synthetic oracle entropy re-asking. Replay is an analysis of recorded predictions, not executed requests. |
+| `benchmark_workflows.py` | `CascadeDecisionBackend` executes a weak-to-strong policy with a frozen validation gate, accounts for each child attempt, and reuses the weak result on a transient strong retry. Child backend lifecycle is caller-owned. |
+| `benchmark_runner.py` | Freezes datasets, profiles, source/runtime identities, candidate catalogs and protocol in an immutable run; executes/resumes cells and constructs an offline report. Dataset ID/index/prepared SHA distinguish same-name inputs; wholly unavailable arms remain present. Attempted coverage and all-planned-decision coverage remain distinct. Unsupported, failed and unresolved outcomes remain explicit. |
+| `benchmark_store.py` | `RunStore` hash-bound manifest and append-only journal, executor locking, attempt spend admission, response receipts and unresolved recovery. `read_only=True` permits portable audit of copied evidence; execution resumes only against the original lock/file identity. |
+| `benchmark_resources.py` | Hardware identity and optional process/resource sampling; measurements are separate from provider token accounting and must disclose their availability and scope. |
+| `benchmark_graphical.py` | Injected async reconstruction of a disclosed three-node reference, soft CPT Brier, structure proposal, coupled entropy observation trajectory and actual posterior re-asks; strict genuine beliefs, caller-owned lifecycle, retained failures and synthetic observation units. |
+| `benchmark_publication.py` | Offline Markdown/PDF report generation from benchmark reports; exports include run/journal identities and limitations. Export does not publish or establish scientific acceptance. |
+| `evidence.py` | `selected_benchmark_bytes` consumes exact hash-verified historical inputs in one read; path-based `selected_benchmark` remains compatible. `verification_inputs`, frozen `VerificationStatistics` and `selected_verification` bind native unit coverage/JUnit/live collection to before/after/current source/test/script/config identity. Malformed/stale explicit selection fails even draft; regeneration requires no raw coverage or new pytest collection. Live count is collection, not execution. Cohort compatibility still needs review. |
+| `study_evidence.py` | Pure selected CPU/hosted summary consumption; validates count, billing provenance, gate and metric consistency. Exact retained inputs generate optional study variables; no model fitting, inference or reconstructed missing provenance. |
+| `study_figures.py` | Six empirical figures and modular cover with selected-input hashes, plotted-data JSON and vector PDF companions. A complete plotting context preserves standalone/full rendering equivalence; intervals, null risk, ordinal units and separate cohorts retain their declared scope. |
+
+Capabilities declared in profiles or a public model catalog are not evidence of a
+successful inference. Generated labels do not become probability vectors; native
+rounded distributions retain their precision policy. Raw confidence and entropy
+are not correctness probabilities. Reported USD, unknown charges, reservations,
+and local resource costs remain distinct. No hosted call is implied by planning,
+offline reports, model discovery, or validation-gate replay.
 
 Runnable walkthroughs live in `examples/` (quickstart, triage router,
 composite scoring, gated fallback, corpus evaluation, decision-point
@@ -271,6 +318,15 @@ daf-jev providers                           # registry listing (keyless, exit 0)
 daf-jev posteriors-load FILE [--graphspec FILE]
                                            # validate a posterior sidecar
                                            # (keyless; exit 1 on invalid)
+daf-jev posteriors-reask FILE [--graphspec FILE] [--asked VAR ...]
+                                           # keyless evidence-bearing sidecar plan
+daf-jev benchmark dataset synthetic|fetch|prepare ...
+daf-jev benchmark catalog --output FILE [--profiles-output FILE]
+daf-jev benchmark plan --config YAML --out-dir ROOT
+daf-jev benchmark run RUN_DIRECTORY
+daf-jev benchmark resume RUN_DIRECTORY
+daf-jev benchmark report RUN_DIRECTORY [--output FILE] [--markdown FILE]
+            [--pdf FILE] [--gates-output FILE]
 # global --provider KEY precedes any subcommand: daf-jev --provider kev models
 ```
 
@@ -314,7 +370,9 @@ One wire contract (`POST /v1/systemone`), six registered providers in
 - Behavioral caveats live in the registry `notes` (see `daf-jev providers`):
   jeff — temperature-scaled probabilities, nominal output tokens; kev —
   extra top-level `latency_ms` (parsed and ignored); openrouter — extra
-  `id` / `provider` / `usage.cost` fields (parsed and ignored).
+  `id` / `provider` / `usage.cost` fields (ignored by legacy response dataclasses).
+  New benchmarks use explicit `DecisionBackend` native/chat endpoints and
+  canonical OpenRouter IDs; see [provider guide](../../docs/providers.md).
 
 ## MCP
 
@@ -330,6 +388,8 @@ JSON-safe dicts):
 - `jev_posteriors_load` — load/validate a posterior sidecar
   (`dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`); no API call,
   optional GraphSpec cross-check.
+- `jev_reask_plan` — max-entropy plan over an evidence-bearing posterior
+  sidecar; no API call. Nine tools total plus the snapshot resource.
 - Resource `jev://docs/snapshot` — `{page_count, snapshot_id, scraped_at,
   index_sha256}` from `docs/reference/MANIFEST.json`.
 
@@ -347,3 +407,55 @@ JSON-safe dicts):
 - **Thresholds are domain-specific.** Calibrate on your own data
   (`expected_calibration_error`, `reliability_table`) before trusting
   defaults; keep question text and threshold constants in one reviewable place.
+
+## Explicit benchmark workflow
+
+Read [the architecture contracts](../../docs/ARCHITECTURE.md#decision-backends-and-benchmark-contracts)
+and [the benchmark protocol](../../docs/decision_benchmarking.md) before running
+an experiment. Optional classifiers/splits use `uv sync --extra benchmark`.
+Prepared [datasets](../../docs/datasets.md) retain source/license/hash, full
+vocabulary, leakage groups and train/validation/test roles. Plan freezes exact
+source/config/data/catalog identities without inference; catalog and source
+fetch are explicit public network operations. Benchmark credentials use only
+the profile's process environment variable, never implicit `.env` fallback.
+
+Native distributions, generated labels and classifier/prior probabilities
+carry different probability/confidence provenance. Do not invent a vector or
+P(correct) for generated labels; retain native rounding without normalization.
+Provenance is separate from probability meaning: a native row or normalized
+compatibility score is not automatically a posterior or CPT. Preserve unknown
+meaning through the separate `probability_semantics` field, estimator definitions
+and independent calibration evidence. Generic native semantics default to unknown.
+Record every paid attempt, including retries and parse failures. Unknown charges
+retain liability and stop hosted admission; local compute cost is unknown
+without a rate. Preserve failed/unsupported/unattempted/unresolved denominators.
+Resume never automatically replays an uncertain paid attempt. Reports and policy
+replay are offline reductions, not executed policy timing. Runtime probes,
+real local/hosted model execution and scientific/publication acceptance remain
+separate. See [reproducibility](../../docs/reproducibility.md) and
+[the reproduced review](../../docs/methods_review.md).
+
+The requested warm cohort is 100 shared physical test examples globally, before
+model capability/outcome filtering, with five additional repetitions. Freeze
+the exact dataset/input/example/group IDs and task allocation; retain failures
+and unsupported selections. Current `timing_sampling_scope: cohort` requires
+the exact global count; an insufficient pool fails. Complete matched cyclic
+Choice bundles are separately counted quality controls with
+`timing_eligible: false`, excluded from ordinary timing IDs. The retained per-dataset selector produced
+an expanded 368-ID Mac cohort, which remains separate and incomplete. Changing
+scope or prompt presentation needs a new accepted source/manifest and fresh
+input proofs, with prior cumulative profile time carried forward. Do not resume
+an original study whose future admission was withdrawn at a clean boundary.
+
+For measured manuscript regeneration, use
+`scripts/capture_verification.py --out-dir FRESH_INSIDE_ROOT` after preparing
+`dev`, `figures` and `benchmark` extras. It executes unit tests with native
+coverage/JUnit and only collects live tests. Select its receipt path/SHA in the
+optional `manuscript/evidence.json` `verification` field deliberately; preserve
+historical benchmark selection and failed captures. Read the
+[retained verification contract](../../docs/reproducibility.md#retained-verification-for-exact-offline-regeneration)
+before selection. This is local source evidence, not model/hosted or publication
+acceptance. Layout-only rerenders may reuse the exact saved map, with fresh
+`--output` / `--artifacts-dir` and all-page prose/layout review.
+
+`benchmark_graphical.py` executes disclosed reference CPT reconstruction, structure proposal, and coupled oracle observation experiments through injected, caller-owned backends.

@@ -22,12 +22,11 @@ Jev sits UPSTREAM of inference here: structure and CPTs are elicited once
 and reused downstream; :meth:`daf_jev.graphical.BayesNet.posterior` performs
 the inference itself in :mod:`daf_jev.graphical`.
 
-Both functions accept any client object exposing
-``ask(state, questions) -> SystemOneResponse`` — the sync
-:class:`~daf_jev.client.JevClient`, the async
-:class:`~daf_jev.client.AsyncJevClient` (the whole batch runs on one
-private event loop, mirroring :mod:`daf_jev.evaluate`), or a test stand-in.
-The client is never closed here: its lifecycle stays with the caller.
+The async variants await each request on the caller's event loop and leave
+client lifecycle with the caller. The sync functions accept a synchronous
+client or a fresh asynchronous client for single-use compatibility: that
+async client is closed on the bridge loop, including on failure. Within a
+running event loop, use the async variants instead of the sync bridge.
 Provider choice happened upstream (``open_client`` /
 ``JevClient.for_provider``).
 """
@@ -35,11 +34,11 @@ Provider choice happened upstream (``open_client`` /
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import inspect
 import itertools
 import math
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from daf_jev._types import (
@@ -56,7 +55,9 @@ if TYPE_CHECKING:
     # the two modules land concurrently.
     from daf_jev.graphical import BayesNet, Edge, Variable
 
-__all__ = ["elicit_cpts", "propose_structure"]
+__all__ = [
+    "elicit_cpts", "elicit_cpts_async", "propose_structure", "propose_structure_async"
+]
 
 _CPT_INSTRUCTIONS_DEFAULT = (
     "You are supplying the conditional probability tables (CPTs) of a "
@@ -82,18 +83,24 @@ _STRUCTURE_INSTRUCTIONS_DEFAULT = (
 # ---------------------------------------------------------------------------
 
 
-def _run_coroutine(coro: Any) -> Any:
-    """Drive a coroutine from the sync API, even inside a running loop.
+def _client_ask(client: Any) -> Any:
+    ask: Any = getattr(client, "ask", None)
+    if not callable(ask):
+        raise TypeError(
+            "client must expose a callable ask(state, questions), got "
+            f"{type(client).__name__}"
+        )
+    return ask
 
-    Mirrors ``daf_jev.evaluate.Evaluator._run_async``: a fresh event loop
-    when none is running, otherwise a private single-worker thread.
-    """
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(asyncio.run, coro).result()
+
+async def _ask_chunks_async(
+    client: Any, state: JSONContent, chunks: Sequence[Mapping[str, ChoiceQuestion]]
+) -> list[SystemOneResponse]:
+    """Await chunks sequentially on the caller loop without closing client."""
+    ask = _client_ask(client)
+    if not inspect.iscoroutinefunction(ask):
+        raise TypeError("async elicitation requires an async def client.ask")
+    return [await ask(state, chunk) for chunk in chunks]
 
 
 def _ask_chunks(
@@ -101,29 +108,44 @@ def _ask_chunks(
 ) -> list[SystemOneResponse]:
     """Round-trip every chunk in order through the public ``ask`` API.
 
-    Async clients (``ask`` declared ``async def``, e.g.
-    ``AsyncJevClient``) run the WHOLE batch on one private event loop so a
-    shared async transport never straddles loops; sync clients ask chunk by
-    chunk inline. A sync-declared ``ask`` that still returns a coroutine
-    fails closed. The client is never closed here.
+    The legacy async bridge consumes a fresh client once, closing it on
+    the same loop as its requests. Async callers use the additive async
+    entry points to retain and reuse their own client.
     """
-    ask: Any = getattr(client, "ask", None)
-    if not callable(ask):
-        raise TypeError(
-            "client must expose a callable ask(state, questions), got "
-            f"{type(client).__name__}"
-        )
+    ask = _client_ask(client)
     if inspect.iscoroutinefunction(ask):
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError(
+                "sync elicitation cannot bridge an async client inside a "
+                "running event loop; await elicit_cpts_async or "
+                "propose_structure_async instead"
+            )
+        close = getattr(client, "close", None)
+        if not callable(close):
+            raise TypeError(
+                "sync elicitation with an async client requires close(); "
+                "use the async elicitation entry points for caller-owned lifecycle"
+            )
 
         async def _run() -> list[SystemOneResponse]:
-            return [await ask(state, chunk) for chunk in chunks]
+            try:
+                return await _ask_chunks_async(client, state, chunks)
+            finally:
+                result = close()
+                if inspect.isawaitable(result):
+                    await result
 
-        return _run_coroutine(_run())
+        return asyncio.run(_run())
 
     responses: list[SystemOneResponse] = []
     for chunk in chunks:
         result: Any = ask(state, chunk)
         if inspect.iscoroutine(result):
+            result.close()
             raise ValueError(
                 "client.ask returned a coroutine although it is not declared "
                 "async; provide an async def ask() (AsyncJevClient) or a "
@@ -385,6 +407,16 @@ def _directed_edge_of(
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _CPTPlan:
+    net: BayesNet
+    parents: dict[str, tuple[str, ...]]
+    states: dict[str, tuple[str, ...]]
+    rows: list[tuple[str, Variable, tuple[tuple[str, str], ...], tuple[str, ...]]]
+    state: JSONContent
+    chunks: list[Mapping[str, ChoiceQuestion]]
+
+
 def elicit_cpts(
     variables: Sequence[Variable],
     edges: Sequence[Edge],
@@ -415,7 +447,9 @@ def elicit_cpts(
             self-loops, acyclicity) before any network call.
         client: Any object exposing ``ask(state, questions) ->
             SystemOneResponse`` (sync ``JevClient``, async
-            ``AsyncJevClient``, or a test stand-in). Never closed here.
+            ``AsyncJevClient``, or a test stand-in). A fresh async client
+            is single-use and closed by the sync bridge; use
+            ``elicit_cpts_async`` for caller-owned async lifecycle.
         instructions: Optional context prepended to the shared base
             instructions.
         max_questions_per_request: Optional batch size (>= 1); ``None``
@@ -434,7 +468,43 @@ def elicit_cpts(
             ``validate()``.
         TypeError: When ``client`` exposes no callable ``ask``.
     """
-    from daf_jev.graphical import CPT, BayesNet  # lazy: sibling module
+    plan = _prepare_cpt_plan(
+        variables, edges, instructions, max_questions_per_request, state
+    )
+    return _assemble_cpts(plan, _ask_chunks(client, plan.state, plan.chunks))
+
+
+async def elicit_cpts_async(
+    variables: Sequence[Variable],
+    edges: Sequence[Edge],
+    *,
+    client: Any,
+    instructions: str | None = None,
+    max_questions_per_request: int | None = None,
+    state: JSONContent | None = None,
+) -> BayesNet:
+    """Await CPT elicitation on the caller's loop, without closing client.
+
+    Inputs, deterministic batching and answer validation match
+    :func:`elicit_cpts`. Cancellation propagates; the caller retains the
+    client's lifecycle and may reuse it for subsequent elicitation.
+    """
+    plan = _prepare_cpt_plan(
+        variables, edges, instructions, max_questions_per_request, state
+    )
+    responses = await _ask_chunks_async(client, plan.state, plan.chunks)
+    return _assemble_cpts(plan, responses)
+
+
+def _prepare_cpt_plan(
+    variables: Sequence[Variable],
+    edges: Sequence[Edge],
+    instructions: str | None,
+    max_questions_per_request: int | None,
+    state: JSONContent | None,
+) -> _CPTPlan:
+    """Validate and compose all CPT requests before any network call."""
+    from daf_jev.graphical import BayesNet
 
     if max_questions_per_request is not None and max_questions_per_request < 1:
         raise ValueError(
@@ -489,37 +559,52 @@ def elicit_cpts(
             rows[start : start + max_questions_per_request]
             for start in range(0, len(rows), max_questions_per_request)
         ]
-    responses = _ask_chunks(
-        client,
-        resolved_state,
+    return _CPTPlan(
+        provisional, parents_of, states_of, rows, resolved_state,
         [{qid: questions[qid] for qid, *_rest in chunk} for chunk in chunks],
     )
+
+
+def _assemble_cpts(plan: _CPTPlan, responses: Sequence[SystemOneResponse]) -> BayesNet:
+    """Build the same validated net for synchronous and asynchronous asks."""
+    from daf_jev.graphical import CPT, BayesNet
 
     answers_by_qid: dict[str, object] = {}
     for response in responses:
         answers_by_qid.update(response.answers)
 
     tables: dict[str, list[tuple[tuple[str, ...], tuple[float, ...]]]] = {
-        variable.key: [] for variable in variables_list
+        variable.key: [] for variable in plan.net.variables
     }
-    for qid, child, _assignment, values in rows:
+    for qid, child, _assignment, values in plan.rows:
         answer = _choice_answer_of(answers_by_qid, qid)
-        probabilities = _distribution_of(answer, qid, states_of[child.key])
+        probabilities = _distribution_of(answer, qid, plan.states[child.key])
         tables[child.key].append((values, probabilities))
 
     cpts = {
         child.key: CPT(
             child=child.key,
-            parents=parents_of[child.key],
+            parents=plan.parents[child.key],
             table=tuple(tables[child.key]),
         )
-        for child in variables_list
+        for child in plan.net.variables
     }
     net = BayesNet(
-        variables=tuple(variables_list), edges=tuple(edges_list), cpts=cpts
+        variables=plan.net.variables, edges=plan.net.edges, cpts=cpts
     )
     net.validate()
     return net
+
+
+@dataclass(frozen=True)
+class _StructurePlan:
+    variables: tuple[Variable, ...]
+    keys: list[str]
+    pairs: list[tuple[int, int]]
+    state: JSONContent
+    questions: dict[str, ChoiceQuestion]
+    edge_penalty: float
+    exact_limit: int
 
 
 def propose_structure(
@@ -567,7 +652,9 @@ def propose_structure(
             least 2).
         client: Any object exposing ``ask(state, questions) ->
             SystemOneResponse`` (sync ``JevClient``, async
-            ``AsyncJevClient``, or a test stand-in). Never closed here.
+            ``AsyncJevClient``, or a test stand-in). A fresh async client
+            is single-use and closed by the sync bridge; use
+            ``propose_structure_async`` for caller-owned async lifecycle.
         instructions: Optional context prepended to the shared base
             instructions.
         edge_penalty: Finite cost per consistent edge subtracted from
@@ -589,7 +676,42 @@ def propose_structure(
             probability — naming the question id).
         TypeError: When ``client`` exposes no callable ``ask``.
     """
-    from daf_jev.graphical import BayesNet, Edge  # lazy: sibling module
+    plan = _prepare_structure_plan(
+        variables, instructions, edge_penalty, exact_limit, state
+    )
+    (response,) = _ask_chunks(client, plan.state, [plan.questions])
+    return _assemble_structure(plan, response)
+
+
+async def propose_structure_async(
+    variables: Sequence[Variable],
+    *,
+    client: Any,
+    instructions: str | None = None,
+    edge_penalty: float = 1.0,
+    exact_limit: int = 8,
+    state: JSONContent | None = None,
+) -> BayesNet:
+    """Await structure proposal on the caller's loop without closing client.
+
+    Validation, edge scoring and deterministic tie-breaking match
+    :func:`propose_structure`. Cancellation propagates to the caller.
+    """
+    plan = _prepare_structure_plan(
+        variables, instructions, edge_penalty, exact_limit, state
+    )
+    (response,) = await _ask_chunks_async(client, plan.state, [plan.questions])
+    return _assemble_structure(plan, response)
+
+
+def _prepare_structure_plan(
+    variables: Sequence[Variable],
+    instructions: str | None,
+    edge_penalty: float,
+    exact_limit: int,
+    state: JSONContent | None,
+) -> _StructurePlan:
+    """Validate and compose pairwise questions before any network call."""
 
     if not math.isfinite(edge_penalty):
         raise ValueError(f"edge_penalty must be finite, got {edge_penalty!r}")
@@ -624,7 +746,18 @@ def propose_structure(
             },
         )
 
-    (response,) = _ask_chunks(client, resolved_state, [questions])
+    return _StructurePlan(
+        tuple(variables_list), keys, pairs, resolved_state, questions,
+        edge_penalty, exact_limit,
+    )
+
+
+def _assemble_structure(plan: _StructurePlan, response: SystemOneResponse) -> BayesNet:
+    """Apply the existing exact/greedy policy to either client response."""
+    from daf_jev.graphical import BayesNet, Edge
+
+    keys, pairs = plan.keys, plan.pairs
+    n, edge_penalty, exact_limit = len(plan.variables), plan.edge_penalty, plan.exact_limit
     candidates: dict[tuple[int, int], tuple[tuple[int, int], float, float] | None] = {}
     for i, j in pairs:
         qid = f"edge::{keys[i]}->{keys[j]}"
@@ -690,7 +823,7 @@ def propose_structure(
     edges = tuple(
         Edge(parent=keys[u], child=keys[v]) for (u, v) in edge_pairs
     )
-    return BayesNet(variables=tuple(variables_list), edges=edges, cpts={})
+    return BayesNet(variables=plan.variables, edges=edges, cpts={})
 
 
 def _reachable(

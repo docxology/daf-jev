@@ -1,0 +1,230 @@
+{
+  "execution_this_continuation": {
+    "authenticated_hosted_requests": 0,
+    "model_process_starts": 0,
+    "provider_inference_calls": 0
+  },
+  "fixed_source_revision": "450a49a3731c794cc6138707c2100ac48854a471",
+  "format": "dafjev.manuscript-scholarship-release-report/1",
+  "hosted_accounting": {
+    "admission_stopped": true,
+    "limit_usd": "25",
+    "reported_charge_scope": "Only known reported receipts; a numeric zero is not evidence that the failed attempt was free.",
+    "reported_cost_usd": "0",
+    "reserved_usd": "0",
+    "shared_allocation_id": "first-authorized-hosted-usd25",
+    "unreconciled_attempts": 1
+  },
+  "hosted_test_improvements": [
+    "Bounded decoded-body diagnostic hashes and fixed classifications; raw bodies and arbitrary headers excluded.",
+    "Valid reported billing and individual usage fields retained independently of answer validation.",
+    "Malformed, oversized and incomplete replies finalize a single observable transport attempt.",
+    "Cancellation and after-hook failures retain original cancellation semantics.",
+    "Printable bounded provider identifiers reject supplied credentials and request-text reflection.",
+    "Runner admission, retries and unknown-billing stop remain authoritative."
+  ],
+  "interpretive_scope": [
+    "CPU supervised results are distinct from native or generative model results.",
+    "Retained native evidence belongs to an older source identity and remains partial.",
+    "The hosted pilot remains incomplete with one unreconciled failed attempt.",
+    "New source requires a newly frozen execution manifest; no shared budget or local clock resets.",
+    "Same-host byte reproduction does not establish cross-platform PDF identity or live-model acceptance."
+  ],
+  "measured_study_values": {
+    "STUDY_BANK_ACCURACY_PCT": "87.69",
+    "STUDY_CLINC_ACCURACY_PCT": "79.84",
+    "STUDY_CPU_COMPLETED": "68894",
+    "STUDY_CPU_JOBS": "9",
+    "STUDY_CPU_PLANNED": "93046",
+    "STUDY_CPU_QUALITY": "68870",
+    "STUDY_CPU_UNSUPPORTED": "24152",
+    "STUDY_HOSTED_ATTEMPTS": "1",
+    "STUDY_HOSTED_FAILED": "1",
+    "STUDY_HOSTED_LIMIT_USD": "25",
+    "STUDY_HOSTED_PLANNED": "18065",
+    "STUDY_HOSTED_UNATTEMPTED": "18045",
+    "STUDY_HOSTED_UNRESOLVED_BILLING": "1",
+    "STUDY_HOSTED_UNSUPPORTED": "19",
+    "STUDY_NATIVE_COMPLETED": "2005",
+    "STUDY_WINE_MAE": "0.2770",
+    "STUDY_WINE_PRIOR_MAE": "0.3319"
+  },
+  "private_review_fingerprints": [
+    {
+      "scope": "http_accounting_and_credentials",
+      "sha256": "0de31bc54b8483b32088a15d350a4e3101f4740a138babd9c9f316b923e0a484"
+    },
+    {
+      "scope": "scholarship_and_statistical_prose",
+      "sha256": "b8694eab279a2253041b3b1113f49f56f3283f843da6403fb523672bc7748725"
+    },
+    {
+      "scope": "selected_study_figures_and_statistics",
+      "sha256": "ab6d68c1c4b945d9149607a758091ecd11f1fb3036d4d737e6d73de51108e407"
+    },
+    {
+      "scope": "selected_consumption_independent",
+      "sha256": "0e87bb2dc19e9bb069134e6da5c20c1307a668c72e07f49c8993c0da8b745cac"
+    },
+    {
+      "scope": "source_commit_custody",
+      "sha256": "b3222785f064a0083b8b1426f0b5514dbeedb75ee6f33006fe7480bebff6a5e1"
+    },
+    {
+      "scope": "final_pdf_presentation",
+      "sha256": "299574cf3cd9917f0f81366eee69b47def17c641b121a001216858a30ccb9cf6"
+    },
+    {
+      "scope": "final_pdf_interpretation_delta",
+      "sha256": "baaabf93a94a6d3020f9e32b3b125476795ad76a708e0856c268263ab2fc411b"
+    }
+  ],
+  "publication_executed": false,
+  "regression_cases": {
+    "diagnostic_total": 33,
+    "pure_receipt_accounting": 6,
+    "real_loopback_http": 27,
+    "selected_study_consumption_and_figures": 38
+  },
+  "remaining_execution_requirements": [
+    "Reconcile the retained failed hosted attempt at per-attempt billing level before further admission to first-authorized-hosted-usd25.",
+    "Freeze new execution manifests for the revised source; retain the original journal and shared allocation.",
+    "Native profile acceptance requires verified cumulative runtime allowance and sufficient physical memory.",
+    "Execute remaining supported validation/quality/repeat/cascade/graphical cells with denominator-preserving receipts before a full comparative study claim.",
+    "Additional hosted expenditure beyond USD25 needs a separately authorized budget."
+  ],
+  "render": {
+    "bytes": 1545601,
+    "format": "dafjev.same-host-render-reproduction/1",
+    "gates": {
+      "missing_bibliography": 0,
+      "overfull_vertical_boxes": 0,
+      "undefined_references": 0,
+      "unloadable_images": 0
+    },
+    "inference_executed": false,
+    "pages": 26,
+    "presentation": {
+      "all_page_bounds_checked": 26,
+      "cited_bibliography_entries_complete": 25,
+      "headings_complete": 52,
+      "numbered_figures_complete": 13,
+      "private_markers": 0,
+      "safe_link_annotations": 171,
+      "tables_complete": 3,
+      "unresolved_markers": 0
+    },
+    "public_pdf": "output/pdf/modular-methods-scholarship-20261008-final.pdf",
+    "scope": "Same-host reproducibility with installed fonts and fixed source epoch; no cross-platform byte identity claim.",
+    "sha256": "a75ae2379f0a39071057e1a426af10b1b595bd010aa037719b10636d7b3599a3",
+    "source_commit": "450a49a3731c794cc6138707c2100ac48854a471",
+    "source_date_epoch": 1791487963,
+    "toolchain": {
+      "bibtex": "BibTeX 0.99e (TeX Live 2026)",
+      "pandoc": "pandoc 3.12",
+      "python": "Python 3.14.4",
+      "uv": "uv 0.12.23 (Homebrew 2026-10-03 aarch64-apple-darwin)",
+      "xelatex": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)"
+    },
+    "two_render_bytes_identical": true,
+    "variables": {
+      "count": 66,
+      "path": "output/data/manuscript_variables.json",
+      "sha256": "fff9c7af30a0887cd13742402e1880f7ab4598073f31ac164ba69e4b48aea762"
+    }
+  },
+  "retained_execution_cohorts": [
+    {
+      "cohort": "CPU comparators",
+      "planned_cells": 93046,
+      "statuses": {
+        "completed": 68894,
+        "failed": 0,
+        "unattempted": 0,
+        "unresolved": 0,
+        "unsupported": 24152
+      }
+    },
+    {
+      "cohort": "Older partial native",
+      "planned_cells": 2792,
+      "statuses": {
+        "completed": 2005,
+        "failed": 3,
+        "unattempted": 288,
+        "unresolved": 1,
+        "unsupported": 495
+      }
+    },
+    {
+      "cohort": "Hosted pilot",
+      "planned_cells": 18065,
+      "statuses": {
+        "completed": 0,
+        "failed": 1,
+        "unattempted": 18045,
+        "unresolved": 0,
+        "unsupported": 19
+      }
+    }
+  ],
+  "review_scope": "Fresh independent source, statistics, accounting and credential reviews plus final renderer presentation and interpretation reviews; private custody receipts are retained locally.",
+  "scholarship": {
+    "bibliography_entries": 29,
+    "cited_bibliography_entries": 25,
+    "figure_links": 13,
+    "headings": 52,
+    "source_sections": 10,
+    "study_tokens": 17,
+    "tokens": 66
+  },
+  "selected_evidence": {
+    "historical_benchmarks": {
+      "batching": {
+        "path": "output/benchmarks/batching_20260916.json",
+        "provenance": "historical incomplete provenance; no backfill",
+        "sha256": "06990754d64b7452529a347f49ee98a3bb320753e616972056b0dd6e7124ec55"
+      },
+      "calibration": {
+        "path": "output/benchmarks/calibration_20260916.json",
+        "provenance": "historical incomplete provenance; no backfill",
+        "sha256": "deef17fbd564bbd4d7775d34558ed11037ae074473842785ccad88d33e866507"
+      },
+      "jaggedness": {
+        "path": "output/benchmarks/jaggedness_20260924.json",
+        "provenance": "historical incomplete provenance; no backfill",
+        "sha256": "e187188f3a39a06b9a5cd1153b15a2482393d80480e452ed69a9c8f63729f620"
+      },
+      "patterns": {
+        "path": "output/benchmarks/patterns_20260916.json",
+        "provenance": "historical incomplete provenance; no backfill",
+        "sha256": "ebba6eae325fbc4b61453abfdd82723da4179bd8b49100daa402ad613309b662"
+      }
+    },
+    "selection_path": "manuscript/evidence.json",
+    "selection_sha256": "ede2bccb36895c2727f1db9c2c028ee09c26e4bec6ee86d03090a91117136556",
+    "study_summaries": {
+      "cpu": {
+        "path": "output/reports/full-offline-20261008/full-offline-comparison.json",
+        "sha256": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7"
+      },
+      "hosted": {
+        "path": "output/reports/hosted-pilot-20261008/summary.json",
+        "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+      }
+    },
+    "verification": {
+      "path": "output/verification/20261008-publication-final-07143b6c37934137b0fb50b1074a0a22/verification.json",
+      "sha256": "9351523142702069ccfd18ee5b871d53a97cf1653c9682d249bac76bc003ed78"
+    }
+  },
+  "source_improvement_revision": "7ac4ceb055ad96f93e6b3026e2d12d9cd028f007",
+  "source_verification": {
+    "coverage_percent": 93.11131772462176,
+    "live_tests_collected_only": 2,
+    "sdk_modules": 47,
+    "unit_tests": 1590
+  },
+  "status": "PASS_SOFTWARE_AND_LOCAL_MANUSCRIPT_REPRODUCTION__FULL_MODEL_STUDY_INCOMPLETE",
+  "unexecuted_full_hosted_proposal_cells": 376155
+}

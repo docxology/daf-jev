@@ -308,6 +308,23 @@ def test_mpe_rejects_zero_probability_evidence() -> None:
         net.most_probable_explanation(evidence)
 
 
+@pytest.mark.parametrize("query", ["lung", "tub", "either", "asia"])
+def test_query_rejects_impossible_partially_observed_evidence(query: str) -> None:
+    net = _asia_net()
+    evidence = {"lung": "false", "tub": "false", "either": "true"}
+    with pytest.raises(ValueError, match="zero probability"):
+        net.query(query, evidence)
+    with pytest.raises(ValueError, match="zero probability"):
+        net.posterior(evidence)
+
+
+def test_observed_query_retains_indicator_for_possible_partial_evidence() -> None:
+    net = _asia_net()
+    evidence = {"lung": "false", "tub": "false", "either": "false"}
+    assert net.query("either", evidence) == (1.0, 0.0)
+    assert net.query("asia", evidence) == pytest.approx(net.posterior(evidence)["asia"])
+
+
 # ------------------------------------------------------------- 2. sample -----
 
 

@@ -1,10 +1,8 @@
 """Release-metadata consistency pins (offline, no-mock).
 
-Static reads of the repo's release-metadata surfaces plus the provider
-registry import. Pins the v0.6.0 / Zenodo-22921974 alignment that the
-docs claim (README badge + record list, CITATION.cff, AGENTS.md,
-pyproject, package ``__version__``, ``.zenodo.json``) and the six-key
-provider surface advertised in the README Providers table.
+Static reads bind the current software version while preserving the published
+v0.6.0 record as historical metadata. A new version DOI must not be invented
+before the publisher creates its record. Provider membership remains public API.
 
 No network, no client I/O, no monkeypatching: files are read as text and
 the provider registry is pure in-process data.
@@ -23,9 +21,7 @@ from daf_jev.providers import list_providers
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CONCEPT_DOI = "10.5281/zenodo.22816187"
-LATEST_RECORD_ID = "22921974"
-LATEST_VERSION_DOI = f"10.5281/zenodo.{LATEST_RECORD_ID}"
-LATEST_RECORD_URL = f"https://zenodo.org/records/{LATEST_RECORD_ID}"
+HISTORICAL_RECORD_ID = "22921974"
 
 BUILT_IN_PROVIDERS = {
     "jev",
@@ -78,24 +74,32 @@ def test_readme_cites_concept_doi() -> None:
     assert CONCEPT_DOI in record_list
 
 
-def test_latest_record_consistent_across_surfaces() -> None:
+def test_historical_record_is_preserved() -> None:
     readme = _read("README.md")
     badge_lines = [ln for ln in readme.splitlines() if "v0.6.0 on Zenodo" in ln]
     assert badge_lines, "README.md has no v0.6.0 Zenodo badge"
-    assert any(f"zenodo.org/records/{LATEST_RECORD_ID}" in ln for ln in badge_lines)
+    assert any(f"zenodo.org/records/{HISTORICAL_RECORD_ID}" in ln for ln in badge_lines)
     record_list = readme[
         readme.index("- **Concept DOI**") : readme.index("- **Public repository**")
     ]
-    assert f"zenodo.org/records/{LATEST_RECORD_ID}" in record_list
-    assert LATEST_RECORD_ID in _read("AGENTS.md")
+    assert f"zenodo.org/records/{HISTORICAL_RECORD_ID}" in record_list
+    assert HISTORICAL_RECORD_ID in _read("AGENTS.md")
 
 
-def test_citation_preferred_citation_is_latest_version() -> None:
+def test_citation_current_version_uses_verified_family() -> None:
     cff = yaml.safe_load(_read("CITATION.cff"))
     assert cff["doi"] == CONCEPT_DOI
     preferred = cff["preferred-citation"]
-    assert preferred["doi"] == LATEST_VERSION_DOI
-    assert preferred["url"] == LATEST_RECORD_URL
+    assert preferred["title"] == f"daf-jev (v{_pyproject_version()})"
+    assert preferred["doi"].startswith("10.5281/zenodo.")
+    # During release preparation the concept DOI is valid; a confirmed
+    # version-specific DOI can replace it without discarding the family DOI.
+    if preferred["doi"] == CONCEPT_DOI:
+        assert preferred["url"] == f"https://doi.org/{CONCEPT_DOI}"
+    else:
+        record_id = preferred["doi"].rsplit(".", 1)[1]
+        assert record_id.isdecimal()
+        assert preferred["url"] == f"https://zenodo.org/records/{record_id}"
 
 
 def test_no_stale_pending_release_language() -> None:

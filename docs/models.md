@@ -5,6 +5,12 @@ trained, how calibration works, and where the vendor's claims have (and have not
 corroborated. This page is documentation, not a benchmark; every factual claim carries a
 source link and its access date.
 
+This is a dated reference, principally based on the September snapshot. It
+does not claim that vendor guarantees transfer to every self-hosted sibling or
+that a model catalog entry has been executed. The current abstraction,
+native/generated probability distinctions, explicit OpenRouter endpoints and
+local verification gates are documented in [providers.md](providers.md).
+
 **Contents.**
 
 - [1. What a System One model is](#1-what-a-system-one-model-is)
@@ -35,7 +41,8 @@ source link and its access date.
 - **Third-party-reported** = claim found only in independent coverage or analysis;
   flagged inline. Independently measured results (e.g. Every's hands-on tests) are marked
   as such.
-- **All sources accessed 2026-09-16**; each citation below names that access date.
+- **Sections 1–9 sources accessed 2026-09-16**; later ecosystem sections state
+  their own dates and verification limitations.
 
 ---
 
@@ -326,17 +333,18 @@ count, training-compute disclosure, or weights at launch
 
 daf-jev ships multi-provider dispatch for self-hostable servers that speak
 the same wire contract as TypeSafe's hosted API (`POST /v1/systemone`,
-`GET /v1/models`, the noul/choice/score primitives, strict calibrated
-answers). The two reference sibling implementations differ on the model
+`GET /v1/models`, the noul/choice/score primitives and typed answers). Wire
+compatibility does not establish calibrated correctness. The two reference
+sibling implementations differ on the model
 family — GLiFormer (jeff) versus the Qwen3.5 family (kev) — but both are
-drop-in wire-compatible, so daf-jev needs no adapter: its strict
+intended to be wire-compatible, so the legacy client needs no custom parser: its strict
 `parse_response` already tolerates unknown top-level fields (kev adds a
 top-level `latency_ms`; daf-jev parses it and ignores it).
 
-Facts below are as pinned by the provider-dispatch contract (2026-09-22);
-unlike the sections above, they have not been re-verified against each
-project's public documentation, so no external links beyond the two pinned
-repositories are asserted.
+Registry defaults below reflect the provider-dispatch contract (2026-09-22),
+not immutable weight selection or serving acceptance. The decoding distinctions
+following the table were checked against the explicit upstream revisions on
+2026-10-07; execution must retain its own checkpoint/runtime identities.
 
 | | jeff | kev |
 | --- | --- | --- |
@@ -346,7 +354,20 @@ repositories are asserted.
 | Default model | `jev-latest` (also accepts the alias `jev`) | `kev-latest` |
 | Client key env var | `JEFF_API_KEY` (server auth var: `JEFF_API_KEYS`); falls back to `TYPESAFE_API_KEY` | `KEV_API_KEY`; falls back to `TYPESAFE_API_KEY` |
 | Base-URL / model env vars | `JEFF_BASE_URL` / `JEFF_MODEL` | `KEV_BASE_URL` / `KEV_MODEL` |
-| Behavioral caveats | temperature-scaled probabilities; nominal output tokens | responses add a top-level `latency_ms` field; legend keys are strings (`"0"`, `"1"`, `"2"`) |
+| Behavioral caveats | normalized, temperature-transformed sigmoid compatibility scores; nominal output tokens | discriminative pointer-head class estimates; top-level `latency_ms`; string legend keys (`"0"`, `"1"`, `"2"`) |
+
+The pinned [Jeff decoder](https://github.com/logan-markewich/jeff/blob/34b32f99a727c47b679adde33f4702a001e02979/src/jeff/core/answers.py)
+normalizes independent sigmoid scores after a power-temperature transform. This
+is not proof of calibrated class posteriors. Its score expectation uses the raw
+row, while the reported distribution uses the transformed row. The pinned
+[Kev model](https://github.com/jaredpalmer/kev/blob/5e42a7a03f28134853dd3ff77461457e921e5ec1/kev/model.py)
+uses a temperature-scaled pointer head with softmax class estimates;
+[answer conversion](https://github.com/jaredpalmer/kev/blob/5e42a7a03f28134853dd3ff77461457e921e5ec1/kev/api.py)
+derives chance-adjusted choice peakedness and score-mode dispersion. Neither
+source definition establishes P(correct) or calibration on a new domain.
+Four-decimal serialization and valid row mass establish numerical properties,
+not empirical or conditional-factor meaning. See
+[probability meaning and confidence](providers.md#probability-meaning-and-confidence).
 
 Naming note (verified): the official TypeSafe SDK convention is
 `TYPESAFE_API_KEY` / `TYPESAFE_BASE_URL` / `TYPESAFE_DEFAULT_MODEL`;
@@ -386,7 +407,7 @@ Trackers: mrjev.com, awesomejev.com, systemonemodels.org.
 
 ## 12. Jev as a factor source for graphical models
 
-Beyond single decisions, Jev's calibrated `choice` answers can act as
+Beyond single decisions, supplied numerical `choice` rows can act as
 **factors for graphical models** — discrete Bayes nets whose conditional
 probability tables are elicited from the model instead of measured. Two
 experiments anchor the design (the Jev+GTSAM Asia experiments, Frank
@@ -413,7 +434,12 @@ The calibration caveats from
 model judgments, not measured frequencies — group calibration is the
 vendor claim, individual CPT entries carry no ground truth, and exact
 arithmetic downstream does not make elicited probabilities correct.
-Validate elicited nets against domain data before clinical-grade use.
+The benchmark records `probability_semantics` separately from origin and names
+its graphical treatment
+`normalized_surrogate_factor_under_disclosed_reference_protocol`. Unknown
+native meaning remains unknown: exact inference describes the surrogate graph
+conditional on its supplied factors. Validate factor interpretation and domain
+calibration separately before making population-level probability claims.
 
 **Literature anchors.** The pointers below were collected in an
 AI-assisted literature sweep and have **not** been verified line-by-line

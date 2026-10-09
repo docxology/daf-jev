@@ -2,7 +2,7 @@
 
 This file contains LaTeX packages and commands that are automatically injected into the document compilation process.
 
-> **Infrastructure Note**: This file is parsed by `infrastructure/rendering/latex_utils.py` and combined with the configuration output by `infrastructure/rendering/pdf_renderer.py` before final Pandoc execution to generate the physical PDF holding this text.
+> **Infrastructure Note**: This Markdown preamble is retained for optional external template integration. The standalone in-repository renderer, `scripts/render_pdf.py`, consumes `manuscript/render/preamble.tex` and `manuscript/render/cover.tex`; it does not establish the availability or acceptance of an external template render path.
 
 ```latex
 % Core mathematics

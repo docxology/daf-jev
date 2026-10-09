@@ -10,11 +10,34 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from typing import TypeVar
 
-from daf_jev._types import ChoiceAnswer, ScoreAnswer
+from daf_jev._types import ChoiceAnswer, ScoreAnswer, validate_probability_row
 
 __all__ = ["composite_score", "confidence_gate", "pick", "route", "tiered_gate"]
 
 T = TypeVar("T")
+
+
+def _valid_confidence(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and 0.0 <= value <= 1.0
+        and math.isfinite(value)
+    )
+
+
+def _check_threshold(value: float, name: str) -> None:
+    if not _valid_confidence(value):
+        raise ValueError(f"{name} must be finite and in [0, 1], got {value!r}")
+
+
+def _finite_weight(value: object) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def composite_score(
@@ -23,9 +46,12 @@ def composite_score(
 ) -> float:
     """Expected value of a Score answer over its level indices.
 
-    Default (uniform weighting): ``sum(p_i * i)`` over the sorted level
+    Default (uniform weighting): ``sum(p_i * i) / sum(p_i)`` over the sorted level
     indices — the probability-weighted position on the scale, in
-    ``[min index, max index]``; equals ``answer.score``.
+    ``[min index, max index]``. Accepted native rows rounded to two decimal
+    places may have mass slightly different from one; division by the observed
+    mass computes the expectation without modifying the stored probabilities.
+    Malformed probability mass raises instead of being repaired.
 
     With ``weights`` (one per level, positional order matching the sorted
     level indices): the probability distribution is re-weighted —
@@ -36,7 +62,8 @@ def composite_score(
     weights are accepted deliberately (scale-invariant reweighting) but
     void that range guarantee.
 
-    ``ValueError`` if any probability is not a finite non-negative number,
+    ``ValueError`` if any probability is not a finite number in [0, 1],
+    the row mass exceeds the declared native rounding allowance,
     a probability key is not an integer level index, the weights length
     does not match the level count, any weight is not finite, the weights
     do not sum to a positive value, or ``sum(p_j * w_j) == 0`` (the
@@ -60,28 +87,35 @@ def composite_score(
             raise ValueError(
                 "probability keys must be integer level indices"
             ) from None
-        if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+        if not _valid_confidence(value):
             raise ValueError(
                 f"probability {key!r} must be a finite non-negative number, "
                 f"got {value!r}"
             )
         by_index[index] = by_index.get(index, 0.0) + value
 
+    validate_probability_row(probs, rounding_digits=2)
+
     indices = sorted(by_index)
     if weights is None:
-        return sum(index * by_index[index] for index in indices)
+        return math.fsum(index * by_index[index] for index in indices) / math.fsum(by_index.values())
 
     if len(weights) != len(indices):
         raise ValueError(
             f"weights length {len(weights)} does not match level count {len(indices)}"
         )
-    if not all(math.isfinite(w) for w in weights):
+    if not all(_finite_weight(w) for w in weights):
         raise ValueError("weights must all be finite")
-    if sum(weights) <= 0:
+    total_weight = sum(weights)
+    if not _finite_weight(total_weight):
+        raise ValueError("weights must have a finite sum")
+    if total_weight <= 0:
         raise ValueError("weights must sum to a positive value")
 
     weighted = [(idx, by_index[idx] * w) for idx, w in zip(indices, weights, strict=True)]
     mass = sum(m for _, m in weighted)
+    if not math.isfinite(mass) or any(not math.isfinite(m) for _, m in weighted):
+        raise ValueError("weighted probability mass must be finite")
     if mass == 0:
         raise ValueError("weights assign no mass to probable levels")
     return sum(idx * m for idx, m in weighted) / mass
@@ -101,7 +135,8 @@ def confidence_gate(
     description of the level nearest ``score`` — rounded to the nearest
     integer with ties to even (Python ``round`` semantics) and clamped to the
     probable level range — falling back to the score itself when the legend
-    lacks that level. A non-finite score raises ``ValueError``.
+    lacks that level. A non-finite score raises ``ValueError``. Invalid
+    confidence always returns ``below``; thresholds must be finite in [0, 1].
     """
     confidence = getattr(answer, "confidence", None)
     if confidence is None:
@@ -109,6 +144,9 @@ def confidence_gate(
             f"{type(answer).__name__} carries no confidence "
             "(noul answers do not); confidence_gate requires a Choice or Score answer"
         )
+    _check_threshold(threshold, "threshold")
+    if not _valid_confidence(confidence):
+        return below
 
     choice = getattr(answer, "choice", None)
     if choice is not None:
@@ -142,7 +180,7 @@ def route(
 ) -> T:
     """Dispatch to the handler for ``answer.choice``, gated on confidence.
 
-    Confidence below ``min_confidence`` (a non-finite confidence counts as
+    Confidence below ``min_confidence`` (invalid confidence counts as
     below) routes to ``fallback`` — the model is saying it is not sure, so
     no handler fires. A choice with no registered handler also falls back.
     When ``fallback`` is ``None``, either condition raises (``ValueError``
@@ -156,10 +194,11 @@ def route(
             f"{type(answer).__name__} has no 'choice'; route() requires a ChoiceAnswer"
         )
 
+    _check_threshold(min_confidence, "min_confidence")
     confidence = getattr(answer, "confidence", 0.0)
-    # Fail closed: `not (c >= min)` sends a NaN confidence to the fallback,
-    # which a raw `c < min` comparison would wrongly dispatch.
-    if not (confidence >= min_confidence):
+    # Invalid numeric confidence (including infinities, bools, and values
+    # outside [0, 1]) always falls back before a handler can run.
+    if not _valid_confidence(confidence) or not (confidence >= min_confidence):
         if fallback is None:
             raise ValueError(
                 f"answer confidence {confidence} is not at least "
@@ -210,11 +249,13 @@ def tiered_gate(
     ``high_label`` (automate), ``>= low`` returns ``middle_label`` (review),
     otherwise ``low_label`` (escalate). ``answer`` must carry a ``confidence``
     field (Choice or Score answers do; Noul answers do not and raise
-    ``TypeError``). Both thresholds must be finite; a non-finite confidence
-    compares False against both and escalates.
+    ``TypeError``). Both thresholds must be finite in [0, 1]; invalid
+    confidence (bool, non-finite, or outside [0, 1]) always escalates.
     """
-    if not (math.isfinite(high) and math.isfinite(low)):
+    if not (_finite_weight(high) and _finite_weight(low)):
         raise ValueError(f"thresholds must be finite, got high={high!r}, low={low!r}")
+    _check_threshold(high, "high")
+    _check_threshold(low, "low")
     if low > high:
         raise ValueError(f"low ({low}) must not exceed high ({high})")
     if not (high_label and middle_label and low_label):
@@ -226,8 +267,9 @@ def tiered_gate(
             f"{type(answer).__name__} carries no confidence "
             "(noul answers do not); tiered_gate requires a Choice or Score answer"
         )
+    if not _valid_confidence(confidence):
+        return low_label
 
-    # A NaN confidence fails both comparisons below and escalates.
     if confidence >= high:
         return high_label
     if confidence >= low:

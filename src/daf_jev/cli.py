@@ -587,6 +587,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "list with 'daf-jev providers')",
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
+    from daf_jev.benchmark_cli import register_benchmark_parser
+    register_benchmark_parser(sub.add_parser("benchmark", help="reproducible decision-model experiments"))
 
     def add_common(p: argparse.ArgumentParser, *, base_url: bool = True) -> None:
         if base_url:

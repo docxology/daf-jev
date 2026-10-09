@@ -156,7 +156,9 @@ def test_sync_evaluate_ids_order_and_states(stub) -> None:
 
 
 def test_evaluate_accepts_questionset_mapping(stub) -> None:
-    stub.enqueue(body=_body())
+    body = _body()
+    body["answers"] = {"billing": body["answers"]["billing"]}
+    stub.enqueue(body=body)
     questions = QuestionSet().noul("billing", "Is this about billing?")
     with _sync_client(stub) as client:
         evaluator = Evaluator(client, questions)  # default concurrency
@@ -167,7 +169,9 @@ def test_evaluate_accepts_questionset_mapping(stub) -> None:
 
 
 def test_evaluator_model_override_reaches_request(stub) -> None:
-    stub.enqueue(body=_body(model="jev-x"))
+    body = _body(model="jev-x")
+    body["answers"] = {"billing": body["answers"]["billing"]}
+    stub.enqueue(body=body)
     with _sync_client(stub) as client:
         evaluator = Evaluator(
             client,
@@ -447,15 +451,17 @@ def test_summary_before_evaluate_raises() -> None:
 
 def test_raw_dict_question_passes_through_but_is_skipped_from_aggregates(stub) -> None:
     # Raw dicts are accepted alongside Question dataclasses on the wire, and
-    # a question with no recognized declared type is skipped in aggregation.
+    # lack the dataclass type attribute used for aggregation.
     questions = _questions()
-    questions["extra_raw"] = {"type": "mystery", "instructions": "raw passthrough"}
-    stub.enqueue(body=_body())
+    questions["extra_raw"] = {"type": "noul", "instructions": "raw passthrough"}
+    body = _body()
+    body["answers"]["extra_raw"] = {"type": "noul", "noul": .5}
+    stub.enqueue(body=body)
     with _sync_client(stub) as client:
         evaluator = Evaluator(client, questions, concurrency=1)
         records = evaluator.evaluate(["s0"])
     assert records[0].error is None
-    assert stub.hits[0]["json"]["questions"]["extra_raw"]["type"] == "mystery"
+    assert stub.hits[0]["json"]["questions"]["extra_raw"]["type"] == "noul"
     summary = evaluator.summary(records)
     assert set(summary["questions"]) == {"billing", "tone", "severity"}
 

@@ -21,6 +21,7 @@ from daf_jev import (
     Decider,
     JevClient,
     NoulAnswer,
+    NoulQuestion,
     RetryPolicy,
     UsageLedger,
     UsageSnapshot,
@@ -203,6 +204,7 @@ def test_noul_answers_are_not_gated(stub) -> None:
     decider = _decider(
         stub,
         gate=ConfidenceGate("route", 0.5),
+        questions=lambda state: {"route": NoulQuestion("Should we act?")},
         map_answers=lambda state, resp: "acted",
     )
 
@@ -239,6 +241,20 @@ def test_confidence_gate_rejects_non_finite_confidence() -> None:
     assert gate({"route": inf}) is not None
 
 
+@pytest.mark.parametrize("confidence", [True, False, -0.1, 1.1])
+def test_confidence_gate_rejects_boolean_and_out_of_range_confidence(confidence) -> None:
+    answer = ChoiceAnswer(
+        choice="act", probabilities={"act": 0.7, "hold": 0.3}, confidence=confidence
+    )
+    assert ConfidenceGate("route", 0.5)({"route": answer}) is not None
+
+
+@pytest.mark.parametrize("threshold", [True, False])
+def test_confidence_gate_rejects_boolean_threshold(threshold) -> None:
+    with pytest.raises(ValueError, match="threshold must be in"):
+        ConfidenceGate("route", threshold)
+
+
 def test_mapping_error_counts_toward_latch(stub) -> None:
     stub.enqueue(body=_body())
     stub.enqueue(status=500, body={"error": "boom"})
@@ -261,6 +277,72 @@ def test_mapping_error_counts_toward_latch(stub) -> None:
     assert decider.decide("s4") == "hold"
     assert decider.last_event.reason == "latched"
     assert len(stub.hits) == 3
+
+
+def test_repeated_mapping_failures_latch_despite_successful_asks(stub) -> None:
+    for _ in range(3):
+        stub.enqueue(body=_body())
+
+    def map_answers(state, response):
+        raise ValueError("cannot map action")
+
+    decider = _decider(stub, map_answers=map_answers, max_consecutive_failures=3)
+    for state in ("one", "two", "three"):
+        assert decider.decide(state) == "hold"
+        assert decider.last_event.reason == "mapping_error"
+    assert decider.dead
+    assert decider.decide("four") == "hold"
+    assert decider.last_event.reason == "latched"
+    assert len(stub.hits) == 3
+    assert decider.usage_snapshot().requests == 3
+
+
+def test_full_pipeline_success_resets_mapping_failure_counter(stub) -> None:
+    for _ in range(4):
+        stub.enqueue(body=_body())
+
+    def map_answers(state, response):
+        if state == "accepted":
+            return "act"
+        raise ValueError("cannot map action")
+
+    decider = _decider(stub, map_answers=map_answers, max_consecutive_failures=2)
+    assert decider.decide("bad-one") == "hold"
+    assert decider.decide("accepted") == "act"
+    assert decider.decide("bad-two") == "hold"
+    assert not decider.dead
+    assert decider.decide("bad-three") == "hold"
+    assert decider.dead
+
+
+@pytest.mark.parametrize("stage", ["gate", "mapping", "raising_gate", "cache"])
+def test_paid_fallback_retains_usage_and_request_id(stub, stage: str) -> None:
+    stub.enqueue(body=_body(), headers={"x-typesafe-request-id": "paid-request"})
+    overrides: dict = {}
+    if stage == "gate":
+        overrides["gate"] = lambda answers: "needs review"
+    elif stage == "mapping":
+        def mapping(state, response):
+            raise ValueError("cannot map action")
+        overrides["map_answers"] = mapping
+    elif stage == "raising_gate":
+        def gate(answers):
+            raise RuntimeError("gate unavailable")
+        overrides["gate"] = gate
+    else:
+        class FailingCache(dict):
+            def __setitem__(self, key, value):
+                raise RuntimeError("cache unavailable")
+        overrides.update(cache=FailingCache(), cache_key=str)
+    decider = _decider(stub, **overrides)
+    assert decider.decide("state") == "hold"
+    event = decider.last_event
+    assert event.source == "fallback"
+    assert event.request_id == "paid-request"
+    assert event.usage.input_tokens == 100
+    assert event.usage.output_tokens == 20
+    assert decider.usage_snapshot().requests == 1
+    assert event.to_dict()["usage"] == {"input_tokens": 100, "output_tokens": 20}
 
 
 def test_not_asked_short_circuits_before_any_hit(stub) -> None:

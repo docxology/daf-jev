@@ -1,0 +1,67 @@
+{
+  "figure": "cohort_sensitivity",
+  "format": "dafjev.study-figure-data/1",
+  "rows": [
+    {
+      "accuracy": [
+        0.8769480519480519,
+        0.8760169215750081
+      ],
+      "backend": "tfidf-logistic-C1",
+      "brier": [
+        0.35803688763281843,
+        0.35966563988039174
+      ],
+      "canonical_n": 3080,
+      "dataset": "banking77",
+      "filtered_n": 3073
+    },
+    {
+      "accuracy": [
+        0.012987012987012988,
+        0.013016596160104133
+      ],
+      "backend": "prior",
+      "brier": [
+        0.9878246914296022,
+        0.9878140308496857
+      ],
+      "canonical_n": 3080,
+      "dataset": "banking77",
+      "filtered_n": 3073
+    },
+    {
+      "accuracy": [
+        0.7983636363636364,
+        0.7977446344125136
+      ],
+      "backend": "tfidf-logistic-C1",
+      "brier": [
+        0.4307267003860991,
+        0.42914270230193546
+      ],
+      "canonical_n": 5500,
+      "dataset": "clinc150",
+      "filtered_n": 5498
+    },
+    {
+      "accuracy": [
+        0.18181818181818182,
+        0.18188432157148055
+      ],
+      "backend": "prior",
+      "brier": [
+        0.9918688538736399,
+        0.9918670630835753
+      ],
+      "canonical_n": 5500,
+      "dataset": "clinc150",
+      "filtered_n": 5498
+    }
+  ],
+  "scope": "Canonical and leakage-filtered text results use separately refitted models and different test cohorts. Connecting lines are descriptive, without paired or causal change intervals; denominators are shown for each cohort.",
+  "selected_input_sha256": {
+    "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+  }
+}

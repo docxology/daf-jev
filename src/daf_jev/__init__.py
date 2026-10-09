@@ -46,9 +46,27 @@ from daf_jev.config import (
     resolve_timeout,
 )
 from daf_jev.decider import Budget, ConfidenceGate, Decider, DecisionEvent
+from daf_jev.decision_backends import (
+    AsyncDecisionBackend,
+    AsyncHTTPDecisionBackend,
+    BackendCapabilities,
+    CallReceipt,
+    DecisionBackend,
+    DecisionPrediction,
+    DecisionRequest,
+    DecisionResult,
+    HTTPDecisionBackend,
+    PriorBackend,
+    ThreadedAsyncBackend,
+)
 from daf_jev.evaluate import EvaluationRecord, Evaluator
 from daf_jev.graphical import CPT, BayesNet, Edge, Variable, decompose_single_parent
-from daf_jev.graphical_elicitation import elicit_cpts, propose_structure
+from daf_jev.graphical_elicitation import (
+    elicit_cpts,
+    elicit_cpts_async,
+    propose_structure,
+    propose_structure_async,
+)
 from daf_jev.jaggedness import (
     COIN,
     COIN_NOUL,
@@ -75,7 +93,7 @@ from daf_jev.providers import (
 from daf_jev.reask import ReAskPlan, entropy_bits, next_question, reask_plan
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 __all__ = [
     "COIN",
@@ -85,10 +103,14 @@ __all__ = [
     "APIConnectionError",
     "APITimeoutError",
     "Answer",
+    "AsyncDecisionBackend",
+    "AsyncHTTPDecisionBackend",
     "AsyncJevClient",
+    "BackendCapabilities",
     "BayesNet",
     "Budget",
     "CalibrationPairing",
+    "CallReceipt",
     "ChoiceAnswer",
     "ChoiceQuestion",
     "CircuitBreaker",
@@ -96,10 +118,15 @@ __all__ = [
     "CircuitState",
     "ConfidenceGate",
     "Decider",
+    "DecisionBackend",
     "DecisionEvent",
+    "DecisionPrediction",
+    "DecisionRequest",
+    "DecisionResult",
     "Edge",
     "EvaluationRecord",
     "Evaluator",
+    "HTTPDecisionBackend",
     "JSONContent",
     "JaggednessFixture",
     "JevClient",
@@ -108,6 +135,7 @@ __all__ = [
     "NoulQuestion",
     "OverloadedError",
     "PosteriorsSidecar",
+    "PriorBackend",
     "ProviderSpec",
     "Question",
     "QuestionSet",
@@ -118,6 +146,7 @@ __all__ = [
     "ScoreQuestion",
     "Settings",
     "SystemOneResponse",
+    "ThreadedAsyncBackend",
     "TypeSafeError",
     "Usage",
     "UsageLedger",
@@ -131,6 +160,7 @@ __all__ = [
     "confidence_gate",
     "decompose_single_parent",
     "elicit_cpts",
+    "elicit_cpts_async",
     "entropy_bits",
     "get_provider",
     "list_providers",
@@ -147,6 +177,7 @@ __all__ = [
     "pick_model",
     "position_slope",
     "propose_structure",
+    "propose_structure_async",
     "reask_plan",
     "register_provider",
     "resolve_retry",
