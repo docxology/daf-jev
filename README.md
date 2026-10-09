@@ -1007,6 +1007,8 @@ readiness or ship the documentation snapshot.
 - **v0.6.0 historical version record (recorded 2026-09-23)**:
   [22921974](https://zenodo.org/records/22921974), version DOI
   `10.5281/zenodo.22921974`; earlier versions remain in the same concept family.
+  [![v0.6.0 on Zenodo](https://img.shields.io/badge/Zenodo-v0.6.0-1F77B4)](https://zenodo.org/records/22921974)
+  identifies this historical archive.
   A new version DOI is added only after the corresponding version record is created and verified.
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Reviewed scholarship PDF**:
