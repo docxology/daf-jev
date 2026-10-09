@@ -1418,8 +1418,13 @@ and [reproducibility.md](reproducibility.md).
   modalities=("text", "json"), max_options=None, max_questions=None,
   max_context_chars=None, batching=True, authentication="none", probability_source="native",
   confidence_semantics="provider_defined", probability_rounding_digits=2,
-  evidence="declared_unverified", probability_semantics=None)` declares eligibility and provenance;
+  evidence="declared_unverified", probability_semantics=None,
+  max_score_levels=None)` declares eligibility and provenance;
   capability declarations do not establish runtime acceptance.
+  The appended optional `max_score_levels` independently limits Score criteria;
+  it accepts an integer >= 2 or `None`. An over-limit Score fails before
+  reservation/transport without shortening levels. Existing `max_options`
+  behavior and default unlimited Score capability remain unchanged.
   HTTP adapters bind effective authentication to `bearer` for hosted requests
   and `none` for loopback; frozen HTTP profiles record that effective mode.
 - Frozen `DecisionRequest(state, questions, model=None, timeout=60.0,
@@ -1881,7 +1886,41 @@ it is not the total validation/test quality-control physical row count.
   before a durable `native_input_contract_breach` stop. Caller numeric bounds,
   mutable latest aliases, other providers and other native models cannot enable
   this contract. Its reservation is conditional on the documented contract and
-  enforced tariffs, not a measured charge. All-zero admitted native tariffs and surcharge ceilings
+  enforced tariffs, not a measured charge.
+  A separate explicit contract
+  `pricing.native_billing_contract="openrouter-perplexity-pplx-decider-v1.1-27b-input262143/1"`
+  admits only `perplexity/pplx-decider-v1.1-27b` at the same Decisions endpoint,
+  with Perplexity-only routing, no fallback, required parameters and no
+  auxiliary/generative controls. The [primary request/pricing documentation](https://docs.perplexity.ai/docs/decisions/quickstart)
+  bounds input **under 262,144** tokens across state, images and all questions.
+  Its code-owned maximum is 262,143; catalog context cannot widen it. This
+  contract requires exact `max_questions=128`, `max_options=255`,
+  `max_score_levels=10` and `probability_rounding_digits=None` declarations.
+  Strict `1e-6` mass validation is an adapter protocol; hosted precision and
+  calibration remain unknown. The exact nominal input tariff is USD 0.02 per
+  million, with the same sent prompt ceiling and zero completion/request/image,
+  cache premium and auxiliary tariffs. Its conditional reservation is
+  USD 0.00524286 per physical attempt. The frozen descriptor carries tariff,
+  scope, limits and exact acceptable resolution identities: the namespace
+  model, documented short model `pplx-decider-v1.1-27b`, or the exact discovered
+  canonical ID `perplexity/pplx-decider-v1.1-27b-20261006`, and provider name
+  `Perplexity` or tag `perplexity`. `resolution_evidence` binds the retained
+  catalog and provider endpoint SHA-256 values and public URLs. Accepting that
+  discovered literal does not establish physically served weights. Other
+  suffixes, aliases and revisions are not guessed.
+  Successful receipts with missing/different resolution identities stop
+  admission; reported cost must not exceed `usage.input_tokens` times the
+  pinned tariff. Missing billed input usage also stops. Failed HTTP responses
+  may lack resolution identity; unknown billing still remains unresolved.
+  After receipt retention/reconciliation, all these violations latch the
+  existing durable `native_input_contract_breach` reason, with per-run
+  `breach_dimension` identifying `input_tokens`, `reported_cost`,
+  `missing_billed_input_usage` or `resolved_identity`. Reconciliation and stop
+  share the admission lock; cancellation/finalization preserve receipts.
+  This contract does not modify the global allocation policy or Jev descriptor.
+  See [Perplexity preparation](perplexity_native.md); actual hosted acceptance
+  is **UNATTEMPTED** until independent review and admitted probes.
+  All-zero admitted native tariffs and surcharge ceilings
   still yield zero liability. Execution rechecks these contracts and refuses
   older stored numeric reservations that no longer have a supported bound,
   preserving their immutable manifests. Every hosted HTTP mode additionally

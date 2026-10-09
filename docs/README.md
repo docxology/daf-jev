@@ -28,6 +28,8 @@ Documentation for daf-jev.
   benchmark adapters, output semantics, capability evidence and accounting.
 - [local_serving.md](local_serving.md) — isolated Mac runtimes, full-input
   admission, resident model ownership, counterbalanced passes and resource limits.
+- [perplexity_native.md](perplexity_native.md) — separate source-bound native
+  Perplexity billing/capability preparation; actual hosted acceptance unattempted.
 - [decision_benchmarking.md](decision_benchmarking.md) — plan/run/resume/report,
   quality/timing/cost metrics, policies and partial-run interpretation.
 - [shared_allocations.md](shared_allocations.md) — explicit shared spending

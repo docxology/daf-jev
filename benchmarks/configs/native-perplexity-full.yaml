@@ -1,0 +1,113 @@
+# Preparation template; actual hosted acceptance is UNATTEMPTED.
+# Bind the existing USD25 allocation explicitly; this file creates no allowance.
+# Retain/refresh primary source snapshots before freezing an executable manifest.
+# Strict1e-6 mass is a consumer protocol, not observed hosted precision.
+# Supply the held12-datasetV3 corpus and freeze the shared timing_sample_pack.
+# BANKING source carries fold0; four other validation rotations stay separate.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '25'
+capability_probes: true
+hosted_concurrency: 4
+timeout_s: 60
+timing_samples: 100
+timing_repetitions: 5
+sampling: all
+datasets:
+- id: banking77
+  path: ../../.benchmarks/native-full-inputs/banking77-source.json
+  role: ordinary
+- id: clinc150
+  path: ../../.benchmarks/native-full-inputs/clinc150-source.json
+  role: ordinary
+- id: wine
+  path: ../../.benchmarks/native-full-inputs/wine-source.json
+  role: ordinary
+- id: synthetic-binary-v3
+  path: ../../.benchmarks/native-full-inputs/synthetic-binary-v3.json
+  role: ordinary
+- id: synthetic-categorical-v3
+  path: ../../.benchmarks/native-full-inputs/synthetic-categorical-v3.json
+  role: ordinary
+- id: synthetic-ordinal-v3
+  path: ../../.benchmarks/native-full-inputs/synthetic-ordinal-v3.json
+  role: ordinary
+- id: synthetic-bayes-v3
+  path: ../../.benchmarks/native-full-inputs/synthetic-bayes-v3.json
+  role: ordinary
+- id: synthetic-categorical-matched-v3
+  path: ../../.benchmarks/native-full-inputs/synthetic-categorical-matched-v3.json
+  role: quality_control
+- id: banking77-selection-fold1
+  path: ../../.benchmarks/native-full-inputs/banking77-selection-fold1.json
+  role: ordinary
+- id: banking77-selection-fold2
+  path: ../../.benchmarks/native-full-inputs/banking77-selection-fold2.json
+  role: ordinary
+- id: banking77-selection-fold3
+  path: ../../.benchmarks/native-full-inputs/banking77-selection-fold3.json
+  role: ordinary
+- id: banking77-selection-fold4
+  path: ../../.benchmarks/native-full-inputs/banking77-selection-fold4.json
+  role: ordinary
+backends:
+- id: pplx-decider-v1.1-27b-perplexity-native
+  kind: http
+  hosted: true
+  mode: systemone
+  endpoint: https://openrouter.ai/api/alpha/decisions
+  model: perplexity/pplx-decider-v1.1-27b
+  api_key_env: OPENROUTER_API_KEY
+  context_length: 262144
+  options:
+    provider:
+      only:
+      - perplexity
+      allow_fallbacks: false
+      require_parameters: true
+      max_price:
+        prompt: 0.02
+        completion: 0
+        request: 0
+        image: 0
+  capabilities:
+    primitives:
+    - noul
+    - choice
+    - score
+    max_options: 255
+    probability_source: native
+    probability_rounding_digits: null
+    confidence_semantics: provider_defined
+    evidence: primary_documentation_unverified_execution
+    max_questions: 128
+    max_score_levels: 10
+    probability_semantics: null
+  pricing:
+    native_billing_contract: openrouter-perplexity-pplx-decider-v1.1-27b-input262143/1
+    source: https://openrouter.ai/api/v1/models/perplexity/pplx-decider-v1.1-27b/endpoints
+    snapshot_at: '2026-10-09'
+    rates:
+      prompt: '0.00000002'
+      completion: '0'
+      discount: '0'
+  artifact:
+    canonical_slug: perplexity/pplx-decider-v1.1-27b-20261006
+    provider: Perplexity
+    provider_tag: perplexity
+    license: consult_model_card
+    weights_sha256: provider_opaque_unknown
+    tokenizer_sha256: provider_opaque_unknown
+    extraction: native_Noul_Choice_Score
+    precision: UNKNOWN
+    quantization: UNKNOWN
+    hosted_revision: UNKNOWN
+    calibration: UNKNOWN
+    execution_acceptance: UNATTEMPTED
+    primary_source_sha256:
+      catalog: 594c20ac042cd08ee79e6f5fed8a8dd87a50f47a510903115c77cc3097f959be
+      quickstart: 35f8569d22b23d2bc60a1ecb1a58c50eb74b6fb84f4626bdb9dad12703660f05
+      reference: c58a01cc3bdda65ad604d35108a42d7028222c52a4e3b7f0b8da68253bce7af2
+      router_endpoint: 514320287e5e45d6845c89fa48cd5273a7c01e6f1bf7447584994350a55a9e0c
+timing_sampling_scope: cohort
+graphical_experiments: true

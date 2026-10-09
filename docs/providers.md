@@ -22,6 +22,12 @@ must distinguish declarations (`declared_unverified`), public catalog discovery
 (`catalog_only`), and independently recorded runtime probes. Do not silently
 promote a declaration after a successful import.
 
+An optional `max_score_levels` independently bounds ordinal criteria while
+preserving existing `max_options` behavior. Its default is unlimited. The
+[prepared Perplexity native contract](perplexity_native.md) freezes 10 Score
+levels, 255 Choice options and 128 questions; actual hosted acceptance remains
+UNATTEMPTED. Provider limits and probability precision are distinct evidence.
+
 ## Existing System One registry
 
 `daf-jev providers` is keyless and performs no network call. The stable keys are

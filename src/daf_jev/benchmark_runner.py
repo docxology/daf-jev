@@ -70,6 +70,7 @@ FORMAT = "dafjev.benchmark-run/1"
 ROOT = Path(__file__).resolve().parents[2]
 EXECUTION_PHASES = ("capability_probe", "quality", "warm_repeat", "graphical")
 _JEV_NATIVE_CONTRACT = "openrouter-typesafe-jev-1.13-input32000/1"
+_PPL_NATIVE_CONTRACT = "openrouter-perplexity-pplx-decider-v1.1-27b-input262143/1"
 
 
 def _native_billing_contract(profile: dict[str, Any]) -> dict[str, Any] | None:
@@ -81,11 +82,13 @@ def _resolve_native_billing_contract(profile: dict[str, Any]) -> dict[str, Any] 
     """Resolve one code-owned, explicitly selected native billing guarantee.
 
     Catalog context limits and caller-declared token bounds cannot widen it.
-    The provider's documented 32,000 input-token limit covers state plus
-    questions. Other models, aliases, endpoints and execution options remain
+    Each provider's documented aggregate input limit is code-owned. Other
+    models, aliases, endpoints and execution options remain
     outside this contract, including generative controls and auxiliary services.
     """
     pricing = profile.get("pricing", {})
+    if isinstance(pricing, dict) and pricing.get("native_billing_contract") == _PPL_NATIVE_CONTRACT:
+        return _perplexity_billing_contract(profile)
     if (not isinstance(pricing, dict)
             or pricing.get("native_billing_contract") != _JEV_NATIVE_CONTRACT
             or pricing.get("source") != "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints"
@@ -126,8 +129,66 @@ def _resolve_native_billing_contract(profile: dict[str, Any]) -> dict[str, Any] 
                         "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints"]}
 
 
+def _perplexity_billing_contract(profile: dict[str, Any]) -> dict[str, Any] | None:
+    """The documented request-wide bound, not the catalog context window.
+
+    Strict mass validation is a consumer protocol; hosted numerical precision
+    and resolved identity conventions still require actual capability receipts.
+    """
+    model = "perplexity/pplx-decider-v1.1-27b"
+    source = f"https://openrouter.ai/api/v1/models/{model}/endpoints"
+    pricing = profile["pricing"]
+    if (pricing.get("source") != source or not pricing.get("snapshot_at")
+            or profile.get("hosted") is not True or profile.get("kind", "http") != "http"
+            or profile.get("mode", "systemone") != "systemone" or profile.get("model") != model
+            or profile.get("endpoint") != "https://openrouter.ai/api/alpha/decisions"):
+        return None
+    options, caps = profile.get("options"), profile.get("capabilities")
+    if not isinstance(options, dict) or set(options) != {"provider"} or not isinstance(caps, dict):
+        return None
+    # These independently declared limits must match the executable profile.
+    # Unknown capabilities and Jev rounding cannot inherit this billing proof.
+    if (any(isinstance(caps.get(key), bool) or not isinstance(caps.get(key), int)
+            or caps.get(key) != value for key, value in
+            {"max_options": 255, "max_questions": 128, "max_score_levels": 10}.items())
+            or "probability_rounding_digits" not in caps or caps["probability_rounding_digits"] is not None):
+        return None
+    provider = options["provider"]
+    if (not isinstance(provider, dict)
+            or set(provider) != {"only", "allow_fallbacks", "require_parameters", "max_price"}
+            or provider["only"] != ["perplexity"] or provider["allow_fallbacks"] is not False
+            or provider["require_parameters"] is not True):
+        return None
+    ceilings, rates = provider["max_price"], pricing.get("rates")
+    if (not isinstance(ceilings, dict) or set(ceilings) != {"prompt", "completion", "request", "image"}
+            or not isinstance(rates, dict) or not {"prompt", "completion"} <= set(rates)
+            or set(rates) - {"prompt", "completion", "discount", "request", "image",
+                             "input_cache_read", "input_cache_write"}
+            or usd(rates["prompt"]) != Decimal("0.00000002")
+            or any(usd(value) for key, value in rates.items() if key != "prompt")
+            or usd(ceilings["prompt"]) != Decimal("0.02")
+            or any(usd(ceilings[key]) for key in ("completion", "request", "image"))):
+        return None
+    return {"format": "dafjev.native-billing-contract/1", "id": _PPL_NATIVE_CONTRACT,
+            "model": model, "endpoint": "https://openrouter.ai/api/alpha/decisions",
+            "provider_tag": "perplexity", "input_scope": "state, images and all questions",
+            "max_input_tokens": 262143, "input_price_usd_per_token": "0.00000002",
+            "completion_price_usd_per_token": "0", "max_questions": 128,
+            "max_choice_options": 255, "max_score_levels": 10,
+            "resolved_models": [model, "pplx-decider-v1.1-27b",
+                                "perplexity/pplx-decider-v1.1-27b-20261006"],
+            "resolved_providers": ["Perplexity", "perplexity"],
+            "resolution_evidence": {
+                "catalog": {"url": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+                    "sha256": "594c20ac042cd08ee79e6f5fed8a8dd87a50f47a510903115c77cc3097f959be"},
+                "provider_endpoint": {"url": source,
+                    "sha256": "514320287e5e45d6845c89fa48cd5273a7c01e6f1bf7447584994350a55a9e0c"}},
+            "sources": ["https://docs.perplexity.ai/docs/decisions/quickstart",
+                        "https://docs.perplexity.ai/api-reference/decisions-post", source]}
+
+
 class _NativeContractObserver:
-    """Retain each physical receipt before stopping on a token-limit breach."""
+    """Retain each physical receipt before stopping on a supported-contract breach."""
 
     def __init__(self, observer: AttemptObserver, ledger: SpendLedger,
                  contract: dict[str, Any]) -> None:
@@ -142,9 +203,25 @@ class _NativeContractObserver:
         # share one critical section, excluding admission between the two.
         with ledger._lock, (shared.transaction() if shared is not None else nullcontext()), ledger.store.transaction():
             self.observer.after(receipt)
+            breach = None
             if receipt.input_tokens is not None and receipt.input_tokens > self.contract["max_input_tokens"]:
+                breach = "input_tokens"
+            elif self.contract["id"] == _PPL_NATIVE_CONTRACT:
+                if (receipt.status_code is not None and 200 <= receipt.status_code < 300
+                        and (receipt.requested_model != self.contract["model"]
+                             or receipt.resolved_model not in self.contract["resolved_models"]
+                             or receipt.provider not in self.contract["resolved_providers"])):
+                    breach = "resolved_identity"
+                elif receipt.cost_status == "reported":
+                    with localcontext(currency_context()):
+                        if receipt.input_tokens is None:
+                            breach = "missing_billed_input_usage"
+                        elif usd(receipt.cost_usd) > Decimal(receipt.input_tokens) * usd(self.contract["input_price_usd_per_token"]):
+                            breach = "reported_cost"
+            if breach is not None:
                 ledger.store.append({"event": "accounting_rejected", "attempt_id": receipt.attempt_id,
                                      "reason": "native_input_contract_breach", "contract_id": self.contract["id"],
+                                     **({"breach_dimension": breach} if self.contract["id"] == _PPL_NATIVE_CONTRACT else {}),
                                      "input_tokens": receipt.input_tokens,
                                      "max_input_tokens": self.contract["max_input_tokens"]})
                 ledger.stopped = True

@@ -6,6 +6,16 @@ routing. Jev answers Noul, Choice and Score questions directly; generated chat
 labels are excluded from this cohort. Catalog discovery remains separate from
 capability-probe acceptance and empirical performance.
 
+A separate [Perplexity native preparation](perplexity_native.md) defines its
+own billing contract, Score/Choice/question limits and strict consumer mass
+protocol. Its actual hosted acceptance is UNATTEMPTED; the Jev observations
+below remain specific to their selected model and journal cut.
+
+The separate [prospective joint native full recipe](../benchmarks/configs/native-comparison-full.yaml)
+freezes Jev and Perplexity on common inputs and interleaves both arms before
+test-quality inspection. Earlier Jev-only execution remains exploratory under
+its own identity; this preparation neither relabels it nor funds a new allowance.
+
 The prior Mercury 404 receipt retains UNKNOWN billing. A separately reviewed
 exact-request upper bound can permit continuation under the same USD 25 total
 allocation. It does not backfill a zero charge, rewrite any receipt or fund a
