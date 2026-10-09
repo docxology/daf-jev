@@ -349,7 +349,7 @@ def test_async_cancel_after_headers_preserves_partial_receipt_and_original_cance
     b'{"usage":{"cost":true}}',
     b'{"usage":[]}',
     b'{"usage":{"cost":0},"pad":"' + b"x" * MAX_RESPONSE_BODY_BYTES + b'"}',
-])
+], ids=["duplicate-cost", "infinite-cost", "boolean-cost", "nonobject-usage", "oversized-body"])
 def test_hosted_pure_receipt_never_infers_free_billing_from_untrusted_body(tmp_path, payload):
     # Hosted construction/reduction only; the destination is never requested.
     backend = HTTPDecisionBackend(endpoint="https://openrouter.ai/api/alpha/decisions", model="fixture",
