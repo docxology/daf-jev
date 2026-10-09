@@ -792,6 +792,10 @@ results. The separate
 [first hosted probe report](output/reports/hosted-pilot-20261008/summary.md)
 records an HTTP 404 and unknown billing; further hosted admission is stopped
 under the shared USD 25 allocation. It supplies no hosted quality result.
+New hosted execution requires an existing allocation bound into its frozen
+manifest. The [shared-allocation guide](docs/shared_allocations.md) explains
+explicit initialization, legacy imports, cross-run reservations and recovery.
+Older unbound plans remain reportable and cannot execute hosted requests.
 
 ```bash
 uv sync --extra benchmark
@@ -972,7 +976,9 @@ behave differently from the hosted jev endpoint.
 
 ## Package and releases
 
-The v0.7.0 source prepares a modular decision-evaluation release: typed native
+The v0.7.1 source adds shared hosted allocation admission and the scoped
+Mac/Python 3.10 benchmark-runtime repair to the modular decision-evaluation
+release: typed native
 and constrained-chat adapters, frozen datasets and policies, exact graphical
 inference, explicit execution coverage and cost accounting, and an
 evidence-selected manuscript. It preserves the native client API and separates
@@ -995,10 +1001,12 @@ readiness or ship the documentation snapshot.
 - **v0.6.0 historical version record (recorded 2026-09-23)**:
   [22921974](https://zenodo.org/records/22921974), version DOI
   `10.5281/zenodo.22921974`; earlier versions remain in the same concept family.
-  A new version DOI is added only after the v0.7.0 record is created and verified.
+  A new version DOI is added only after the corresponding version record is created and verified.
 - **Public repository**: https://github.com/docxology/daf-jev
 - **Reviewed scholarship PDF**:
-  [Modular Decision Models, v0.7.0](output/pdf/daf-jev-0.7.0-manuscript.pdf).
+  [Modular Decision Models, v0.7.1](output/pdf/daf-jev-0.7.1-manuscript.pdf).
+  The [v0.7.0 GitHub release](https://github.com/docxology/daf-jev/releases/tag/v0.7.0)
+  and its [reviewed PDF](output/pdf/daf-jev-0.7.0-manuscript.pdf) remain retained.
   The [prior scholarship edition](output/pdf/modular-methods-scholarship-20261008-final.pdf)
   remains retained separately.
   The historical [root PDF](daf-jev_combined.pdf) remains a separate artifact;
@@ -1017,7 +1025,7 @@ citation must use the DOI confirmed for the published version:
   year    = {2026},
   doi     = {10.5281/zenodo.22816187},
   url     = {https://github.com/docxology/daf-jev},
-  version = {0.7.0}
+  version = {0.7.1}
 }
 ```
 
@@ -1078,6 +1086,7 @@ source to contract. Module contracts live in
 | `benchmark_workflows` | [`benchmark_workflows.py`](src/daf_jev/benchmark_workflows.py) | executed weak-to-strong cascades with child receipts |
 | `benchmark_runner` | [`benchmark_runner.py`](src/daf_jev/benchmark_runner.py) | frozen cohorts, bounded execution/resume and offline report |
 | `benchmark_store` | [`benchmark_store.py`](src/daf_jev/benchmark_store.py) | immutable manifests, hash journals, locks and spend admission |
+| `benchmark_allocation` | [`benchmark_allocation.py`](src/daf_jev/benchmark_allocation.py) | shared hosted authorization, verified legacy imports and cross-run admission |
 | `benchmark_resources` | [`benchmark_resources.py`](src/daf_jev/benchmark_resources.py) | hardware identity and scoped process RSS sampling |
 | `benchmark_graphical` | [`benchmark_graphical.py`](src/daf_jev/benchmark_graphical.py) | disclosed reference factors and coupled synthetic evidence/model re-asks |
 | `benchmark_publication` | [`benchmark_publication.py`](src/daf_jev/benchmark_publication.py) | standalone offline Markdown/PDF report exports |

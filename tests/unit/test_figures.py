@@ -21,6 +21,7 @@ from daf_jev.figures import (
     FIGURE_REGISTRY_FILENAME,
     _latest_benchmark,
     architecture_mermaid,
+    generate_admission,
     generate_all,
     generate_architecture,
     generate_batching,
@@ -43,6 +44,7 @@ EXPECTED_PNGS = {
     "latency": "latency_percentiles.png",
     "confidence": "confidence_bands.png",
     "calibration": "calibration_reliability.png",
+    "admission": "hosted_admission.png",
 }
 
 EXPECTED_REGISTRY_KEYS = {f"fig:{name}" for name in EXPECTED_PNGS}
@@ -54,9 +56,11 @@ EXPECTED_REGISTRY_SECTIONS = {
     "fig:latency": "Results",
     "fig:confidence": "Methodology",
     "fig:calibration": "Results",
+    "fig:admission": "Reproducibility",
 }
 EXPECTED_REGISTRY_WIDTHS = {
     "fig:graphical_abstract": "1.0\\textwidth",
+    "fig:admission": "1.0\\textwidth",
     "fig:confidence": "0.8\\textwidth",
 }
 
@@ -182,7 +186,7 @@ def _assert_valid_png(path: Path) -> None:
 
 
 # --------------------------------------------------------------- generate_all ---
-def test_generate_all_writes_all_seven_pngs(fake_project: Path, tmp_path: Path) -> None:
+def test_generate_all_writes_all_registered_pngs(fake_project: Path, tmp_path: Path) -> None:
     out_dir = tmp_path / "figures"
     paths = generate_all(out_dir, project_root=fake_project)
 
@@ -415,7 +419,7 @@ def test_architecture_figure_is_byte_deterministic(fake_project: Path, tmp_path:
 
 @pytest.fixture()
 def generated_project(fake_project: Path, tmp_path: Path) -> Path:
-    """Out directory holding the seven PNGs and the registry written by generate_all."""
+    """Out directory holding registered PNGs and the registry from generate_all."""
     out_dir = tmp_path / "figures"
     generate_all(out_dir, project_root=fake_project)
     return out_dir
@@ -430,7 +434,7 @@ def test_generate_all_writes_figure_registry(generated_project: Path) -> None:
     assert set(registry) == EXPECTED_REGISTRY_KEYS
 
 
-def test_figure_filenames_and_registry_meta_cover_the_same_seven_figures(
+def test_figure_filenames_and_registry_meta_cover_the_same_figures(
     generated_project: Path,
 ) -> None:
     """The --only name surface, PNG outputs, and registry metadata stay in lockstep."""
@@ -438,6 +442,13 @@ def test_figure_filenames_and_registry_meta_cover_the_same_seven_figures(
     assert FIGURE_FILENAMES == EXPECTED_PNGS
     assert {"calibration", "graphical_abstract"} <= set(FIGURE_FILENAMES)
     assert {entry["filename"] for entry in registry.values()} == set(FIGURE_FILENAMES.values())
+
+
+def test_admission_diagram_renders_without_benchmark_inputs(tmp_path: Path) -> None:
+    """The accounting contract is renderable with no selected measurements."""
+    path = generate_admission(tmp_path / "figures", tmp_path / "absent-project")
+    assert path.read_bytes().startswith(PNG_MAGIC)
+    assert path.with_suffix(".pdf").read_bytes().startswith(b"%PDF-")
 
 
 def test_write_figure_registry_standalone(tmp_path: Path) -> None:

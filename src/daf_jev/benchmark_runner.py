@@ -24,6 +24,7 @@ from urllib.request import urlopen
 from daf_jev._cancellation import cancellation_workflow
 from daf_jev._json import strict_json_loads
 from daf_jev._yaml import strict_yaml_loads
+from daf_jev.benchmark_allocation import AllocationLedger
 from daf_jev.benchmark_datasets import pilot_samples, prepared_dataset_from_dict
 from daf_jev.benchmark_graphical import (
     GraphicalExperimentError,
@@ -116,7 +117,7 @@ def source_identity() -> dict[str, Any]:
     files = {str(p.relative_to(ROOT)): _file_hash(p) for p in sorted((ROOT / "src" / "daf_jev").glob("*.py"))}
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
     packages: dict[str, str | None] = {}
-    for name in ("httpx", "PyYAML", "scikit-learn", "numpy", "psutil"):
+    for name in ("httpx", "PyYAML", "scikit-learn", "numpy", "scipy", "psutil"):
         try:
             packages[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
@@ -148,7 +149,7 @@ def _check_reporter_source(expected: dict[str, Any], package_root: Path) -> None
 def _reporter_environment() -> dict[str, Any]:
     """Static reducer runtime metadata, distinct from inference environment."""
     packages: dict[str, str | None] = {}
-    for name in ("httpx", "PyYAML", "scikit-learn", "numpy", "psutil"):
+    for name in ("httpx", "PyYAML", "scikit-learn", "numpy", "scipy", "psutil"):
         try:
             packages[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
@@ -307,6 +308,45 @@ def _gate_identity(manifest: dict[str, Any], backend: str, index: int) -> str:
         "source_files": manifest["source"]["files"]})
 
 
+def _allocation(value: Any, *, base: Path, limit: str | Decimal,
+                read_only: bool) -> AllocationLedger:
+    """Open an explicitly bound existing allocation; never initialize one."""
+    fields = {"directory", "allocation_id", "manifest_hash"}
+    if (not isinstance(value, dict) or set(value) != fields
+            or any(not isinstance(value[field], str) or not value[field].strip()
+                   for field in fields)):
+        raise ValueError("shared_allocation requires directory, allocation_id and manifest_hash")
+    path = Path(value["directory"])
+    if ".." in path.parts:
+        raise ValueError("shared allocation path must not contain parent traversal")
+    if not path.is_absolute():
+        path = base / path
+    ledger = AllocationLedger(path, read_only=read_only)
+    identity = ledger.identity()
+    if any(identity[field] != value[field] for field in ("allocation_id", "manifest_hash")):
+        raise ValueError("shared allocation identity changed")
+    if usd(limit) > ledger.limit:
+        raise ValueError("run budget exceeds shared allocation limit")
+    return ledger
+
+
+def _shared_accounting(manifest: dict[str, Any]) -> dict[str, Any]:
+    """An observed global cut is distinct from this run's historical receipts."""
+    binding = manifest.get("shared_allocation")
+    if binding is None:
+        return {"status": "not_bound", "binding": None,
+                "scope": "historical per-run accounting only; no shared allocation admission"}
+    try:
+        allocation = _allocation(binding, base=Path.cwd(), limit=manifest["budget_usd"], read_only=True)
+        snapshot = allocation.snapshot()
+    except (OSError, ValueError, TypeError) as exc:
+        return {"status": "unavailable", "binding": binding,
+                "reason": type(exc).__name__,
+                "scope": "shared allocation inspection unavailable; per-run receipts unchanged"}
+    return {"status": "observed", "binding": allocation.identity(), "snapshot": snapshot,
+            "scope": "read-only current allocation snapshot; not inference-time per-run billing"}
+
+
 def plan_run(config_path: Path, output_root: Path) -> RunStore:
     """Freeze configuration, dataset bytes, cohort and software without inference."""
     config_bytes = _input_bytes(config_path)
@@ -319,6 +359,10 @@ def plan_run(config_path: Path, output_root: Path) -> RunStore:
     limit = usd(config.get("budget_usd", "25"))
     if limit > 25:
         raise ValueError("this pilot's authorized maximum is USD 25")
+    shared = config.get("shared_allocation")
+    shared_binding = (_allocation(shared, base=config_path.absolute().parent,
+                                 limit=limit, read_only=True).identity()
+                      if shared is not None else None)
     profiles = config.get("backends", [])
     catalog_path = config.get("backends_from_catalog")
     catalog_bytes = None
@@ -458,6 +502,7 @@ def plan_run(config_path: Path, output_root: Path) -> RunStore:
         raise ValueError("execution_selection contains no evaluation cells")
     cells.sort(key=lambda cell: (_phase_key(cell), content_hash([seed, "execution_order", cell["id"]])))
     manifest = {"format": FORMAT, "created_at": utc_now(), "seed": seed, "budget_usd": str(limit),
+        **({"shared_allocation": shared_binding} if shared_binding is not None else {}),
         "source": source_identity(), "catalog": ({"sha256": hashlib.sha256(catalog_bytes).hexdigest(), "file": "inputs/catalog.json"} if catalog_bytes is not None else None), "datasets": datasets, "backends": profiles, "cells": cells,
         "protocol": {"timeout_s": timeout, "local_time_limit_s": profile_limit,
             "hosted_concurrency": concurrency, "local_concurrency": 1, "max_attempts": 2,
@@ -536,15 +581,19 @@ def _budget_stop_outcome(store: RunStore, cell_id: str, error: BudgetStopped) ->
     return "unattempted", str(error)
 
 
-async def _execute(store: RunStore, *, through_phase: str | None = None) -> dict[str, Any]:
+async def _execute(store: RunStore, *, through_phase: str | None = None,
+                   allocation: AllocationLedger | None = None) -> dict[str, Any]:
     boundary = _phase_boundary(through_phase)
     if store.manifest.get("format") != FORMAT:
         raise ValueError("unknown benchmark manifest")
+    if allocation is None and any(profile.get("hosted") or profile.get("kind") == "cascade"
+                                  for profile in store.manifest["backends"]):
+        raise BudgetStopped("hosted execution requires a frozen shared allocation binding")
     if source_identity() != store.manifest["source"]:
         raise ValueError("source bytes changed; plan a new run")
     datasets = _datasets(store)
     examples = [{e.id: e for e in dataset.examples} for dataset in datasets]
-    ledger = SpendLedger(store, limit=store.manifest["budget_usd"])
+    ledger = SpendLedger(store, limit=store.manifest["budget_usd"], allocation=allocation)
     events = store.events()
     outcomes = {r["cell_id"]: r for r in events if r.get("event") == "cell_finished"}
     completed = {r["cell_id"] for r in events if r.get("event") == "cell_finished" and r.get("status") != "unattempted"}
@@ -912,6 +961,17 @@ def execute_run(directory: Path, *, through_phase: str | None = None) -> dict[st
     """
     _phase_boundary(through_phase)  # reject invalid boundaries before opening the run
     store = RunStore(directory)
+    if any(profile.get("hosted") or profile.get("kind") == "cascade"
+           for profile in store.manifest["backends"]):
+        if store.manifest.get("shared_allocation") is None:
+            raise BudgetStopped("hosted execution requires a frozen shared allocation binding")
+        # Preserve the preexisting refusal before any execution-journal writes.
+        if source_identity() != store.manifest["source"]:
+            raise ValueError("source bytes changed; plan a new run")
+        allocation = _allocation(store.manifest["shared_allocation"], base=store.directory,
+                                 limit=store.manifest["budget_usd"], read_only=False)
+        with allocation.execution(store):
+            return asyncio.run(_execute(store, through_phase=through_phase, allocation=allocation))
     with store.lease():
         return asyncio.run(_execute(store, through_phase=through_phase))
 
@@ -1079,7 +1139,8 @@ def report_run(store_or_path: RunStore | Path) -> dict[str, Any]:
         "source_hash_scheme": "SHA-256 of canonical JSON mapping SDK source paths to their SHA-256 hashes",
         "status": "complete" if not any(statuses[k] for k in ("failed", "unattempted", "unresolved")) else "partial",
         "denominators": dict(statuses), "planned_cells": len(cells), "cells": cells,
-        "accounting": ledger.snapshot(), "cohorts": cohorts, "policies": policies,
+        "accounting": ledger.snapshot(), "shared_accounting": _shared_accounting(store.manifest),
+        "cohorts": cohorts, "policies": policies,
         "execution_selection": store.manifest["protocol"].get("execution_selection", {"phase": "all"}),
         "execution_phase_boundary": through_phase,
         "timing_sampling_scope": store.manifest["protocol"].get("timing_sampling_scope", "per_dataset"),

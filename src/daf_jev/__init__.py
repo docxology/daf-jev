@@ -93,7 +93,7 @@ from daf_jev.providers import (
 from daf_jev.reask import ReAskPlan, entropy_bits, next_question, reask_plan
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 __all__ = [
     "COIN",

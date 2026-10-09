@@ -466,7 +466,7 @@ wire path is silently coerced.
   entry); exit 1 on unexpected error (missing benchmark data names the
   file), 0 on success. `--include-study` appends the six explicitly selected
   empirical figures from `study_figures.py`, with per-figure data JSON and
-  deterministic vector PDF companions; legacy invocation retains seven figures.
+  deterministic vector PDF companions; default invocation renders eight core figures.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`: writes `output/data/manuscript_variables.json`
   and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
@@ -483,6 +483,11 @@ wire path is silently coerced.
   `dafjev.verification-evidence/1` even for a failed capture. Only its owned
   private raw coverage files are removed. Capture does not change the
   publication selection or publish results; live collection is not live acceptance.
+- `scripts/check_benchmark_runtime.py` — `check_runtime() -> dict` imports real
+  SciPy sparse linear algebra and fits/predicts the public structured comparator
+  on bounded owned toy data with a complete absent-class vocabulary. CLI has
+  no arguments and prints `dafjev.benchmark-runtime-check/1` JSON, exit 0/1.
+  Requires the benchmark extra; no provider calls or full-study acceptance.
 - `scripts/render_pdf.py` — standalone saved-token substitution and
   Pandoc/XeLaTeX renderer. `--output FILE` requires a fresh PDF path;
   `--artifacts-dir DIR` optionally retains intermediate Markdown, TeX and logs
@@ -495,7 +500,7 @@ wire path is silently coerced.
   module level, headless `Agg`; NEVER import from core modules). One
   `generate_<name>()` per manuscript figure — `graphical_abstract`,
   `architecture`, `primitives`, `batching`, `latency`, `confidence`,
-  `calibration` (7 figures in `_REGISTRY`; `generate_one(name, out_dir, project_root=None, *, include_study=False)`
+  `calibration`, `admission` (8 figures in `_REGISTRY`; `generate_one(name, out_dir, project_root=None, *, include_study=False)`
   raises `ValueError` naming the valid choices on an unknown name) —
   orchestrated by `generate_all(out_dir, project_root, *, include_study=False)`: renders in
   registry order and ALWAYS writes `figure_registry.json` after the
@@ -507,7 +512,7 @@ wire path is silently coerced.
   exact benchmark JSONs selected by `manuscript/evidence.json` and verified
   through `evidence.selected_benchmark_bytes` in one verified consumption (the private compatibility helper
   keeps the name `_latest_benchmark`) and raise `FileNotFoundError` naming the missing
-  file; `architecture`, `primitives`, and `confidence` are data-free
+  file; `architecture`, `primitives`, `confidence`, and `admission` are data-free
   and always renderable. `architecture_mermaid() -> str` re-renders the
   architecture diagram as byte-deterministic mermaid from the same
   static `_ARCHITECTURE_NODES` / `_ARCHITECTURE_EDGES` tables the PNG
@@ -522,6 +527,10 @@ wire path is silently coerced.
   Study mode replaces the cover with a modular workflow and separate retained
   evidence counts; the legacy default cover remains available. Registry caption
   and alt text follow the chosen cover. Both modes write vector PDF companions.
+  `generate_admission(out_dir, project_root=None) -> Path` diagrams shared
+  reservation before run intent/HTTP, run receipt before shared reconciliation,
+  and conservative stops for unknown charges or incomplete journals. It is a
+  schematic without measurements and preserves the cover as registry figure 1.
 - `study_evidence.py` — pure selected aggregate consumption, no model execution
   or plotting. `load_studies(project_root) -> StudyEvidence` consumes SHA-bound
   `study_summaries.cpu` and `.hosted` through `evidence.selected_study_bytes`.
@@ -1699,9 +1708,41 @@ it is not the total validation/test quality-control physical row count.
   or selected-gate risk guarantees. No costs/latency frontier is inferred.
   Detailed row/binding contracts live in [benchmark comparisons](benchmark_comparisons.md).
 
-### `benchmark_store.py` and `benchmark_runner.py`
+### `benchmark_allocation.py`, `benchmark_store.py` and `benchmark_runner.py`
+
+- `LegacyRunBinding(directory: Path, manifest_hash, manifest_sha256,
+  journal_sha256, head_sha256, journal_tip)` binds exact retained accounting
+  inputs. `capture(directory)` validates and captures existing bytes;
+  `from_dict` / `to_dict` use strict
+  `dafjev.shared-allocation-legacy-binding/1` serialization. An import never
+  edits original receipts or supplies a missing charge.
+- `AllocationLedger.create(directory, *, allocation_id, limit="25",
+  required_imports: tuple[LegacyRunBinding, ...]=())` explicitly creates one
+  shared authorization directory. `AllocationLedger(directory, *,
+  read_only=False)` validates its immutable manifest and complete linked
+  journal/head. `identity()` returns exactly `directory`, `allocation_id` and
+  `manifest_hash`; `limit` is Decimal. `snapshot()` is a read-only reduction
+  with journal sequence/tip, imported evidence, pending/unknown liability and
+  import completeness. `import_run(binding)` appends verified legacy accounting
+  only while inactive; every declared required import must be satisfied before
+  execution. Unknown or abandoned imported work stops shared admission even
+  for zero-bound requests. These are cooperating local POSIX filesystem
+  controls, not account-wide billing completeness or cross-machine authority.
+- `AllocationLedger.execution(store)` takes the exclusive allocation lease
+  before the run lease. `bind_run(store)` is execution-only. Separate runs are
+  serialized under that allocation; within-run concurrency is unchanged.
+  Every shared reservation precedes the per-run admission intent; per-run
+  receipt precedes shared reconciliation. Partial bookkeeping conservatively
+  retains liability. Physical lock identities and journal/head consistency are
+  checked; OS lease release after process exit cannot authorize uncertain replay.
+  A shared finished event must match the durable per-run event/receipt hashes
+  and exact cost/status before reduction releases liability for any next
+  admission. Contradictory hash-linked data fails before another reservation.
 
 - `RunStore.create(root, manifest) -> RunStore` creates a UUID run;
+  `RunStore.create_at(directory, manifest) -> RunStore` is explicit exclusive
+  creation at a caller-selected path, used by allocation initialization. Both
+  refuse existing directories and preserve the same durable serialization.
   `RunStore(path, *, read_only=False)`
   verifies immutable manifest bytes and a complete hash-linked journal/head.
   `lease()` exclusively admits one Unix executor; `append(event)` fsyncs an
@@ -1709,7 +1750,9 @@ it is not the total validation/test quality-control physical row count.
   truncation, symlinks and identity changes fail closed. Execution freezes
   original lock device/inode identities; copied artifacts are inspectable with
   `read_only=True`, not executable/resumable under substituted locks.
-- `SpendLedger(store, *, limit="25")` reserves each hosted attempt before I/O,
+- `SpendLedger(store, *, limit="25", allocation: AllocationLedger | None=None)`
+  retains the historical per-run API; runner-hosted execution requires the
+  shared allocation. It reserves each hosted attempt before I/O,
   reconciles reported charges after it, retains unresolved liability on unknown
   cost and stops admission on uncertainty/overage. `snapshot()` is JSON-safe.
   The default pilot ceiling is an admission limit, not a provider billing
@@ -1760,6 +1803,12 @@ it is not the total validation/test quality-control physical row count.
   authorization or automatic prior-run verification mechanism.
 - `execute_run(directory, *, through_phase=None) -> dict` takes the lease and runs/resumes bounded
   local/hosted arms, closing its adapters. Complete cells are not repeated;
+  every hosted or cascade manifest must freeze `shared_allocation` with
+  `directory`, `allocation_id` and `manifest_hash`. Planning may inspect an
+  existing allocation read-only and freezes its absolute identity; it cannot
+  initialize, import or bind execution. Unbound hosted proposals remain
+  inspectable. Execution refuses them before backend construction, credential
+  lookup or transport. The run limit cannot exceed the shared limit.
   unresolved starts are not automatically replayed. Unsupported/unattempted
   cells and exceptions remain visible. Refused budget admission before any
   per-cell `attempt_started` intent leaves the cell unattempted. If an earlier
@@ -1772,6 +1821,9 @@ it is not the total validation/test quality-control physical row count.
   `report_run(store_or_path) -> dict` reduces the exact journal
   offline into `dafjev.benchmark-report/1`; `save_report(report, path)` refuses
   overwrite. Quality and timing-repeat phases are separate cohorts.
+  Shared accounting is a separately labeled read-only current snapshot;
+  missing/changed allocation evidence is unavailable and does not rewrite
+  historical per-run charges or prevent their offline reduction.
   Optional `through_phase` is `capability_probe`, `quality`, `warm_repeat` or
   `graphical`; unknown values fail before opening the run. This runtime boundary
   is journaled on every execution and filters only pending cells. The immutable
@@ -1805,6 +1857,9 @@ it is not the total validation/test quality-control physical row count.
   remain present with empty outcome rows and unavailable accuracy, proper loss
   and throughput rather than disappearing from comparisons.
 - CLI: `benchmark dataset synthetic|fetch|prepare`, `benchmark catalog`,
+  `benchmark allocation init DIRECTORY --allocation-id ID [--limit-usd USD]
+  [--required-import BINDING_JSON ...]`, `benchmark allocation inspect DIRECTORY`,
+  `benchmark allocation import-legacy DIRECTORY --binding BINDING_JSON`,
   `benchmark plan --config YAML --out-dir ROOT`, `benchmark run RUN_DIRECTORY`,
   `benchmark resume RUN_DIRECTORY` (both execution commands accept
   `--through-phase capability_probe|quality|warm_repeat|graphical`), and
@@ -1812,6 +1867,8 @@ it is not the total validation/test quality-control physical row count.
   [--pdf FILE] [--gates-output FILE]`. Dataset fetch and catalog
   are explicit network operations. Planning/reporting are inference-free.
   Exact argument recipes and config files are in the user protocol.
+  Allocation initialization/import are explicit accounting mutations without
+  inference; inspect, plan and report do not mutate the shared allocation.
 - `graphical_experiments: true` or a selected profile-ID list adds dedicated
   graphical cells. The manifest freezes the reference graph, CPT chunk/search
   parameters, seed and bounded observation costs. The report retains separate

@@ -43,6 +43,15 @@ def markdown_report(report: dict[str, Any]) -> str:
         "## Direct predictions", "",
         "| Backend | Dataset | Dataset ID | Dataset index | Split | Phase | N | Accuracy | Macro-F1 | Brier | MAE | p50 s | p95 s | Failure rate |",
         "|---|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    if "shared_accounting" in report:
+        shared = report["shared_accounting"]
+        display = {key: shared[key] for key in ("status", "scope", "snapshot", "reason")
+                   if key in shared}
+        if shared.get("binding"):
+            display["binding"] = {key: shared["binding"][key]
+                                  for key in ("allocation_id", "manifest_hash")}
+        lines[12:12] = ["Shared accounting inspection: " + canonical_json(display), "",
+                        "This current allocation snapshot is separate from the original per-run receipts.", ""]
     if "reporter_source_hash" in report:
         lines[4:4] = [f"Inference source SHA256: {_display(report.get('inference_source_hash'))}. "
                       f"Reporter source SHA256: {_display(report['reporter_source_hash'])}.",

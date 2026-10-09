@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 
 from daf_jev import choice
+from daf_jev.benchmark_allocation import AllocationLedger
 from daf_jev.benchmark_datasets import make_synthetic_dataset, save_dataset
 from daf_jev.benchmark_runner import _liability, execute_run, plan_run
 from daf_jev.benchmark_store import BudgetStopped, RunStore, SpendLedger
@@ -31,7 +32,10 @@ def _plan(tmp_path, profile):
     dataset = tmp_path / "dataset.json"
     save_dataset(make_synthetic_dataset("categorical", seed=13, n=6), dataset)
     path = tmp_path / "config.json"
+    allocation = AllocationLedger.create(tmp_path / "fixture-allocation",
+                                         allocation_id="public-unit-fixture", limit="25")
     path.write_text(json.dumps({"format": "dafjev.benchmark-run/1", "seed": 13,
+        "shared_allocation": allocation.identity(),
         "budget_usd": "0", "sampling": "all", "timing_samples": 1, "timing_repetitions": 1,
         "capability_probes": False, "timeout_s": 2, "datasets": [{"path": dataset.name}],
         "backends": [profile]}))

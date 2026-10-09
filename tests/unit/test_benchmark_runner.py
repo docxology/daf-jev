@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
+from daf_jev.benchmark_allocation import AllocationLedger
 from daf_jev.benchmark_datasets import make_synthetic_dataset, save_dataset
 from daf_jev.benchmark_runner import (
     catalog_profiles,
@@ -33,6 +34,9 @@ def _config(tmp_path, *, backends=None, budget="0", kind="categorical"):
               "capability_probes": False,
               "timeout_s": 2, "datasets": [{"path": data.name}],
               "backends": backends or [{"id": "uniform", "kind": "uniform", "model": "uniform"}]}
+    if any(profile.get("hosted") or profile.get("kind") == "cascade" for profile in config["backends"]):
+        config["shared_allocation"] = AllocationLedger.create(
+            tmp_path / "fixture-allocation", allocation_id="public-unit-fixture", limit="25").identity()
     path = tmp_path / "config.json"
     path.write_text(json.dumps(config))
     return path
@@ -696,6 +700,8 @@ def test_executed_cascade_frozen_gate_and_zero_hosted_budget_admission(tmp_path,
         "pricing": {"source": "fixture tariff", "snapshot_at": "2026-10-07T00:00:00Z",
                     "rates": {"prompt": "0.001", "completion": "0"}}},
         {"id": "cascade", "kind": "cascade", "weak": "uniform", "strong": "hosted", "gate_file": gate_file.name}]
+    payload["shared_allocation"] = AllocationLedger.create(
+        tmp_path / "fixture-allocation", allocation_id="public-unit-fixture", limit="25").identity()
     path.write_text(json.dumps(payload))
     store = plan_run(path, tmp_path / "runs")
     cascade = next(p for p in store.manifest["backends"] if p["id"] == "cascade")

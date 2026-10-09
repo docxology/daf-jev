@@ -84,6 +84,11 @@ includes all frozen repetition rounds; `graphical` or an omitted boundary
 includes every phase. Inspect actual billing and capability evidence before
 continuing: an unknown charge keeps its reservation and stops hosted admission.
 Starting a new run does not grant another spending allocation.
+Every new hosted executable manifest must bind an existing shared allocation
+by directory, allocation ID and immutable manifest hash. The
+[allocation guide](shared_allocations.md) gives the explicit accounting commands
+and migration rules. Unbound historical plans remain inspectable; executing
+their hosted cells is refused before backend construction or credential lookup.
 
 PDF output uses the optional figures environment. All exports bind the manifest
 and journal hashes and preserve partial outcomes; rendering a report does not
