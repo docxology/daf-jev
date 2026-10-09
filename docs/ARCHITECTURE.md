@@ -498,7 +498,14 @@ wire path is silently coerced.
   canonical absolute narrow Python executable; every replacement checks both
   path boundaries. Coverage JSON is strictly decoded before recursive string
   key/value relocation, collision checking and declared JSON serialization, so
-  escape spelling cannot conceal private data. Missing stdlib provenance supplies no substitution. Native
+  escape spelling cannot conceal recognized private data. Parsed XML attribute,
+  text and tail values are checked before serialization. Credential markers
+  (Bearer/Basic schemes, recognized API-key and private-key prefixes) are
+  rejected before path relocation; residual POSIX/Windows user-path markers
+  are rejected afterward. A bounded scan also inspects HTML, URL and hexadecimal
+  display encodings without editing the emitted text. These checks detect the
+  documented markers, not arbitrary secrets; independent artifact review
+  remains necessary. Missing stdlib provenance supplies no substitution. Native
   files, result values and before/after source inventories remain unchanged.
 - `scripts/check_benchmark_runtime.py` — `check_runtime() -> dict` imports real
   SciPy sparse linear algebra and fits/predicts the public structured comparator

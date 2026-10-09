@@ -10,16 +10,43 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import json
 import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from daf_jev._json import strict_json_loads  # noqa: E402
+
+_PRIVATE = re.compile(r"/Users/|/home/|/private/|/tmp/|[A-Za-z]:[\\/]+(?:Users|Documents and Settings)[\\/]+|~[\\/]", re.I)
+_SECRET = re.compile(r"sk-or-|sk-[A-Za-z0-9_-]{12,}|(?:Bearer|Basic)\s+\S+|-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
+_ESCAPED_CHARACTER = re.compile(r"\\(?:u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2}))")
+
+
+def _display_forms(text: str) -> list[str]:
+    """Inspect common display encodings without modifying published evidence.
+
+    JSON/XML inputs are also parsed in their own formats. These additional
+    forms cover escaped log text and nested HTML/URL spellings; this is a
+    bounded recognized-marker check, not a claim to detect arbitrary secrets.
+    """
+    forms = [text]
+    for _ in range(8):
+        decoded = _ESCAPED_CHARACTER.sub(lambda match: chr(int(match[1] or match[2], 16)),
+                                         unquote(html.unescape(forms[-1])))
+        if decoded == forms[-1]:
+            return forms
+        forms.append(decoded)
+    raise ValueError("unrecognized nested display encoding in projection")
+
+
+def _contains_secret(text: str) -> bool:
+    return any(_SECRET.search(form) is not None for form in _display_forms(text))
 
 
 def _hash(raw: bytes) -> str:
@@ -28,7 +55,7 @@ def _hash(raw: bytes) -> str:
 
 def _canonical_path(value: str, *, context: str) -> Path:
     if (not value or "\\" in value or any(char.isspace() or ord(char) < 32 for char in value)
-            or any(char in value for char in ('"', "'", "<", ">")) or "sk-or-" in value):
+            or any(char in value for char in ('"', "'", "<", ">")) or _contains_secret(value)):
         raise ValueError(f"invalid captured {context}")
     path = Path(value)
     if value.startswith("//") or not path.is_absolute() or path.as_posix() != value or ".." in path.parts:
@@ -133,11 +160,15 @@ def project(root: Path, capture: Path, out: Path) -> Path:
         substitutions[_interpreter(command[0])] = "<PYTHON_EXECUTABLE>"
     stdlib = _stdlib_directory(record)
     def display(text: str) -> str:
+        # Check before relocation too: a captured prefix cannot launder an
+        # embedded credential marker by replacing the whole path.
+        if _contains_secret(text):
+            raise ValueError("unrecognized private data in projection")
         if stdlib is not None:
             text = _relocate_stdlib(text, stdlib)
         for old, new in sorted(substitutions.items(), key=lambda pair: -len(pair[0])):
             text = _relocate_path(text, old, new, children=new == "<PROJECT_ROOT>")
-        if "/Users/" in text or "/home/" in text or "/private/" in text or "sk-or-" in text:
+        if any(_PRIVATE.search(form) or _SECRET.search(form) for form in _display_forms(text)):
             raise ValueError("unrecognized private data in projection")
         return text
     def relocate(value: Any) -> Any:
@@ -166,6 +197,14 @@ def project(root: Path, capture: Path, out: Path) -> Path:
     removed = sum("hostname" in node.attrib for node in tree.iter())
     for node in tree.iter():
         node.attrib.pop("hostname", None)
+        # Inspect parsed values before XML serialization can encode whitespace
+        # inside attributes and hide a credential scheme from the scanner.
+        node.tag = display(node.tag)
+        node.attrib = relocate(node.attrib)
+        if node.text is not None:
+            node.text = display(node.text)
+        if node.tail is not None:
+            node.tail = display(node.tail)
     emitted["junit"] = display(ET.tostring(tree, encoding="unicode")).encode("utf-8")
     for key in ("unit_command", "live_collection_command"):
         record[key] = [display(x) for x in record[key]]
@@ -179,19 +218,25 @@ def project(root: Path, capture: Path, out: Path) -> Path:
         "transformations": ["relocate project-root display", "relocate interpreter display",
                             *(["relocate exactly captured version-specific stdlib-directory display"] if stdlib is not None else []),
                             "strictly decode coverage JSON; relocate string keys/values; serialize JSON",
-                            "remove JUnit hostname attributes; serialize XML"],
+                            "remove JUnit hostname attributes; inspect decoded XML values; serialize XML",
+                            "reject recognized credential and private-path markers in decoded display forms"],
         "removed_hostname_attributes": removed,
         "commands_are_relocated_display": True,
         "original_native_capture_retained_privately": True,
     }
-    out.mkdir(parents=True, exist_ok=False)
     names = {"coverage": "coverage.json", "junit": "junit.xml",
              "live_collection": "live-collection.txt", "unit_log": "unit.txt"}
+    # Generated destination references are publication data too. Assemble and
+    # inspect the final record before creating any directory or derivative.
+    display(str(out))
     for key, data in emitted.items():
         destination = out / names[key]
-        destination.write_bytes(data)
         record[key] = {"path": destination.relative_to(root).as_posix(), "sha256": _hash(data)}
     record["public_projection"] = projection
+    record = relocate(record)
+    out.mkdir(parents=True, exist_ok=False)
+    for key, data in emitted.items():
+        (out / names[key]).write_bytes(data)
     destination = out / "verification.json"
     destination.write_text(json.dumps(record, indent=2, sort_keys=True, allow_nan=False) + "\n")
     return destination

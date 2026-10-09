@@ -125,7 +125,8 @@ def test_successful_http_finalizer_cancellation_cannot_inherit_previous_request(
     ('{"usage":{"cost":NaN}}', "application/json", "invalid_json"),
     ('{"secret":"private-state-canary",', "application/json", "invalid_json"),
     ('[{"error":"private-state-canary"}]', "application/json", "json_other"),
-])
+], ids=["empty-body", "plain-text-auth-canary", "duplicate-cost-json", "nonfinite-cost-json",
+        "truncated-json", "json-array"])
 def test_http_failure_keeps_digest_status_not_provider_text(stub, asynchronous, raw, media, classification):
     stub.enqueue(404, text=raw, content_type=media,
                  headers={"x-typesafe-request-id": "request-safe-1", "x-secret": "header-secret-canary"})
