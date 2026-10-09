@@ -34,7 +34,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/v0.7.1-public-mac314/verification.json",
-    "sha256": "eca3ee74aabd216b80fe412790f256bba05d5fc236753f4739cdf58405d4c214"
+    "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json",
+    "sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b"
   }
 }

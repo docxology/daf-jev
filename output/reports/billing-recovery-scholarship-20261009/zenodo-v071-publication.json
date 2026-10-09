@@ -1,0 +1,139 @@
+{
+  "all7_binary_bytes_equal_accepted_assets": true,
+  "all7_md5_equal_public_zenodo": true,
+  "all7_sha256_and_size_equal_public_github": true,
+  "anonymous_downloads": true,
+  "archive_commit": "7fcba511661e803494bae42467d2438f4e30a2cd",
+  "archive_tree": "930868576d6183dc499aaa375b0d026df296a93b",
+  "authenticated_reads_or_writes": false,
+  "continuity": {
+    "concept_api_and_doi_resolve_current": true,
+    "current_is_last": true,
+    "prior_record": 22921974,
+    "prior_version": "0.6.0",
+    "same_parent": 22816187,
+    "version_indices": [
+      6,
+      7
+    ]
+  },
+  "file_count": 7,
+  "files": [
+    {
+      "bytes": 551,
+      "filename": "SHA256SUMS",
+      "local_and_github_digest_match": true,
+      "md5": "7a6c880463e6401159ac4b44ccdf387e",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/SHA256SUMS/content",
+      "sha256": "107be0880c382b5d58926ec174bdced920fcdf815b6b34309d80fd7790db19ae",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/SHA256SUMS/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 10215729,
+      "filename": "daf-jev-0.7.1-source.zip",
+      "local_and_github_digest_match": true,
+      "md5": "0b8ec1a5f42d7b69c5d85c4fac285eeb",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-source.zip/content",
+      "sha256": "20ffc667dc95722e1f47f89f82abb48b6d9e0b64184f7a830c987dbcee701e9b",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-source.zip/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 3649201,
+      "filename": "daf-jev-0.7.1-evidence.zip",
+      "local_and_github_digest_match": true,
+      "md5": "52c8e10566023c426f360d151b0d4404",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-evidence.zip/content",
+      "sha256": "e68f22caa363a41fabe8d50e66da427d7608825f32f441db83bac0b90ce8ec53",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-evidence.zip/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 290238,
+      "filename": "daf_jev-0.7.1.tar.gz",
+      "local_and_github_digest_match": true,
+      "md5": "b7de9d213cafc7845427e8d2fb4f9128",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/daf_jev-0.7.1.tar.gz/content",
+      "sha256": "50f115b4a87ab1518095031a6e52321b59ca3cae8fda46cc95dd1211a4817fa4",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/daf_jev-0.7.1.tar.gz/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 268898,
+      "filename": "daf_jev-0.7.1-py3-none-any.whl",
+      "local_and_github_digest_match": true,
+      "md5": "248b091b7236e257533d07962922ca1c",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/daf_jev-0.7.1-py3-none-any.whl/content",
+      "sha256": "d320c883ada3bff92746e1a248fdf28d89b325f098752eecfb7750b2b1986e44",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/daf_jev-0.7.1-py3-none-any.whl/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 111209,
+      "filename": "release-manifest.json",
+      "local_and_github_digest_match": true,
+      "md5": "70fc1bcfaaf647179c1aa1189d9608ef",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/release-manifest.json/content",
+      "sha256": "3b672bd339b1ab77842b621fbe3ec330c49881ce3f0dc97cd8ccf8565969b22e",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/release-manifest.json/content",
+      "zenodo_md5_match": true
+    },
+    {
+      "bytes": 1668953,
+      "filename": "daf-jev-0.7.1-manuscript.pdf",
+      "local_and_github_digest_match": true,
+      "md5": "857cb56aaa4e2db2014125c6e24fe3ee",
+      "resolved_url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-manuscript.pdf/content",
+      "sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+      "status": "PASS",
+      "url": "https://zenodo.org/api/records/23266335/files/daf-jev-0.7.1-manuscript.pdf/content",
+      "zenodo_md5_match": true
+    }
+  ],
+  "format": "dafjev.zenodo-publication-acceptance-summary/1",
+  "github_release": {
+    "all7_actual_API_SHA256_digests_sizes_match_downloads_and_accepted_local_assets": true,
+    "published_at": "2026-10-09T03:23:38Z",
+    "release_id": 407467096,
+    "release_url": "https://github.com/docxology/daf-jev/releases/tag/v0.7.1",
+    "tag_name": "v0.7.1"
+  },
+  "independent_review_sha256": "b007a546d5ec7c911ce102aa04ca33ba808aca5c956576651cec287f1a7a5efd",
+  "metadata": {
+    "concept_api_latest_id": 23266335,
+    "concept_doi_resolved_url": "https://zenodo.org/records/23266335",
+    "creator_orcid_license_software_version_pass": true,
+    "description_exact_intent_after_HTML_stripping": true,
+    "publisher_scope": "Legacy public JSON does not expose publisher; no independent publisher-field assertion made.",
+    "same_concept": true,
+    "title_inherited_exact_previous": true
+  },
+  "record": {
+    "concept_doi": "10.5281/zenodo.22816187",
+    "conceptrecid": "22816187",
+    "created": "2026-10-09T15:48:55.618325+00:00",
+    "doi": "10.5281/zenodo.23266335",
+    "id": 23266335,
+    "modified": "2026-10-09T15:48:57.038112+00:00",
+    "state": "done",
+    "submitted": true,
+    "url": "https://zenodo.org/records/23266335",
+    "version": "0.7.1"
+  },
+  "recorded_utc": "2026-10-09T15:56:33.693562+00:00",
+  "release_manifest_sha256": "3b672bd339b1ab77842b621fbe3ec330c49881ce3f0dc97cd8ccf8565969b22e",
+  "scope": [
+    "Independent anonymous public metadata and complete-byte acceptance for archived v0.7.1 only.",
+    "New billing-recovery source, refreshed manuscript and current verification are separate follow-up artifacts.",
+    "Archival publication does not reconcile the unknown hosted charge or complete comparative model studies.",
+    "A sanitized allowlisted summary, not a byte-identical private review receipt."
+  ],
+  "total_bytes": 16204779
+}

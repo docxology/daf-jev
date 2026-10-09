@@ -8,7 +8,7 @@ The study distinguishes proper scoring against independent labels from distribut
 
 Selected historical API receipts show workload-specific batching and pipeline behavior; their reliability diagram uses a repeat-agreement proxy and does not establish ground-truth calibration. Later CPU comparator studies contain 9 jobs with 68894 completed cells out of 93046 planned cells, with inapplicable combinations retained as unsupported. Their final-train tests, leakage-clean refits and training-fold validation have distinct interpretations. Partial native evidence remains separate. The hosted pilot made 1 failed capability attempt and retained 1 unknown-billing attempt, halting admission under the shared USD 25 allocation; it supplies no hosted quality comparison.
 
-Current software coverage is 92.79%, bound to retained verification inputs. Generated variables, figures and prose share exact selected evidence, including the documentation snapshot 708902db9820d9d8. The contribution is a reusable decision-evaluation framework and an explicit account of what the selected experiments establish, rather than a universal provider ranking or deployment guarantee.
+Current software coverage is 92.71%, bound to retained verification inputs. Generated variables, figures and prose share exact selected evidence, including the documentation snapshot 708902db9820d9d8. The contribution is a reusable decision-evaluation framework and an explicit account of what the selected experiments establish, rather than a universal provider ranking or deployment guarantee.
 
 **Keywords:** decision models, LLM APIs, probability calibration, batching, confidence-gated routing, Python client, reproducible research
 
@@ -180,6 +180,8 @@ Evidence acquisition reveals an unobserved variable selected by its current marg
 Reports retain completed, failed, unsupported, unresolved and unattempted cells. A started cell without a terminal outcome is unresolved. Planned coverage uses the entire frozen obligation; attempted-outcome coverage describes the observed subset. Quality among successful predictions is consequently accompanied by the planned status distribution, so a difficult or unsupported arm cannot disappear from the denominator.
 
 Token counts, reported API charges, reserved liability and local economic cost are different measurements. Known API charges are summed exactly, with unknown charge preserved as unknown. Admission requires a conservative sourced liability; a native catalog context length alone is insufficient to bound aggregate billable input across questions. A nominally free model does not make a response with missing billing metadata reconciled. Local hardware, energy and setup cost require a separately declared rate or measurement, and cannot be inferred from absent API billing.
+
+External billing recovery adds an independently reviewed charge record for an exactly identified finished attempt while preserving its original unknown receipt. Generation metadata requires the original response identity; an account total, a model name or a missing activity row cannot establish the charge for a particular request. A provider statement must bind the complete retained attempt identity. Document hashes and reviewer declarations preserve custody but do not themselves authenticate the provider. Reports distinguish originally reported charges from externally verified charges and their combined effective total. A recovered charge exceeding its original reservation is fully debited and keeps admission stopped; reconciliation does not erase an inadequate liability bound.
 
 Resource guards, cumulative allowances and owned cleanup constrain execution rather than model quality. A cancellation receipt can prove an attempt was interrupted without proving a final model outcome or charge. Raw unresolved windows remain unresolved; an additive nonrefundable allocation convention, if separately approved, must not be described as exact elapsed-time recovery or a rigorous upper bound on an unknown descendant. This distinction allows continuation designs to retain their uncertainty honestly.
 
@@ -364,7 +366,7 @@ The results in [@sec:results] combine separately selected historical API receipt
 
 ## Software and documentation identities
 
-The current package/render edition is daf-jev 0.7.1, generated under 3.14.4 on `macOS-27.0.1-arm64-arm-64bit-Mach-O`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python 3.10 or newer. Core runtime dependencies are `httpx` and `pyyaml`, with `tomli` on Python 3.10 and standard-library `tomllib` on newer Python. Optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
+The current package/render edition is daf-jev 0.7.1, generated under 3.10.20 on `macOS-27.0.1-arm64-arm-64bit`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python 3.10 or newer. Core runtime dependencies are `httpx` and `pyyaml`, with `tomli` on Python 3.10 and standard-library `tomllib` on newer Python. Optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
 
 The model-level documentation claims in [@sec:jev_model] are grounded in a retained hash-manifested TypeSafe snapshot (708902db9820d9d8, 111 pages). That identifies source documentation bytes, not the model's weights or current hosted behavior.
 
@@ -380,7 +382,7 @@ The command scripts expose their protocol through explicit arguments. `manuscrip
 
 Historical wall times include transport, parsing and composition; retries and network conditions can influence them. They are observations, not conservative guarantees for future application latency. Token totals are response usage, not dollar charges. Where an old receipt does not declare its percentile estimator, the current nearest-rank helper cannot retroactively determine it.
 
-The selected result files and their hashes bind prose and figures to one reviewed evidence set. The reproducible build timestamp is 2026-10-09T02:30:02Z; this pinned timestamp is neither the actual render time nor a benchmark execution date. Independently choosing the newest file for each benchmark cannot establish a common model/date/environment. Retained receipts remain unchanged when new experiments run.
+The selected result files and their hashes bind prose and figures to one reviewed evidence set. The reproducible build timestamp is 2026-10-09T16:12:03Z; this pinned timestamp is neither the actual render time nor a benchmark execution date. Independently choosing the newest file for each benchmark cannot establish a common model/date/environment. Retained receipts remain unchanged when new experiments run.
 
 ## Dataset views and evaluation roles
 
@@ -457,13 +459,13 @@ Omitting `--manifest` from the scraper's check performs a fresh network comparis
 
 ## Test evidence
 
-Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 63 files, 1810 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
+Tests follow the no-mock convention: real transports connect to an ephemeral local HTTP fixture, including persistent connection, error, timeout and cancellation paths. Live tests use an explicitly supplied process-environment key; they skip without it. Current counts are 65 files, 1868 unit tests and 2 live tests, subject to the completed evidence used for this rendered edition.
 
 ```bash
 uv run pytest tests/unit --cov=src
 ```
 
-Coverage is 92.79% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
+Coverage is 92.71% under the repository's configured gate. This edition selects a retained native verification record binding coverage JSON, JUnit outcomes, live-test collection and equal before/after/current input inventories. Its regeneration consumes those hash-verified exports without executing live tests, recollecting counts or requiring ephemeral raw coverage. Malformed or stale explicit selection fails rather than falling back to another source. Collection counts and completed runtime coverage are different observations; neither can be inferred from a previous tree. Skipped live tests do not establish live acceptance.
 
 ## Run custody and scientific gates
 
@@ -473,7 +475,7 @@ Hosted runs bind one existing shared allocation in their frozen manifests. Every
 
 ![Hosted admission across runs. Shared reservation precedes run admission and transport; run receipts precede shared reconciliation. Unknown billing or incomplete journals stop further admission. The schematic contains no measured cost or timing.](../output/figures/hosted_admission.png){#fig:admission width=100%}
 
-Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.7.1, with reproducible build timestamp 2026-10-09T02:30:02Z; its render environment is `macOS-27.0.1-arm64-arm-64bit-Mach-O` under 3.14.4. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
+Publication evidence must additionally establish genuine model execution, complete task vocabulary, independent held-out labels, frozen policies, adequate group counts, uncertainty and cost reconciliation. Requested aliases do not establish immutable weights; catalog discovery does not establish access. The historical calibration metric remains a self-consistency proxy. This edition is version 0.7.1, with reproducible build timestamp 2026-10-09T16:12:03Z; its render environment is `macOS-27.0.1-arm64-arm-64bit` under 3.10.20. The pinned build timestamp does not record the actual render time. Release identity and archival publication need separate verification.
 
 Protocol corrections must preserve the original experimental identity and its limitations. A clean admission stop is bound by an additive receipt and unchanged manifest/journal/head; it does not relabel future unattempted work as complete. A revised globally shared timing cohort or ordered prompt serializer needs a newly accepted source, selected-ID pack and complete input/custody proofs. Earlier observations cannot be retroactively converted into matched permutation evidence or identical-prompt repetitions, and a new manifest cannot reset a shared resource allowance.
 

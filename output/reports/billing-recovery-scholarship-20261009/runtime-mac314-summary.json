@@ -1,0 +1,40 @@
+{
+  "counts": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 1868
+  },
+  "coverage_combined_percent": 92.65578635014836,
+  "coverage_method": "coverage.py branch-enabled combined statement and branch opportunities; not branch-only percentage",
+  "coverage_totals": {
+    "covered_branches": 3316,
+    "covered_lines": 9174,
+    "num_branches": 3776,
+    "num_statements": 9704
+  },
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "python_version": "3.14.4"
+  },
+  "format": "dafjev.runtime-verification-summary/1",
+  "full_capture_projection": false,
+  "live_collection_exit_code": 0,
+  "live_execution": false,
+  "live_tests_collected": 2,
+  "native_capture_sha256": "b29b38732f3339cb778899765138ac0a69aa612dca39b011611c3fa5d0134606",
+  "native_companion_sha256": {
+    "coverage": "e9500a7c12291aa3018e4500f6c1f9fd9acf5d27edd1f7fc662b4f8417ac0d62",
+    "junit": "5a53d19cd407c28da08e3897631309596201c0c25624d75edadf44ab69747a84",
+    "live_collection": "12134f9e3b6beb589691e1dacc67c77ec05cfbf6c9f11991192af6930991157b",
+    "unit_log": "2986ef3c3dec989103e713db83001ef45eb5df8bf63ff26e78c757f861ccf751"
+  },
+  "publication_scope": "Explicit allowlisted summary of actual completed Mac/Python3.14 checks, not a byte-identical native record or whole-capture projection. Selected manuscript verification is the separate standard Mac/Python3.10 full projection. This does not execute language models or reconcile hosted billing.",
+  "source_commit": "281fc5c8144a7b104de1bd911dd2bab699f47940",
+  "source_date_epoch": 1791562323,
+  "source_input_count": 299,
+  "source_input_map_sha256": "238516fe0c7d41c891446e298196f23ba11669de8405e8ed94bb107db7ce8c10",
+  "source_inputs_held": true,
+  "standard_projection_result": "Refused unrecognized interpreter standard-library private path displays in successful unit log; original capture retained privately. No privacy exception, stdout stripping or test rerun.",
+  "unit_exit_code": 0
+}
