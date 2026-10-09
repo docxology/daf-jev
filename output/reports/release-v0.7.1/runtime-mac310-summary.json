@@ -1,0 +1,35 @@
+{
+  "closure_sha256": "8a6deef66aaddd50d0b0a19af247321a8b3c35f8519a8cded103cf1f62fac1e0",
+  "counts": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 1810
+  },
+  "coverage_combined_percent": 92.8143258213825,
+  "coverage_method": "coverage.py branch-enabled combined statement and branch opportunities; this is not branch-only percentage",
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "python_version": "3.10.20"
+  },
+  "format": "dafjev.runtime-verification-summary/1",
+  "live_collection_exit_code": 0,
+  "live_execution": false,
+  "native_capture_sha256": "849ce105ab3212028609a145a5f322505a78fecd6f0cb6e89321bdc0ac694a66",
+  "native_companion_sha256": {
+    "coverage": "bc39bf953cc095343ee0a31c08fff692f6d6e46de6472fb0e2de0b9fcbbd9e50",
+    "junit": "bd835f0975c8d569fdbc96c349bb68bbd083d8b884b458572fb9b45e4d9e12d4",
+    "live_collection": "001fca446a30484f1fb0db172c63e0276d04b9ebd609ed8f45bd35a4021395ad",
+    "unit_log": "908386b9693d46684c1bc746195556064c59a8a346f6ff7d2c0361f4a61e04a3"
+  },
+  "numpy": "2.2.6",
+  "publication_scope": "Sanitized summary, not a byte-identical native record or whole-capture projection. Native originals retained privately. Standard projector refused unrecognized private path display; its exception was not relaxed. Mac/Python3.10 compatibility is separate from Linux CI and language-model study acceptance.",
+  "runtime_diagnostic": "SciPy 1.14.1 sparse compiled import and 120-row structured fit passed with full absent-class vocabulary; no model-provider requests",
+  "runtime_diagnostic_path": "output/reports/release-v0.7.1/runtime-mac310-diagnostic.json",
+  "runtime_diagnostic_sha256": "5799b3c5af18b00dcbf46850d232c6969943017f2f996f3635824f36cc1852df",
+  "scikit_learn": "1.7.2",
+  "scipy": "1.14.1",
+  "source_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+  "source_inputs_held": true,
+  "unit_exit_code": 0
+}

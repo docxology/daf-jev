@@ -1,0 +1,28 @@
+{
+  "admission_stopped": true,
+  "allocation_id": "first-authorized-hosted-usd25",
+  "allocation_manifest_hash": "2e15e05ee53450e0b25000c1e1dd6deb621be03173e30a517fa4c049c07299e5",
+  "bound_runs": 0,
+  "current_source_held": true,
+  "format": "dafjev.shared-allocation-acceptance-summary/1",
+  "guard_only_events": 0,
+  "guard_only_planned_cells": 4,
+  "guard_only_run_budget_usd": "0",
+  "imported_runs": 1,
+  "independent_review_sha256": "edae712257e1c80d68276eddd417ccf28fcf87847ca2c2ae1025b982fc8b4e69",
+  "limit_usd": "25",
+  "new_attempts": 0,
+  "original_all_files_held": true,
+  "pending_attempt_count": 1,
+  "private_original_receipt_sha256": "2bd0e5e7805e9ba2279f6ad9ec186b9fc99a599aeb3549ee5eb400421edf7958",
+  "reported_cost_usd": "0",
+  "required_imports_complete": true,
+  "reserved_usd": "0",
+  "scope": "Explicit local allocation bookkeeping migration and blocked-admission guard. This is a sanitized summary; original retained privately. Unknown404 billing is preserved, not reconciled. No hosted model inference or full-study completion.",
+  "source_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+  "stop_reasons": [
+    "legacy_accounting_stopped",
+    "open_reservations_require_original_executor"
+  ],
+  "unknown_attempt_count": 1
+}

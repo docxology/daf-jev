@@ -1,0 +1,570 @@
+{
+  "additional_runtime_verification": {
+    "macos_python310_repaired_benchmark_extra": {
+      "closure_sha256": "8a6deef66aaddd50d0b0a19af247321a8b3c35f8519a8cded103cf1f62fac1e0",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 1810
+      },
+      "coverage_combined_percent": 92.8143258213825,
+      "coverage_method": "coverage.py branch-enabled combined statement and branch opportunities; this is not branch-only percentage",
+      "environment": {
+        "platform": "macOS-27.0.1-arm64-arm-64bit",
+        "python_version": "3.10.20"
+      },
+      "format": "dafjev.runtime-verification-summary/1",
+      "live_collection_exit_code": 0,
+      "live_execution": false,
+      "native_capture_sha256": "849ce105ab3212028609a145a5f322505a78fecd6f0cb6e89321bdc0ac694a66",
+      "native_companion_sha256": {
+        "coverage": "bc39bf953cc095343ee0a31c08fff692f6d6e46de6472fb0e2de0b9fcbbd9e50",
+        "junit": "bd835f0975c8d569fdbc96c349bb68bbd083d8b884b458572fb9b45e4d9e12d4",
+        "live_collection": "001fca446a30484f1fb0db172c63e0276d04b9ebd609ed8f45bd35a4021395ad",
+        "unit_log": "908386b9693d46684c1bc746195556064c59a8a346f6ff7d2c0361f4a61e04a3"
+      },
+      "numpy": "2.2.6",
+      "publication_scope": "Sanitized summary, not a byte-identical native record or whole-capture projection. Native originals retained privately. Standard projector refused unrecognized private path display; its exception was not relaxed. Mac/Python3.10 compatibility is separate from Linux CI and language-model study acceptance.",
+      "runtime_diagnostic": "SciPy 1.14.1 sparse compiled import and 120-row structured fit passed with full absent-class vocabulary; no model-provider requests",
+      "runtime_diagnostic_path": "output/reports/release-v0.7.1/runtime-mac310-diagnostic.json",
+      "runtime_diagnostic_sha256": "5799b3c5af18b00dcbf46850d232c6969943017f2f996f3635824f36cc1852df",
+      "scikit_learn": "1.7.2",
+      "scipy": "1.14.1",
+      "source_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+      "source_inputs_held": true,
+      "unit_exit_code": 0
+    },
+    "prior_v070_locked_mac_python310_failure": {
+      "core_only_installed_wheel_is_separate": true,
+      "corrected_fixture_focus": {
+        "aggregate_coverage_gate_unchanged": true,
+        "counts": {
+          "errors": 0,
+          "failures": 0,
+          "passed": 38,
+          "skipped": 0,
+          "tests": 38
+        },
+        "coverage_percent": 11.608596548355585,
+        "interpretation": "Exactly38 prior setup-error cases passed with external temporary-root placement. Focused command exited1 for the unchanged90percent aggregate coverage threshold. No corrected full aggregate run or optional dependency substitution.",
+        "native_exit_code": 1,
+        "receipt_sha256": "a44efdee784a4162db3ad280bbfffdc233847970bef7f23749cb7c873ecccd14"
+      },
+      "failure_classification": {
+        "failed_cases": 13,
+        "fixture_reason": "Temporary directory nested under a repository inherited the parent pytest configuration.",
+        "fixture_setup_errors": 38,
+        "reason": "Locked SciPy Mach-O extension dlopen error; pure import independently reproduced."
+      },
+      "full_branch_coverage_percent": 91.01269944643438,
+      "full_counts": {
+        "errors": 38,
+        "failures": 13,
+        "passed": 1667,
+        "skipped": 0,
+        "total": 1718
+      },
+      "full_native_outcome_sha256": "763876cd18b52e3f7f7c1993ed268f03cb10a930d5767f0a98d692e97a9d541c",
+      "linux_ci_is_separate": true,
+      "native_records_retained_privately": true,
+      "python": "3.10.20",
+      "scikit_learn": "1.7.2",
+      "scipy": "1.15.3",
+      "source_commit": "e46d5ebf813cd1eb9d1919a2a7a57ae5456caa7b",
+      "status": "FULL_COMPATIBILITY_NOT_ACCEPTED"
+    }
+  },
+  "bibliography_entry_count": 31,
+  "figure_labels": [
+    "fig:graphical_abstract",
+    "fig:architecture",
+    "fig:primitives",
+    "fig:confidence",
+    "fig:batching",
+    "fig:latency",
+    "fig:calibration",
+    "fig:cpu_quality",
+    "fig:wine_ordinal",
+    "fig:cohort_sensitivity",
+    "fig:validation_folds",
+    "fig:selective_validation",
+    "fig:execution_coverage",
+    "fig:hosted_admission",
+    "fig:admission"
+  ],
+  "format": "dafjev.release-reproduction/1",
+  "frozen_hosted_plan_source_commit": "f18a5befed721f735e1637289337318e12a9e112",
+  "independent_review_receipts_retained_privately": {
+    "accounting_v3": "869c7c4964f1514f50fc27bdfea63ba45d187161a72ad7b5895ce9d9933abab8",
+    "actual_guard_migration_block": "edae712257e1c80d68276eddd417ccf28fcf87847ca2c2ae1025b982fc8b4e69",
+    "actual_package": "3425bcc4c40463eca38a62ddfe72b63107bfa753ad985979ae1b2ae503594c95",
+    "runtime_dependency": "9196aaefd591ddeffe87d1b5010c86a73306935a43e2d6989b2b45548ac4192b",
+    "skill_registration": "52f08c24c7c41a760079b03542c74bfd87793d10f611c46184a13a66db5b7e85"
+  },
+  "manuscript_source_build_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+  "manuscript_source_date_epoch": "1791513002",
+  "package_input_bytes_equal_current_source": true,
+  "package_source_build_commit": "476bf6d92ac27061392d99a5035ea6e788c0034c",
+  "package_source_date_epoch": "1791512618",
+  "pdf": {
+    "bytes": 1668953,
+    "path": "output/pdf/daf-jev-0.7.1-manuscript.pdf",
+    "sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9"
+  },
+  "pdf_page_count": 28,
+  "registry_figure_count": 14,
+  "release_sdk_bytes_equal_package_build": true,
+  "rendered_cited_entries": 27,
+  "reproduction": {
+    "limits": [
+      "Cross-platform PDF/archive byte equality is not established.",
+      "Fonts are hashed reproduction inputs and are not redistributed.",
+      "Public summaries do not expose full private original run journals, prepared corpora, runtime inventories or billing/account records. Public selected summaries and figure/map inputs reproduce the manuscript; complete journal-level recomputation also requires the retained private evidence.",
+      "The historical hosted summary-reviewed.pdf retains a relative link to an excluded older diagnostic companion PDF; its bytes are historical and unchanged. The new release manuscript is the current companion.",
+      "GitHub publication and software checks do not complete the hosted/native comparative study or reconcile billing.",
+      "The nonexecutable hosted obligation preserves its original f18a5be SDK identity; execution requires a newly frozen manifest and accepted shared-allocation admission after billing closure.",
+      "The Mac/Python3.10 SciPy1.14.1 optional runtime passed complete revised-source checks and a small real fit; the Wine study was not rerun in that runtime.",
+      "The new shared guard coordinates cooperating processes on one local filesystem. It does not establish account-wide completeness or coordination across machines. Full-manifest accounting overhead remains unmeasured.",
+      "Mac/Python3.10 native capture is retained privately; its public summary binds native hashes and counts. The standard full-capture projector refused an unrecognized private display path; no privacy exception was relaxed."
+    ],
+    "package": "Check out package_source_build_commit; use exact package-inputs.json and SOURCE_DATE_EPOCH, resolved tool identities, and setuptools==84.0.0 constraint. Direct and sdist-derived wheels matched on this host. The Skill-only source correction leaves all54 package inputs identical.",
+    "pdf": "Check out manuscript_source_build_commit. Overlay released selected evidence, figures, saved map and publication selection. Run scripts/render_pdf.py with fresh output/artifacts paths. The HEAD-derived source epoch must match this record."
+  },
+  "same_host_pdf_byte_equal": true,
+  "scientific_acceptance": {
+    "frozen_hosted_plan_uses_prior_sdk_identity": true,
+    "full_comparative_study_complete": false,
+    "historical_local_model_receipts_do_not_accept_current_sdk": true,
+    "hosted_billing_unresolved": true,
+    "hosted_quality_predictions": 0,
+    "new_hosted_expansion_actual_attempts": 0,
+    "new_hosted_expansion_planned_cells": 401232,
+    "original_allocation_usd": "25",
+    "shared_allocation_execution_guard_accepted": true,
+    "shared_guard_acceptance_scope": "Exact legacy import and blocked zero-budget guard, software/accounting only; no hosted execution allowed while billing is UNKNOWN."
+  },
+  "sdk_file_count": 50,
+  "sdk_file_map_sha256": "6730c36c49dff30944492c1b2996689429ce82b29a6269f7da304e3aa1d3c902",
+  "second_pdf_retained_privately_sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+  "selected_inputs": {
+    "manuscript/evidence.json": {
+      "bytes": 1621,
+      "path": "manuscript/evidence.json",
+      "sha256": "db554c2787a281faac183c4ae0df8509f5ccc56e572ffe61236b59cd2f6db267"
+    },
+    "manuscript/references.bib": {
+      "bytes": 17805,
+      "path": "manuscript/references.bib",
+      "sha256": "63f24a57c8e38f5eb40ad9fc46ff0ad96cfd35bc98dc2250e777fcbe58b52b5b"
+    },
+    "manuscript/render/cover.tex": {
+      "bytes": 711,
+      "path": "manuscript/render/cover.tex",
+      "sha256": "9c052ba93fab6b857c53e39d43f1455f5f1479d67f9abefae1d29ce3cf5e00b5"
+    },
+    "manuscript/render/preamble.tex": {
+      "bytes": 1463,
+      "path": "manuscript/render/preamble.tex",
+      "sha256": "d9d3a88badcda177d3fb754ff137fc06d119ea392c8ffcaae2c0a538854df3fa"
+    },
+    "output/benchmarks/batching_20260916.json": {
+      "bytes": 1124,
+      "path": "output/benchmarks/batching_20260916.json",
+      "sha256": "06990754d64b7452529a347f49ee98a3bb320753e616972056b0dd6e7124ec55"
+    },
+    "output/benchmarks/calibration_20260916.json": {
+      "bytes": 805,
+      "path": "output/benchmarks/calibration_20260916.json",
+      "sha256": "deef17fbd564bbd4d7775d34558ed11037ae074473842785ccad88d33e866507"
+    },
+    "output/benchmarks/jaggedness_20260924.json": {
+      "bytes": 5786,
+      "path": "output/benchmarks/jaggedness_20260924.json",
+      "sha256": "e187188f3a39a06b9a5cd1153b15a2482393d80480e452ed69a9c8f63729f620"
+    },
+    "output/benchmarks/patterns_20260916.json": {
+      "bytes": 556,
+      "path": "output/benchmarks/patterns_20260916.json",
+      "sha256": "ebba6eae325fbc4b61453abfdd82723da4179bd8b49100daa402ad613309b662"
+    },
+    "output/data/manuscript_variables.json": {
+      "bytes": 3632,
+      "path": "output/data/manuscript_variables.json",
+      "sha256": "6c6d8970c4f370d3ddfb913aea55de8f826783eda5c89ce955f0a3b72a793e5a"
+    },
+    "output/figures/architecture.mmd": {
+      "bytes": 882,
+      "path": "output/figures/architecture.mmd",
+      "sha256": "1a221e8ad0f1cc6e79bf3e66616e983856dfcbf6c2bb5085bc582e7ef5549196"
+    },
+    "output/figures/architecture.pdf": {
+      "bytes": 24873,
+      "path": "output/figures/architecture.pdf",
+      "sha256": "931f9490a2b7d523e8980598332e2694ba71f7ce9c1c6a38306f234c32a16b21"
+    },
+    "output/figures/architecture.png": {
+      "bytes": 95662,
+      "path": "output/figures/architecture.png",
+      "sha256": "a4482a5ff4b1054dbd30601a9f6e62bdc0ad12f95e15b7880d63cc00a388ac1e"
+    },
+    "output/figures/batching_speedup.pdf": {
+      "bytes": 17621,
+      "path": "output/figures/batching_speedup.pdf",
+      "sha256": "dddd50be38352b14a2f873f9b64745ad0f029634012ab98021711ba514860a45"
+    },
+    "output/figures/batching_speedup.png": {
+      "bytes": 79115,
+      "path": "output/figures/batching_speedup.png",
+      "sha256": "037da45b14f7c5f6ba032e7b462f597e6e3623388b600435e715146d30b31b6e"
+    },
+    "output/figures/calibration_reliability.pdf": {
+      "bytes": 18072,
+      "path": "output/figures/calibration_reliability.pdf",
+      "sha256": "796563eab2fc01e27f63d4f41bfa8ba6e44de39a6b5b2c69742ab099420e1279"
+    },
+    "output/figures/calibration_reliability.png": {
+      "bytes": 81952,
+      "path": "output/figures/calibration_reliability.png",
+      "sha256": "1b341c5a28fab40459f34842ab4b7ea76237f3cf12294c546e2b08e6092d052a"
+    },
+    "output/figures/cohort_sensitivity.data.json": {
+      "bytes": 1698,
+      "path": "output/figures/cohort_sensitivity.data.json",
+      "sha256": "966e7fbe67540544c17d8a6bf245763628077e3930e5b38f8820a25d756b95f8"
+    },
+    "output/figures/cohort_sensitivity.pdf": {
+      "bytes": 27537,
+      "path": "output/figures/cohort_sensitivity.pdf",
+      "sha256": "9340feb418a3da19a5a91b150d3744aeddbdf8ccbc03ba6805685b8cbbf4f850"
+    },
+    "output/figures/cohort_sensitivity.png": {
+      "bytes": 139895,
+      "path": "output/figures/cohort_sensitivity.png",
+      "sha256": "dad609e24c162c9b60925a484f938c3b5ac79e955680428e568478a478fb37c9"
+    },
+    "output/figures/confidence_bands.pdf": {
+      "bytes": 15050,
+      "path": "output/figures/confidence_bands.pdf",
+      "sha256": "0dc5b94cf2bf06c8344253aed724010cbe7c2045b6adf8c52616ddc42f744702"
+    },
+    "output/figures/confidence_bands.png": {
+      "bytes": 58856,
+      "path": "output/figures/confidence_bands.png",
+      "sha256": "7267622498a1d96825475b47b0d35fddc525d148adfa78a38b3dc6e163b3cf43"
+    },
+    "output/figures/cpu_quality.data.json": {
+      "bytes": 1858,
+      "path": "output/figures/cpu_quality.data.json",
+      "sha256": "4ae1f1395012a46afdef1edefb0bb0580f3cfc6f7d56d171b7086833889d1d25"
+    },
+    "output/figures/cpu_quality.pdf": {
+      "bytes": 22295,
+      "path": "output/figures/cpu_quality.pdf",
+      "sha256": "2c10cbb39d2ffbbe51dcde988112ded82bce5721549edc0fccae4d4e52d631af"
+    },
+    "output/figures/cpu_quality.png": {
+      "bytes": 87030,
+      "path": "output/figures/cpu_quality.png",
+      "sha256": "890c39e0ad4343953c0a79c112a8dfcb249ced71d92a28d5c19ba0f1f11c053c"
+    },
+    "output/figures/execution_coverage.data.json": {
+      "bytes": 1332,
+      "path": "output/figures/execution_coverage.data.json",
+      "sha256": "587dc43e2bd4b74d9401c1871919961e3cac718fe5186ae70a9bb6ed6a2df85f"
+    },
+    "output/figures/execution_coverage.pdf": {
+      "bytes": 22245,
+      "path": "output/figures/execution_coverage.pdf",
+      "sha256": "4cddecbfc2f5c03d207bdaed6155b674e0b1e8ef13122651f267193f6f9ee03e"
+    },
+    "output/figures/execution_coverage.png": {
+      "bytes": 118527,
+      "path": "output/figures/execution_coverage.png",
+      "sha256": "a41cfa8cb10c5d0757ffc9d5f14ee89035408e07873c15a3a1b19bdbb245ac64"
+    },
+    "output/figures/figure_registry.json": {
+      "bytes": 14672,
+      "path": "output/figures/figure_registry.json",
+      "sha256": "8925cccfce3be5ee4314c66478032f1606d5a39ad924cabbf98113a4bbdae308"
+    },
+    "output/figures/graphical_abstract.data.json": {
+      "bytes": 1172,
+      "path": "output/figures/graphical_abstract.data.json",
+      "sha256": "0d21e95ae8ad67af04b884ce75121ccb1b95514147339ac942a784f2d33f419a"
+    },
+    "output/figures/graphical_abstract.pdf": {
+      "bytes": 33773,
+      "path": "output/figures/graphical_abstract.pdf",
+      "sha256": "925dc75a820b6f3126f1851e2cf06b4b45150c99009a58d3b84ace2cca09c77b"
+    },
+    "output/figures/graphical_abstract.png": {
+      "bytes": 183153,
+      "path": "output/figures/graphical_abstract.png",
+      "sha256": "c1ee93694effc81d4d51b7d7dbd52c5813b99b2be316b9db80c3ac645adc76ba"
+    },
+    "output/figures/hosted_admission.pdf": {
+      "bytes": 22659,
+      "path": "output/figures/hosted_admission.pdf",
+      "sha256": "5cb080958b18af0d762f94d1a62d7282bb28789ef2a73a8380802fdce843382c"
+    },
+    "output/figures/hosted_admission.png": {
+      "bytes": 90525,
+      "path": "output/figures/hosted_admission.png",
+      "sha256": "78ef31783fd788deb8cbdd5907b03f4e0d8225c45d2c3cbfb27791d40196db14"
+    },
+    "output/figures/latency_percentiles.pdf": {
+      "bytes": 14623,
+      "path": "output/figures/latency_percentiles.pdf",
+      "sha256": "7845fe0344ea59d082247ad6b1d0738c8ec3e88e6c0206b55741c247ef4970eb"
+    },
+    "output/figures/latency_percentiles.png": {
+      "bytes": 48763,
+      "path": "output/figures/latency_percentiles.png",
+      "sha256": "7450b4d8f350699d8989899f21d768dceae7c4255fdf4d13b3351262f18ea3cb"
+    },
+    "output/figures/primitives_overview.pdf": {
+      "bytes": 21326,
+      "path": "output/figures/primitives_overview.pdf",
+      "sha256": "ece4e016ff3b8f1f5d040f24a7b7ddeaee77d76681f691eb6077c3c755e4bb72"
+    },
+    "output/figures/primitives_overview.png": {
+      "bytes": 70064,
+      "path": "output/figures/primitives_overview.png",
+      "sha256": "08f2d8c1bd5149131aed825ba9bdfbdb7b31cc9b44930cfde74bf6eedebdcd65"
+    },
+    "output/figures/selective_validation.data.json": {
+      "bytes": 3977,
+      "path": "output/figures/selective_validation.data.json",
+      "sha256": "84a493f41b0f702e633f37073ea0796cbd7871a6109e2ebd813520ea86b3ab1d"
+    },
+    "output/figures/selective_validation.pdf": {
+      "bytes": 24045,
+      "path": "output/figures/selective_validation.pdf",
+      "sha256": "a56f3b01da9f74c7264aedea5a3e832a8b28d2bed96ca90ab0df4ed3481acd34"
+    },
+    "output/figures/selective_validation.png": {
+      "bytes": 163828,
+      "path": "output/figures/selective_validation.png",
+      "sha256": "c74a61999de59be3a185f9e4ca4be0ce50504397fe9294ff43e84145aecd9a4d"
+    },
+    "output/figures/validation_folds.data.json": {
+      "bytes": 1160,
+      "path": "output/figures/validation_folds.data.json",
+      "sha256": "7043e8811d9128549f2fcb5be4645fe96ae3fcf3650fa3c82169a8f3cef69f50"
+    },
+    "output/figures/validation_folds.pdf": {
+      "bytes": 20581,
+      "path": "output/figures/validation_folds.pdf",
+      "sha256": "1100bb1aa518154818b537af0dc7f46987f04e04471bd285d0eadc80b39a3c9d"
+    },
+    "output/figures/validation_folds.png": {
+      "bytes": 76391,
+      "path": "output/figures/validation_folds.png",
+      "sha256": "c98687a2d0e21e55160c63cf20f75c14518e06f0969abd9b41dceaf65f162606"
+    },
+    "output/figures/wine_ordinal.data.json": {
+      "bytes": 1062,
+      "path": "output/figures/wine_ordinal.data.json",
+      "sha256": "0a6e17a2e10555c12fd6668431863afb97eee0aaef840eda5e1e9efe957f8b82"
+    },
+    "output/figures/wine_ordinal.pdf": {
+      "bytes": 21971,
+      "path": "output/figures/wine_ordinal.pdf",
+      "sha256": "a45a252b3df1fb4c6384d89e99b65b8fd23a98fc372305cadcf689999462ef43"
+    },
+    "output/figures/wine_ordinal.png": {
+      "bytes": 101443,
+      "path": "output/figures/wine_ordinal.png",
+      "sha256": "e82382300bf4a012a1384830fea09650d487d49b1d6884ee701dffc0c8ce3882"
+    },
+    "output/reports/full-offline-20261008/full-offline-comparison.json": {
+      "bytes": 156741,
+      "path": "output/reports/full-offline-20261008/full-offline-comparison.json",
+      "sha256": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7"
+    },
+    "output/reports/hosted-expansion-20261008/admission-matrix.json": {
+      "bytes": 2838,
+      "path": "output/reports/hosted-expansion-20261008/admission-matrix.json",
+      "sha256": "fa5c59c788d5af0b9a99635b46cd38741fdcf1a743d7d876a42fab27c8950592"
+    },
+    "output/reports/hosted-expansion-20261008/admission-matrix.pdf": {
+      "bytes": 30904,
+      "path": "output/reports/hosted-expansion-20261008/admission-matrix.pdf",
+      "sha256": "c7f46b99f73ff2cf790c2156101d1eb89fa736c27bab15634e8cbcc94943cd2f"
+    },
+    "output/reports/hosted-expansion-20261008/admission-matrix.png": {
+      "bytes": 296684,
+      "path": "output/reports/hosted-expansion-20261008/admission-matrix.png",
+      "sha256": "b9bc64facb40f8445ea9cde72d70fd5e79783fb6b927eed6ca9024022a00efcf"
+    },
+    "output/reports/hosted-expansion-20261008/admission-matrix.svg": {
+      "bytes": 214313,
+      "path": "output/reports/hosted-expansion-20261008/admission-matrix.svg",
+      "sha256": "56486b31fbc825dc3101729cc1f622b372c6cc00c4edd1cc3d9f0a58c9868fa6"
+    },
+    "output/reports/hosted-expansion-20261008/generation.json": {
+      "bytes": 6017,
+      "path": "output/reports/hosted-expansion-20261008/generation.json",
+      "sha256": "9e71c9d245e48df868928548468c53017caa5578ddff56e36bcd592e72b69c09"
+    },
+    "output/reports/hosted-expansion-20261008/plan.json": {
+      "bytes": 56835,
+      "path": "output/reports/hosted-expansion-20261008/plan.json",
+      "sha256": "71eb78a22561f4966745d341b9c9a3ac269667008af40e663fe53a7bce0b3050"
+    },
+    "output/reports/hosted-pilot-20261008/summary.json": {
+      "bytes": 7960,
+      "path": "output/reports/hosted-pilot-20261008/summary.json",
+      "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+    },
+    "output/reports/release-v0.7.1/pdf-check.json": {
+      "bytes": 474,
+      "path": "output/reports/release-v0.7.1/pdf-check.json",
+      "sha256": "ba40782d1758e8e9f4959ea34a47d6a39f1b0bce7da337650480d6340236cf3e"
+    },
+    "output/reports/release-v0.7.1/runtime-mac310-diagnostic.json": {
+      "bytes": 939,
+      "path": "output/reports/release-v0.7.1/runtime-mac310-diagnostic.json",
+      "sha256": "5799b3c5af18b00dcbf46850d232c6969943017f2f996f3635824f36cc1852df"
+    },
+    "output/reports/release-v0.7.1/runtime-mac310-summary.json": {
+      "bytes": 1916,
+      "path": "output/reports/release-v0.7.1/runtime-mac310-summary.json",
+      "sha256": "832dbd8212da0c401331c9d69dc35511b672a0485cea6c25ed503a02c4be7019"
+    },
+    "output/reports/release-v0.7.1/shared-allocation-acceptance.json": {
+      "bytes": 1260,
+      "path": "output/reports/release-v0.7.1/shared-allocation-acceptance.json",
+      "sha256": "4f491b2ec68a952c99fb7ae20b4acbdc2882c70716f0a718538ec7308c99479c"
+    },
+    "output/reports/release-v0.7.1/toolchain-fonts.json": {
+      "bytes": 2255,
+      "path": "output/reports/release-v0.7.1/toolchain-fonts.json",
+      "sha256": "fa1a16fa0b33dbba373854ac8160f2379c6eb525683fbe562a1baa8a2b34338f"
+    },
+    "output/verification/v0.7.1-public-mac314/coverage.json": {
+      "bytes": 795735,
+      "path": "output/verification/v0.7.1-public-mac314/coverage.json",
+      "sha256": "2bef47992e16a6b3c39c549befc44ef517656ca27f5074db2ac91cce297cccc7"
+    },
+    "output/verification/v0.7.1-public-mac314/junit.xml": {
+      "bytes": 252316,
+      "path": "output/verification/v0.7.1-public-mac314/junit.xml",
+      "sha256": "079626a302abc42211dfe54042e99b137e4a537f2c6e25ebd13fad1921c682aa"
+    },
+    "output/verification/v0.7.1-public-mac314/live-collection.txt": {
+      "bytes": 581,
+      "path": "output/verification/v0.7.1-public-mac314/live-collection.txt",
+      "sha256": "6251f1718fdb0d256677fbcf30767cdf80b2dc622ac609a78ee5dd97a5560b8b"
+    },
+    "output/verification/v0.7.1-public-mac314/unit.txt": {
+      "bytes": 211160,
+      "path": "output/verification/v0.7.1-public-mac314/unit.txt",
+      "sha256": "dccc6ff949cee47ef16588b96713292732109c1b8f87bd431fb15babf93422da"
+    },
+    "output/verification/v0.7.1-public-mac314/verification.json": {
+      "bytes": 95842,
+      "path": "output/verification/v0.7.1-public-mac314/verification.json",
+      "sha256": "eca3ee74aabd216b80fe412790f256bba05d5fc236753f4739cdf58405d4c214"
+    }
+  },
+  "shared_allocation": {
+    "admission_stopped": true,
+    "allocation_id": "first-authorized-hosted-usd25",
+    "allocation_manifest_hash": "2e15e05ee53450e0b25000c1e1dd6deb621be03173e30a517fa4c049c07299e5",
+    "bound_runs": 0,
+    "current_source_held": true,
+    "format": "dafjev.shared-allocation-acceptance-summary/1",
+    "guard_only_events": 0,
+    "guard_only_planned_cells": 4,
+    "guard_only_run_budget_usd": "0",
+    "imported_runs": 1,
+    "independent_review_sha256": "edae712257e1c80d68276eddd417ccf28fcf87847ca2c2ae1025b982fc8b4e69",
+    "limit_usd": "25",
+    "new_attempts": 0,
+    "original_all_files_held": true,
+    "pending_attempt_count": 1,
+    "private_original_receipt_sha256": "2bd0e5e7805e9ba2279f6ad9ec186b9fc99a599aeb3549ee5eb400421edf7958",
+    "reported_cost_usd": "0",
+    "required_imports_complete": true,
+    "reserved_usd": "0",
+    "scope": "Explicit local allocation bookkeeping migration and blocked-admission guard. This is a sanitized summary; original retained privately. Unknown404 billing is preserved, not reconciled. No hosted model inference or full-study completion.",
+    "source_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+    "stop_reasons": [
+      "legacy_accounting_stopped",
+      "open_reservations_require_original_executor"
+    ],
+    "unknown_attempt_count": 1
+  },
+  "standalone_plan_figure_count": 1,
+  "strict_variables_regenerate_equal": true,
+  "toolchain": {
+    "before_after_final_render_inputs_held": true,
+    "before_after_tool_font_head_epoch_held": true,
+    "cross_platform_byte_equality": false,
+    "final_repeat_sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+    "fonts": {
+      "DejaVuSans-Bold.ttf": {
+        "bytes": 704128,
+        "sha256": "b184b89e3c1075f22f6b71575b6fc20d4972b3cfd3b23322ca6fd596dcaef167"
+      },
+      "DejaVuSans.ttf": {
+        "bytes": 756072,
+        "sha256": "3fdf69cabf06049ea70a00b5919340e2ce1e6d02b0cc3c4b44fb6801bd1e0d22"
+      },
+      "Menlo.ttc": {
+        "bytes": 2134132,
+        "sha256": "f2d400484a6aace67980730ec0a9ef24ce9e535a2604f118e6fdc2510021b85f"
+      },
+      "Times New Roman Bold Italic.ttf": {
+        "bytes": 620008,
+        "sha256": "906157e8294fdf168d83002eaabde01c2d30fc3f44977be89e33fa22f262002a"
+      },
+      "Times New Roman Bold.ttf": {
+        "bytes": 832472,
+        "sha256": "50f5b1f27b7d34621090e437e8b1dd4510a22d2823fc876b3286bed327b64bbb"
+      },
+      "Times New Roman Italic.ttf": {
+        "bytes": 660268,
+        "sha256": "7bb99c3a67697fbce15ab66d806d9a2151432ce1dab2eaba4156e1251da486c0"
+      },
+      "Times New Roman.ttf": {
+        "bytes": 824920,
+        "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+      },
+      "latinmodern-math.otf": {
+        "bytes": 733736,
+        "sha256": "6075562b771f8b82f0c179e363389684f2dd09de30038269e2628e504bd7be0f"
+      }
+    },
+    "fonts_not_distributed": true,
+    "matplotlib": "3.11.2",
+    "resolved_binary_sha256": {
+      "bibtex": "90a989e7fb16a2ba300024f607494ae487bd653e0e0c8167e16de9f4274deb7f",
+      "pandoc": "573925418f44d2d377d33d1170dd9eeac2fb671fd5a2260be034e7a6ab97eb40",
+      "python": "bf4ea26231212e330b8e9b6f24969a30f894fec88665bf42754070d114ac7fc6",
+      "uv": "c87143aea2480b09f107a9f97fa93899d116f0307b4d210649a735e141bdd889",
+      "xelatex": "593df4b2c196aa1cdeabcb6b4fafd20af3b182e05a3cee030418f14707597f0e"
+    },
+    "toolbound_repeat_sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+    "versions": {
+      "bibtex": "BibTeX 0.99e (TeX Live 2026)",
+      "pandoc": "pandoc 3.12",
+      "python": "Python 3.14.4",
+      "uv": "uv 0.12.23 (Homebrew 2026-10-03 aarch64-apple-darwin)",
+      "xelatex": "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)"
+    }
+  },
+  "verification": {
+    "coverage_method": "Branch-enabled combined statement and branch opportunity percentage",
+    "coverage_percent": 92.7888264763929,
+    "live_tests_collected": 2,
+    "live_tests_executed": 0,
+    "public_capture_is_declared_privacy_derivative": true,
+    "raw_capture_retained_privately": true,
+    "source_files_held": true,
+    "unit_passed": 1810
+  },
+  "version": "0.7.1"
+}

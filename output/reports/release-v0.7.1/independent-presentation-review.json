@@ -1,0 +1,29 @@
+{
+  "all_page_text_pixel_rotated_span_checks": true,
+  "bibliography_entries": 31,
+  "cited_entries_rendered": 27,
+  "figure_labels": 15,
+  "format": "dafjev.release-independent-presentation-summary/1",
+  "headings_checked": 52,
+  "pages": 28,
+  "pdf_sha256": "055c0153334fce0a36b2bd33cbb3e521204e7eaf5fdc6417beb48d0d8c8959c9",
+  "private_paths_or_key_patterns": false,
+  "prose_tail_sentinels_accounted": 127,
+  "question_mark_pairs": 0,
+  "review_receipt_sha256": "86770bd4a212d8bd7d4ba4043f0706a5f646f27db2a35ef071645577c7ac2a6d",
+  "safe_annotations": 179,
+  "same_host_final_repeat_pdf_equal": true,
+  "scope": "Local presentation, provenance and public privacy review only; no hosted execution, scientific acceptance, remote publication or billing reconciliation.",
+  "selected_inputs_checked": 64,
+  "source_build_commit": "62d891c1197d041ed1084b3ec4d63e4bb113a5c2",
+  "source_date_epoch": "1791513002",
+  "status": "CLOSED_PASS",
+  "tolerated_bibtex_diagnostics": {
+    "cited_content_complete": true,
+    "comment_syntax_errors": 3,
+    "raw_log_sha256": "b80373c0d8978616eb97b43c77d0559d10af5d1f10428254b58f124d0a803994",
+    "unsupported_online_type_warnings": 11,
+    "warning_free_bibtex_claim": false
+  },
+  "unresolved_tokens": 0
+}
