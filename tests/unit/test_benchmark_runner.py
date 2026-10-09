@@ -1477,32 +1477,59 @@ def test_cascade_strong_admission_stop_retains_completed_weak_as_failed_workflow
 
 @pytest.mark.parametrize("local_limit", [.02, .2])
 def test_cascade_weak_deadline_cancels_without_strong_call_or_implicit_retry(tmp_path, monkeypatch, local_limit):
+    import daf_jev.benchmark_runner as runner
+
+    class ProfileClock:
+        now = 0.0
+
+        def perf_counter(self):
+            return self.now
+
+    clock, awaited_deadlines = ProfileClock(), []
+
+    class RunnerAsyncio:
+        def __getattr__(self, name):
+            return getattr(asyncio, name)
+
+        async def wait_for(self, future, *, timeout):
+            awaited_deadlines.append(timeout)
+            try:
+                return await asyncio.wait_for(future, timeout=timeout)
+            finally:
+                # Setup/reporting speed does not spend the controlled profile
+                # budget. The real awaited deadline expires its remaining cells.
+                clock.now = local_limit + 1.0
+
+    # Replace only the runner's bindings; transport, resource sampling and the
+    # event loop retain their real clocks and the unchanged .02/.2 deadlines.
+    monkeypatch.setattr(runner, "time", clock)
+    monkeypatch.setattr(runner, "asyncio", RunnerAsyncio())
     with _blocked_cascade_server() as server:
         store = _http_cascade_store(tmp_path, server, monkeypatch, local_limit=local_limit)
-        began = time.perf_counter()
         report = execute_run(store.directory)
-        assert time.perf_counter() - began < .9
         repeated = execute_run(store.directory)
         assert all(hit["path"] == "/weak" for hit in server.hits)
+        assert len(server.hits) <= 1
     events = store.events()
     starts = [event for event in events if event["event"] == "attempt_started"]
     receipts = [event["receipt"] for event in events if event["event"] == "attempt_finished"]
-    # Durable admission happens before the first transport await. A profile
-    # deadline may expire during setup or after admission but before TCP I/O;
-    # neither outcome establishes that the server observed a request.
-    assert len(starts) == len(receipts) <= 1
-    if starts:
-        assert starts[0]["attempt_id"] == receipts[0]["attempt_id"]
-        assert receipts[0]["error"] == "CancelledError"
-        failed = next(event for event in events if event["event"] == "cell_finished" and event["status"] == "failed")
-        assert failed["error"] == "TimeoutError"
-        assert failed["workflow"]["weak_status"] == "unresolved"
-        assert failed["workflow"]["strong_status"] == "unattempted"
-        assert failed["workflow"]["observed_receipts"] == receipts
-        assert report["denominators"] == {"failed": 1, "unattempted": len(store.manifest["cells"]) - 1}
-    else:
-        assert report["denominators"] == {"unattempted": len(store.manifest["cells"])}
-        assert all(cell["reason"] == "local_execution_deadline" for cell in report["cells"])
+    # The controlled profile clock reaches the real transport await. Durable
+    # admission/cancellation alone does not establish that the server saw I/O.
+    assert len(starts) == len(receipts) == 1
+    assert starts[0]["attempt_id"] == receipts[0]["attempt_id"]
+    assert receipts[0]["error"] == "CancelledError"
+    assert receipts[0]["status_code"] is None
+    failed = next(event for event in events if event["event"] == "cell_finished" and event["status"] == "failed")
+    assert failed["error"] == "TimeoutError"
+    assert failed["workflow"]["weak_status"] == "unresolved"
+    assert failed["workflow"]["strong_status"] == "unattempted"
+    assert failed["workflow"]["strong_invoked"] is False
+    assert failed["workflow"]["attempt_ids"] == {"weak": [receipts[0]["attempt_id"]], "strong": []}
+    assert failed["workflow"]["observed_receipts"] == receipts
+    assert report["denominators"] == {"failed": 1, "unattempted": len(store.manifest["cells"]) - 1}
+    assert all(cell["reason"] == "local_execution_deadline"
+               for cell in report["cells"] if cell["status"] == "unattempted")
+    assert awaited_deadlines == [local_limit]
     assert all(not event["hosted"] for event in starts)
     resources = [event for event in events if event["event"] == "resources_observed"]
     assert resources[0]["backend"] == "weak" and resources[0]["resources"]["wall_s"] >= local_limit
