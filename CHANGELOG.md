@@ -13,8 +13,16 @@ journal cut feed a selected report and a new scientific figure. Historical
 CPU/local studies and the earlier failed hosted pilot keep their own identities.
 A full quality study is ongoing; capability success is not comparative acceptance.
 
+Perplexity native preparation has an independent billing contract and separate
+Choice, Score and question limits. A prospective interleaved Jev/Perplexity
+recipe preserves identical prepared inputs and timing samples. Actual
+Perplexity acceptance and comparative study completion require hosted evidence.
+Probability-score documentation distinguishes rounded rows from exact simplex
+forecasts and preserves reported zero-probability losses.
+
 Fresh native verification records its interpreter's stdlib location. Public
-projections relocate that declared prefix only, reject unknown private paths,
+projections relocate that declared prefix only, reject recognized credential
+and private-path markers before output creation,
 and preserve the originals. Offline capability exports validate manifest,
 receipt, journal and report identities before writing a fresh derivative bundle.
 
