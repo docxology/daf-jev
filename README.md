@@ -775,8 +775,9 @@ semantics, pinned local setup evidence, discovery, limits and cost receipts.
 
 The `benchmark` commands separate data preparation, public catalog discovery,
 immutable planning, actual inference, resume and offline reporting. They compare
-complete task vocabularies across native probability arms, generated labels and
-training-only priors/classifiers. Reports retain failures, unsupported and
+complete task vocabularies across native probability arms and training-only
+priors/classifiers. Explicit chat adapters support separately named comparator
+experiments; they are excluded from the current native hosted cohort. Reports retain failures, unsupported and
 unattempted arms, unresolved attempts and unknown cost.
 Dataset configuration IDs, inventory indices and prepared input hashes distinguish
 cohorts sharing a family name. Reports keep wholly unavailable arms and separate
@@ -790,8 +791,10 @@ contains 68,894 completed cells (68,870 quality decisions and 24 probes) and
 unfinished; their proposal and continuation limits are stated alongside the
 results. The separate
 [first hosted probe report](output/reports/hosted-pilot-20261008/summary.md)
-records an HTTP 404 and unknown billing; further hosted admission is stopped
-under the shared USD 25 allocation. It supplies no hosted quality result.
+records an HTTP 404 and unknown billing under the shared USD 25 allocation.
+It supplies no hosted quality result. A separately reviewed bounded-UNKNOWN
+exception can permit continuation while retaining that unknown charge and its
+upper bound; it does not rewrite the historical receipt or create another budget.
 New hosted execution requires an existing allocation bound into its frozen
 manifest. The [shared-allocation guide](docs/shared_allocations.md) explains
 explicit initialization, legacy imports, cross-run reservations and recovery.

@@ -1729,7 +1729,8 @@ it is not the total validation/test quality-control physical row count.
   import completeness. `import_run(binding)` appends verified legacy accounting
   only while inactive; every declared required import must be satisfied before
   execution. Unknown or abandoned imported work stops shared admission even
-  for zero-bound requests. These are cooperating local POSIX filesystem
+  for zero-bound requests unless a separately reviewed finished-attempt upper
+  bound has been explicitly accepted. Abandoned transport is never eligible. These are cooperating local POSIX filesystem
   controls, not account-wide billing completeness or cross-machine authority.
 - `AllocationLedger.execution(store)` takes the exclusive allocation lease
   before the run lease. `bind_run(store)` is execution-only. Separate runs are
@@ -1771,6 +1772,26 @@ it is not the total validation/test quality-control physical row count.
   Older readers reject the new event rather than overlook an effective charge.
   See [shared allocations](shared_allocations.md#external-evidence-for-a-finished-unknown-attempt).
 
+- `bounded_unknown_target(manifest_hash, attempt_id)` reads the exact finished
+  imported UNKNOWN target. `preview_bounded_unknown(*, evidence: Path,
+  evidence_sha256, review: Path, review_sha256)` validates without writing;
+  `accept_bounded_unknown` accepts the same arguments and appends one
+  `allocation_legacy_unknown_bounded` event under the inactive allocation lease.
+  Strict schemas are `dafjev.bounded-unknown-evidence/1`,
+  `dafjev.bounded-unknown-review/1` and `dafjev.exact-request-tariff-bound/1`.
+  The reviewed bound is held against the same allocation and original run cap,
+  distinct from known effective charges. `unknown_attempts` and historical
+  receipts retain UNKNOWN; `bounded_unknown_attempts` identifies accepted
+  exceptions and `held_upper_bound_usd` records their liability. A finished
+  reviewed exception can permit new admission; unfinished requests and
+  structural/durability/overcharge stops remain ineligible. Reopen and admission
+  revalidate exact proof bytes, physical identities, original attempt custody,
+  reviewer separation and target binding. Conflicting/reused proof is rejected;
+  an identical acceptance is an idempotent no-op. Later exact reconciliation
+  releases the hold and debits the independently verified charge; a breach of
+  the reviewed bound remains stopped. Operator review binds local evidence,
+  not provider-origin authentication or a guarantee of invoice correctness.
+
 - `RunStore.create(root, manifest) -> RunStore` creates a UUID run;
   `RunStore.create_at(directory, manifest) -> RunStore` is explicit exclusive
   creation at a caller-selected path, used by allocation initialization. Both
@@ -1794,11 +1815,22 @@ it is not the total validation/test quality-control physical row count.
   advertised context and the frozen output-token limit, conditional on those
   limits and tariffs being enforced. A catalog context window does not establish
   an aggregate billable-token bound for a native request's state, questions and
-  options. Paid native input therefore has unavailable liability with
+  options. Paid native input ordinarily has unavailable liability with
   `admission_reason="native_aggregate_billing_unverified"`; nonzero native output
-  tariffs also remain unbounded. No independently verified native aggregate
-  guarantee is currently supported, and caller-declared numeric bounds cannot
-  enable admission. All-zero admitted native tariffs and surcharge ceilings
+  tariffs remain unbounded. The explicit supported contract
+  `pricing.native_billing_contract="openrouter-typesafe-jev-1.13-input32000/1"`
+  admits only pinned `typesafe/jev-1.13` at
+  `https://openrouter.ai/api/alpha/decisions` through TypeSafe-only routing.
+  Its code-owned input ceiling is 32,000 tokens across state and all questions,
+  independently of the catalog context length. Output, request, image and
+  auxiliary charges must be zero; only provider execution settings are allowed.
+  The derived `native_billing_contract` descriptor freezes the primary source
+  URLs, identity and input scope. Execution recomputes and checks the descriptor
+  and actual sent settings. Receipt input usage above the ceiling is retained
+  before a durable `native_input_contract_breach` stop. Caller numeric bounds,
+  mutable latest aliases, other providers and other native models cannot enable
+  this contract. Its reservation is conditional on the documented contract and
+  enforced tariffs, not a measured charge. All-zero admitted native tariffs and surcharge ceilings
   still yield zero liability. Execution rechecks these contracts and refuses
   older stored numeric reservations that no longer have a supported bound,
   preserving their immutable manifests. Every hosted HTTP mode additionally

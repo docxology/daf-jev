@@ -66,7 +66,9 @@ restate them here; there is no `../AGENTS.md` in this location.
     `LegacyRunBinding` imports, cross-run reservation/reconciliation and
     allocation execution lease. Hosted runner manifests must bind an existing
     allocation; planning/reporting never initialize or import one. Unknown
-    billing remains stopped even for zero-tariff attempts. See
+    billing stops admission by default, including zero-tariff attempts. Explicitly
+    accepted reviewed bounds for finished imported UNKNOWN attempts retain
+    UNKNOWN and hold their liability against the same allowance. See
     `docs/shared_allocations.md` and the authoritative benchmark contract.
   - `figures.py` — matplotlib figure registry: 8 core named figures
     (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
@@ -387,7 +389,7 @@ restate them here; there is no `../AGENTS.md` in this location.
   cross-repo artifacts, see Cross-repo pipeline below). `web/` —
   `_combined_manuscript.md`, the template-render combined manuscript
   (tracked in git, not gitignored; verified 2026-09-24).
-- `pyproject.toml` — setuptools build, version 0.7.0, `httpx` + `pyyaml`
+- `pyproject.toml` — setuptools build, version 0.7.1, `httpx` + `pyyaml`
   and conditional `tomli` on Python 3.10
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp,
   mypy, types-PyYAML, ruff, pypdf), `figures` (matplotlib/Pillow), `benchmark`

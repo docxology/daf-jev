@@ -7,7 +7,11 @@ with [the command protocol](../docs/decision_benchmarking.md),
 [provider contracts](../docs/providers.md) and
 [local serving](../docs/local_serving.md). Config recipes live in
 `configs/synthetic.yaml` (uniform and exact-rule synthetic controls),
-`configs/offline.yaml`, `configs/local-mac.yaml` and `configs/pilot.yaml`.
+`configs/offline.yaml`, `configs/local-mac.yaml`, `configs/pilot.yaml` and
+`configs/native-jev-pilot.yaml`. The hosted pilot is a native decision-model
+cohort. The Jev recipe pins the Decisions endpoint and TypeSafe route; generative
+chat models are excluded from this cohort. Complete source snapshots and the
+existing shared-allocation binding must be frozen before execution.
 Plan creates an immutable UUID run without inference; run/resume execute it;
 report reduces its retained journal offline. A catalog snapshot is an explicit
 public GET and does not demonstrate inference access.

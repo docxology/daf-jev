@@ -238,3 +238,5 @@ means agreement with the modal choice across repeats — a self-consistency
 correctness proxy, never ground-truth accuracy; results land in
 unique `output/benchmarks/calibration_<UTC>_<UUID>.json` receipts. The retained
 dated September receipt remains unchanged.
+
+- [Native hosted continuation](native_hosted_study.md): pinned decision-model execution, reviewed UNKNOWN bounds and complete study obligations.
