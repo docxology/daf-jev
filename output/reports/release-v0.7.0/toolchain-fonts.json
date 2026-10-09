@@ -1,6 +1,10 @@
 {
   "cross_platform_byte_equality": false,
   "fonts": {
+    "DejaVuSans-Bold.ttf": {
+      "bytes": 704128,
+      "sha256": "b184b89e3c1075f22f6b71575b6fc20d4972b3cfd3b23322ca6fd596dcaef167"
+    },
     "DejaVuSans.ttf": {
       "bytes": 756072,
       "sha256": "3fdf69cabf06049ea70a00b5919340e2ce1e6d02b0cc3c4b44fb6801bd1e0d22"

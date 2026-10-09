@@ -20,9 +20,9 @@
   "BENCH_PATTERNS_RUNS": "6",
   "CALIBRATION_REPEATS": "5",
   "CALIBRATION_STATES": "6",
-  "CODE_LOC": "15684",
-  "CODE_MODULES": "47",
-  "CODE_MODULE_LIST": "_errors, _http, _json, _retry, _types, _yaml, bayesnet_posteriors, benchmark_cli, benchmark_comparisons, benchmark_datasets, benchmark_graphical, benchmark_metrics, benchmark_models, benchmark_policies, benchmark_publication, benchmark_resources, benchmark_runner, benchmark_sampling, benchmark_store, benchmark_workflows, calibration, cli, client, compose, config, decider, decision_backends, docs_verify, evaluate, evidence, figures, graphical, graphical_animation, graphical_elicitation, graphical_viz, jaggedness, ledger, manuscript_variables, mcp_server, models, primitives, providers, questions, reask, resilience, study_evidence, study_figures",
+  "CODE_LOC": "15754",
+  "CODE_MODULES": "48",
+  "CODE_MODULE_LIST": "_cancellation, _errors, _http, _json, _retry, _types, _yaml, bayesnet_posteriors, benchmark_cli, benchmark_comparisons, benchmark_datasets, benchmark_graphical, benchmark_metrics, benchmark_models, benchmark_policies, benchmark_publication, benchmark_resources, benchmark_runner, benchmark_sampling, benchmark_store, benchmark_workflows, calibration, cli, client, compose, config, decider, decision_backends, docs_verify, evaluate, evidence, figures, graphical, graphical_animation, graphical_elicitation, graphical_viz, jaggedness, ledger, manuscript_variables, mcp_server, models, primitives, providers, questions, reask, resilience, study_evidence, study_figures",
   "CODE_PUBLIC_EXPORTS": "270",
   "CONFIG_BATCHING_N10": "10",
   "CONFIG_BATCHING_N20": "20",
@@ -38,7 +38,7 @@
   "DOCS_SNAPSHOT_ID": "708902db9820d9d8",
   "DOCS_SNAPSHOT_PAGES": "111",
   "FIGURES": "architecture.png, batching_speedup.png, calibration_reliability.png, cohort_sensitivity.png, confidence_bands.png, cpu_quality.png, execution_coverage.png, graphical_abstract.png, latency_percentiles.png, primitives_overview.png, selective_validation.png, validation_folds.png, wine_ordinal.png",
-  "GENERATION_TIMESTAMP": "2026-10-08T22:37:43Z",
+  "GENERATION_TIMESTAMP": "2026-10-08T23:59:11Z",
   "PACKAGE_NAME": "daf-jev",
   "PACKAGE_PYTHON_MIN": "3.10",
   "PACKAGE_VERSION": "0.7.0",
@@ -61,8 +61,8 @@
   "STUDY_NATIVE_COMPLETED": "2005",
   "STUDY_WINE_MAE": "0.2770",
   "STUDY_WINE_PRIOR_MAE": "0.3319",
-  "TEST_COVERAGE_PCT": "93.03",
-  "TEST_FILES_COUNT": "59",
+  "TEST_COVERAGE_PCT": "93.07",
+  "TEST_FILES_COUNT": "60",
   "TEST_LIVE_COUNT": "2",
-  "TEST_UNIT_COUNT": "1703"
+  "TEST_UNIT_COUNT": "1718"
 }

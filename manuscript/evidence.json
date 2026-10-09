@@ -34,7 +34,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/v0.7.0-public-vector-20261008/verification.json",
-    "sha256": "464c09f48dfbe17b84d1d87d9b025d69006beb312bdc3cd0b20a22420440dc23"
+    "path": "output/verification/v0.7.0-public-cancellation-20261008/verification.json",
+    "sha256": "5c6289540229a562fe5c63de6aa21fab7a745b01a4379edd580fc261def2831f"
   }
 }

@@ -20,9 +20,9 @@
     "Archive, https://doi.org/10.5281/zenodo.22816187"
   ],
   "sdist": {
-    "bytes": 278039,
+    "bytes": 279234,
     "name": "daf_jev-0.7.0.tar.gz",
-    "sha256": "ea56a9c7d6ee260faacbc9cb540aa79ea3cb9b89729a8208df33019530e94f17"
+    "sha256": "0bc4965234b7f3ae39ba05a973feca27759edab898ca45433b31a205b8512fd1"
   },
   "sdist_members": [
     "daf_jev-0.7.0/LICENSE",
@@ -37,6 +37,7 @@
     "daf_jev-0.7.0/src/daf_jev.egg-info/requires.txt",
     "daf_jev-0.7.0/src/daf_jev.egg-info/top_level.txt",
     "daf_jev-0.7.0/src/daf_jev/__init__.py",
+    "daf_jev-0.7.0/src/daf_jev/_cancellation.py",
     "daf_jev-0.7.0/src/daf_jev/_errors.py",
     "daf_jev-0.7.0/src/daf_jev/_http.py",
     "daf_jev-0.7.0/src/daf_jev/_json.py",
@@ -88,6 +89,7 @@
   ],
   "source_files": {
     "__init__.py": "6b1704c0946832bb09b8c6029ca20fc73319cc276ce6eb03ff39e3bd28b3a7be",
+    "_cancellation.py": "60118553b13fb11e6adb65fce3bfa50aa77ee2050d03343f7b1d34f41cff4f3c",
     "_errors.py": "179bb8085b7047836cdc23fae53bef2bf948763a9fd58e6a63575eac078325c2",
     "_http.py": "94e89677e248c470f9484e388719bca783e1664aadf827826e0a3b2c93d6aacd",
     "_json.py": "56f91b63fa18816ae4e5cc2659cd533fb6239f17c15343f64e747c20e7e7a29b",
@@ -98,23 +100,23 @@
     "benchmark_cli.py": "ff9cb29a5930b0bc7d7d4efbc2b97a7b5130afadb2fd556f19dc4b174a8617cd",
     "benchmark_comparisons.py": "c489349b1a545a78bfa93729d9cee304725a560a45868fb5bdbdb6189c3b9681",
     "benchmark_datasets.py": "1f01a94de213f45d2c6509a3d17c08c952e41f679be25d2c370f6be640c43767",
-    "benchmark_graphical.py": "fe98516da10a3f7ca019466105f3ea05cdd673ab3531956021acdd9ad57334cf",
+    "benchmark_graphical.py": "567a3ae1bfaa5fcf2949ce632c9e66d5212c827ef326467df9f606831e887869",
     "benchmark_metrics.py": "b00cc9fe0d28f210d5601e76c151bf33131a7f9c6eceae36094e966ed37b4b47",
     "benchmark_models.py": "40a50df29ab309d1b001d615ce7ae2a2d7a5dc87df7f879031df9c5454f07c0a",
     "benchmark_policies.py": "cd948d665ede47a66fa45e68ba77489e3297b1fcf10c941e569735dbebc69eed",
     "benchmark_publication.py": "0c7b012393282861de4ab1bda7168c697b455a83e441a72c6d15bcb81d812d32",
     "benchmark_resources.py": "55a65325326c3d857a6177ef36f1d51d0f013c456318320601363787a4586d0d",
-    "benchmark_runner.py": "3edbb8baba0bc8e629b5bce5efa1bb3a60141ed658878bbffb0830dff3523be0",
+    "benchmark_runner.py": "b51e222f731094b36b9f6a7fbfe33e66784c9472e449d038ffd344e78e454b4e",
     "benchmark_sampling.py": "cdd60fd8a1a77ea935df94c58329d5712bf0d778cd613c04ab49681acb76faf2",
     "benchmark_store.py": "2943ad4845b45ad6a8677fc7fc7aae1b81e1edfdba6a8c230c0645655be9fe0d",
-    "benchmark_workflows.py": "3c057d8448043417c5da5f0028b23d38191097a301c0b8f8a871e60fe9659184",
+    "benchmark_workflows.py": "5c46002568464d2b3fd8a3570bc5059982b9ef5eaa62b754fe379adfb576d40b",
     "calibration.py": "efb7b905d590af97fa6a5f99e7cfb1b7f8a33474b60cea2d92f1a9cfc1168050",
     "cli.py": "70083bb6f6715f5e73306fb11961ee6be3050161c4221eaf8f2481c853d1761c",
     "client.py": "2484fdd034b33a87148cef965d8852ed8f533c17e24309afaa14b960f0fd67f5",
     "compose.py": "f8a9c354ac4933f3754e94f3547b16a5a7e196f2cba8dadbb28a7ead2a3b3091",
     "config.py": "57f1e4fd09f5b8b773cf44679f1306333bdb8bb58a83dff930f02f3820eeef72",
     "decider.py": "caf71bf4c52c002d9f1e2bff5c064e9b06445dc04a48f2b0bf38627bfa72dd74",
-    "decision_backends.py": "949b5c959348e60de223dcb3b0dadbfc129d0e0831bce59c3b02fb9fdbcd8079",
+    "decision_backends.py": "96343430997836d3a9dc1fe407024cc885562f3cb69600dd273b5d1698482053",
     "docs_verify.py": "c7483f364035a4db50e0fc155f43c5b9af6fba1c5147db0312577239281ab5ff",
     "evaluate.py": "53d611cd33c4019807caf43df58f15a45840ab6a9642a34e741134893d98929e",
     "evidence.py": "367f6caf71fa2c5720f5689f6e80244e8cdd6c0348b2218e9cecafea98d2d4c6",
@@ -139,9 +141,9 @@
   "typed_marker": true,
   "version": "0.7.0",
   "wheel": {
-    "bytes": 256513,
+    "bytes": 257872,
     "name": "daf_jev-0.7.0-py3-none-any.whl",
-    "sha256": "7495e9f4ea4560c80baf186437ff0589cd6acc776e5328fcc2e0ebbac9b6a367"
+    "sha256": "a61b5e96059c9094e54cabe6301fcb3e54b84a63e47d2be2fe90f4ecf4b8e78e"
   },
   "wheel_members": [
     "daf_jev-0.7.0.dist-info/METADATA",
@@ -151,6 +153,7 @@
     "daf_jev-0.7.0.dist-info/licenses/LICENSE",
     "daf_jev-0.7.0.dist-info/top_level.txt",
     "daf_jev/__init__.py",
+    "daf_jev/_cancellation.py",
     "daf_jev/_errors.py",
     "daf_jev/_http.py",
     "daf_jev/_json.py",

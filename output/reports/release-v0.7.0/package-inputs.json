@@ -1,9 +1,10 @@
 {
   "files": {
     "LICENSE": "72f87c6cb562ffc6f870dc124d86b45ee0df5460e83fe8443d8e2ae65777e978",
-    "README.md": "11af91156282c18dc23d169d94dadd3d947e1372301821dfb1e66e6ab6416277",
+    "README.md": "3814ddd01ff0e69e95c17ab1c2367afea915f8ae78d7345696396644293e8d58",
     "pyproject.toml": "01f3aef52ee48eece1acbfd96a88cf0d33c329ac9b0015716a39b6e46dc99b85",
     "src/daf_jev/__init__.py": "6b1704c0946832bb09b8c6029ca20fc73319cc276ce6eb03ff39e3bd28b3a7be",
+    "src/daf_jev/_cancellation.py": "60118553b13fb11e6adb65fce3bfa50aa77ee2050d03343f7b1d34f41cff4f3c",
     "src/daf_jev/_errors.py": "179bb8085b7047836cdc23fae53bef2bf948763a9fd58e6a63575eac078325c2",
     "src/daf_jev/_http.py": "94e89677e248c470f9484e388719bca783e1664aadf827826e0a3b2c93d6aacd",
     "src/daf_jev/_json.py": "56f91b63fa18816ae4e5cc2659cd533fb6239f17c15343f64e747c20e7e7a29b",
@@ -14,23 +15,23 @@
     "src/daf_jev/benchmark_cli.py": "ff9cb29a5930b0bc7d7d4efbc2b97a7b5130afadb2fd556f19dc4b174a8617cd",
     "src/daf_jev/benchmark_comparisons.py": "c489349b1a545a78bfa93729d9cee304725a560a45868fb5bdbdb6189c3b9681",
     "src/daf_jev/benchmark_datasets.py": "1f01a94de213f45d2c6509a3d17c08c952e41f679be25d2c370f6be640c43767",
-    "src/daf_jev/benchmark_graphical.py": "fe98516da10a3f7ca019466105f3ea05cdd673ab3531956021acdd9ad57334cf",
+    "src/daf_jev/benchmark_graphical.py": "567a3ae1bfaa5fcf2949ce632c9e66d5212c827ef326467df9f606831e887869",
     "src/daf_jev/benchmark_metrics.py": "b00cc9fe0d28f210d5601e76c151bf33131a7f9c6eceae36094e966ed37b4b47",
     "src/daf_jev/benchmark_models.py": "40a50df29ab309d1b001d615ce7ae2a2d7a5dc87df7f879031df9c5454f07c0a",
     "src/daf_jev/benchmark_policies.py": "cd948d665ede47a66fa45e68ba77489e3297b1fcf10c941e569735dbebc69eed",
     "src/daf_jev/benchmark_publication.py": "0c7b012393282861de4ab1bda7168c697b455a83e441a72c6d15bcb81d812d32",
     "src/daf_jev/benchmark_resources.py": "55a65325326c3d857a6177ef36f1d51d0f013c456318320601363787a4586d0d",
-    "src/daf_jev/benchmark_runner.py": "3edbb8baba0bc8e629b5bce5efa1bb3a60141ed658878bbffb0830dff3523be0",
+    "src/daf_jev/benchmark_runner.py": "b51e222f731094b36b9f6a7fbfe33e66784c9472e449d038ffd344e78e454b4e",
     "src/daf_jev/benchmark_sampling.py": "cdd60fd8a1a77ea935df94c58329d5712bf0d778cd613c04ab49681acb76faf2",
     "src/daf_jev/benchmark_store.py": "2943ad4845b45ad6a8677fc7fc7aae1b81e1edfdba6a8c230c0645655be9fe0d",
-    "src/daf_jev/benchmark_workflows.py": "3c057d8448043417c5da5f0028b23d38191097a301c0b8f8a871e60fe9659184",
+    "src/daf_jev/benchmark_workflows.py": "5c46002568464d2b3fd8a3570bc5059982b9ef5eaa62b754fe379adfb576d40b",
     "src/daf_jev/calibration.py": "efb7b905d590af97fa6a5f99e7cfb1b7f8a33474b60cea2d92f1a9cfc1168050",
     "src/daf_jev/cli.py": "70083bb6f6715f5e73306fb11961ee6be3050161c4221eaf8f2481c853d1761c",
     "src/daf_jev/client.py": "2484fdd034b33a87148cef965d8852ed8f533c17e24309afaa14b960f0fd67f5",
     "src/daf_jev/compose.py": "f8a9c354ac4933f3754e94f3547b16a5a7e196f2cba8dadbb28a7ead2a3b3091",
     "src/daf_jev/config.py": "57f1e4fd09f5b8b773cf44679f1306333bdb8bb58a83dff930f02f3820eeef72",
     "src/daf_jev/decider.py": "caf71bf4c52c002d9f1e2bff5c064e9b06445dc04a48f2b0bf38627bfa72dd74",
-    "src/daf_jev/decision_backends.py": "949b5c959348e60de223dcb3b0dadbfc129d0e0831bce59c3b02fb9fdbcd8079",
+    "src/daf_jev/decision_backends.py": "96343430997836d3a9dc1fe407024cc885562f3cb69600dd273b5d1698482053",
     "src/daf_jev/docs_verify.py": "c7483f364035a4db50e0fc155f43c5b9af6fba1c5147db0312577239281ab5ff",
     "src/daf_jev/evaluate.py": "53d611cd33c4019807caf43df58f15a45840ab6a9642a34e741134893d98929e",
     "src/daf_jev/evidence.py": "367f6caf71fa2c5720f5689f6e80244e8cdd6c0348b2218e9cecafea98d2d4c6",
@@ -53,6 +54,6 @@
     "src/daf_jev/study_evidence.py": "69b384572990e3ae198a47ef9a488fd8924fc4620caa310267e737970f0319ac",
     "src/daf_jev/study_figures.py": "627eca52f9e25fbdafe2bb389232d83f10affc089adb31b3145cc097b908b529"
   },
-  "source_build_commit": "f18a5befed721f735e1637289337318e12a9e112",
-  "source_date_epoch": "1791498487"
+  "source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
+  "source_date_epoch": "1791503951"
 }

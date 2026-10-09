@@ -20,22 +20,25 @@
   "frozen_hosted_plan_source_commit": "f18a5befed721f735e1637289337318e12a9e112",
   "independent_review_receipts_retained_privately": {
     "actual_hosted_expansion_artifacts": "f2d1058ecd6ce56e81bb07839ef2305186ac822e0dd356a4052194192211a622",
+    "current_public_selection_privacy": "94199ea822d1adf8fc4d3dc54fe4a1649e09ef9bc04da30c910861b009d99b4c",
     "direct_retry_status": "06df261c11ab5efd24c53434fae4a254b28b83e2eb0560ac2b37e3a4dd50c418",
+    "fresh_cancellation_revision_artifacts": "2af348c5379975b858f456b5338b9d14b93164e391671c4c1f1587be7567f498",
     "package_checker": "179f4f4c4f362b62640f4ec946718773173186a3955fbbe1786098216385e19c",
     "paired_comparison": "8da38f27cbe541f9d4da3a0f657324ecd02e0015047319f210922947e337a54d",
     "public_source_projection": "f57513bc19754ce4d174d383adc910096fe78f0661052a63ded9f304f4666c97",
+    "python310_cancellation_and_deadline": "d881f20f78a667e5c4dd7128b067d6e77ba71d13e821252675761e8f39f6ac45",
     "raw_vector_landscape_source": "c31a8805466cfc1106562df177b6aad0c1eb52086641df2fa7f42281d1ae80d9",
     "static_inventory": "1de85e298a1883ebf5b10c662ad748c8a0366ce5f36a7da306d5f13214edbebe",
     "verification_projection": "92e02b812a8f33615a1536b9cb44bca765201bf43bb94f155e2ced066f57483b"
   },
-  "manuscript_source_build_commit": "4e3c24f9ac236c39a67a3db33d9fb33f54801702",
-  "manuscript_source_date_epoch": "1791499063",
-  "package_source_build_commit": "f18a5befed721f735e1637289337318e12a9e112",
-  "package_source_date_epoch": "1791498487",
+  "manuscript_source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
+  "manuscript_source_date_epoch": "1791503951",
+  "package_source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
+  "package_source_date_epoch": "1791503951",
   "pdf": {
-    "bytes": 1577836,
+    "bytes": 1577840,
     "path": "output/pdf/daf-jev-0.7.0-manuscript.pdf",
-    "sha256": "99d754f25acc16161004bc6460531cd3f511c81025d51a4e97e7c7be7a7a21c0"
+    "sha256": "6a705987998f3a701e1e28f19eace1328513d550b14f1e9c7cc9d98113823bf1"
   },
   "pdf_page_count": 27,
   "registry_figure_count": 13,
@@ -47,13 +50,15 @@
       "Fonts are hashed reproduction inputs and are not redistributed.",
       "Public summaries do not expose full private original run journals, prepared corpora, runtime inventories or billing/account records. Public selected summaries and figure/map inputs reproduce the manuscript; complete journal-level recomputation also requires the retained private evidence.",
       "The historical hosted summary-reviewed.pdf retains a relative link to an excluded older diagnostic companion PDF; its bytes are historical and unchanged. The new release manuscript is the current companion.",
-      "GitHub publication and software checks do not complete the hosted/native comparative study or reconcile billing."
+      "GitHub publication and software checks do not complete the hosted/native comparative study or reconcile billing.",
+      "The nonexecutable hosted obligation preserves its original f18a5be SDK identity; execution requires a newly frozen manifest and accepted shared-allocation admission after billing closure."
     ],
     "package": "Check out package_source_build_commit; use exact package-inputs.json bytes and recorded SOURCE_DATE_EPOCH; build tools are represented by package metadata and retained receipts. The sdist-to-wheel comparison passed on this host.",
     "pdf": "Clone the public Git repository; check out manuscript_source_build_commit. Overlay released selected evidence, figures, saved map and publication selection. Run scripts/render_pdf.py with fresh output/artifacts paths. HEAD-derived source epoch must match this record."
   },
   "same_host_pdf_byte_equal": true,
   "scientific_acceptance": {
+    "frozen_hosted_plan_uses_prior_sdk_identity": true,
     "full_comparative_study_complete": false,
     "historical_local_model_receipts_do_not_accept_current_sdk": true,
     "hosted_billing_unresolved": true,
@@ -63,13 +68,13 @@
     "original_allocation_usd": "25",
     "shared_allocation_execution_guard_accepted": false
   },
-  "sdk_file_map_sha256": "21000eecb38389127ea149f8dc2f59a3b6ec05b90b550d37cda4d0ed9ce83589",
-  "second_pdf_retained_privately_sha256": "99d754f25acc16161004bc6460531cd3f511c81025d51a4e97e7c7be7a7a21c0",
+  "sdk_file_map_sha256": "a50a2f4a8e21d1b4883956e69c78db76cd229e2dee681103b19c642f3f60983a",
+  "second_pdf_retained_privately_sha256": "6a705987998f3a701e1e28f19eace1328513d550b14f1e9c7cc9d98113823bf1",
   "selected_inputs": {
     "manuscript/evidence.json": {
-      "bytes": 1630,
+      "bytes": 1636,
       "path": "manuscript/evidence.json",
-      "sha256": "55db82e1f42f1a55f2119c5edd3728c1cd83cdeadd4210a47ba71fb07e9dd2ca"
+      "sha256": "755fcf9b4975bc1b00e0bcd31380e227df5672c957761156fee89eeb928f6df9"
     },
     "manuscript/references.bib": {
       "bytes": 17805,
@@ -107,9 +112,9 @@
       "sha256": "ebba6eae325fbc4b61453abfdd82723da4179bd8b49100daa402ad613309b662"
     },
     "output/data/manuscript_variables.json": {
-      "bytes": 3573,
+      "bytes": 3588,
       "path": "output/data/manuscript_variables.json",
-      "sha256": "7cc847f1bfe7e3f0aa57ff1e239be36aaa3dbca3544377c787fdc171eec717d1"
+      "sha256": "b04ae444e9399265e42035becab255ec7788a09be410813c446303cfc2f0d113"
     },
     "output/figures/architecture.mmd": {
       "bytes": 882,
@@ -326,10 +331,30 @@
       "path": "output/reports/hosted-pilot-20261008/summary.json",
       "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
     },
-    "output/verification/v0.7.0-public-vector-20261008/verification.json": {
-      "bytes": 93308,
-      "path": "output/verification/v0.7.0-public-vector-20261008/verification.json",
-      "sha256": "464c09f48dfbe17b84d1d87d9b025d69006beb312bdc3cd0b20a22420440dc23"
+    "output/verification/v0.7.0-public-cancellation-20261008/coverage.json": {
+      "bytes": 750659,
+      "path": "output/verification/v0.7.0-public-cancellation-20261008/coverage.json",
+      "sha256": "d16883a4d45cd30f1ac95d2a561427717f0d7b0a789fa107b1cdf51a7413aa5c"
+    },
+    "output/verification/v0.7.0-public-cancellation-20261008/junit.xml": {
+      "bytes": 1287115,
+      "path": "output/verification/v0.7.0-public-cancellation-20261008/junit.xml",
+      "sha256": "d1c402967e8588d270cbcead736cdef59f6fe85d6cabcf98ea4df51f8b15870b"
+    },
+    "output/verification/v0.7.0-public-cancellation-20261008/live-collection.txt": {
+      "bytes": 581,
+      "path": "output/verification/v0.7.0-public-cancellation-20261008/live-collection.txt",
+      "sha256": "3880d50616762b9daf2eb33f3798c54ea754d290b5450f90d53ab78e84f7b4d1"
+    },
+    "output/verification/v0.7.0-public-cancellation-20261008/unit.txt": {
+      "bytes": 1247910,
+      "path": "output/verification/v0.7.0-public-cancellation-20261008/unit.txt",
+      "sha256": "2db1ee81509128b6c4b15e816d1628a498a06fc2693ad36d1eb7731b9e74a80f"
+    },
+    "output/verification/v0.7.0-public-cancellation-20261008/verification.json": {
+      "bytes": 93958,
+      "path": "output/verification/v0.7.0-public-cancellation-20261008/verification.json",
+      "sha256": "5c6289540229a562fe5c63de6aa21fab7a745b01a4379edd580fc261def2831f"
     }
   },
   "standalone_plan_figure_count": 1,
@@ -337,6 +362,10 @@
   "toolchain": {
     "cross_platform_byte_equality": false,
     "fonts": {
+      "DejaVuSans-Bold.ttf": {
+        "bytes": 704128,
+        "sha256": "b184b89e3c1075f22f6b71575b6fc20d4972b3cfd3b23322ca6fd596dcaef167"
+      },
       "DejaVuSans.ttf": {
         "bytes": 756072,
         "sha256": "3fdf69cabf06049ea70a00b5919340e2ce1e6d02b0cc3c4b44fb6801bd1e0d22"
@@ -377,13 +406,13 @@
     }
   },
   "verification": {
-    "coverage_percent": 93.03,
+    "coverage_percent": 93.07,
     "live_tests_collected": 2,
     "live_tests_executed": 0,
     "public_capture_is_declared_privacy_derivative": true,
     "raw_capture_retained_privately": true,
     "source_files_held": true,
-    "unit_passed": 1703
+    "unit_passed": 1718
   },
   "version": "0.7.0"
 }
