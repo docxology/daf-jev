@@ -34,7 +34,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/v0.7.0-public-cancellation-20261008/verification.json",
-    "sha256": "5c6289540229a562fe5c63de6aa21fab7a745b01a4379edd580fc261def2831f"
+    "path": "output/verification/v0.7.0-public-bounded-labels-20261008/verification.json",
+    "sha256": "fb5eb3262527fe8a9f145618da529fa0ccf4f6224ae1c21ca7dac2d1a9c6ad58"
   }
 }

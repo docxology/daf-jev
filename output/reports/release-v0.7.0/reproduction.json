@@ -1,4 +1,45 @@
 {
+  "additional_runtime_verification": {
+    "macos_python310_locked_benchmark_extra": {
+      "core_only_installed_wheel_is_separate": true,
+      "corrected_fixture_focus": {
+        "aggregate_coverage_gate_unchanged": true,
+        "counts": {
+          "errors": 0,
+          "failures": 0,
+          "passed": 38,
+          "skipped": 0,
+          "tests": 38
+        },
+        "coverage_percent": 11.608596548355585,
+        "interpretation": "Exactly38 prior setup-error cases passed with external temporary-root placement. Focused command exited1 for the unchanged90percent aggregate coverage threshold. No corrected full aggregate run or optional dependency substitution.",
+        "native_exit_code": 1,
+        "receipt_sha256": "a44efdee784a4162db3ad280bbfffdc233847970bef7f23749cb7c873ecccd14"
+      },
+      "failure_classification": {
+        "failed_cases": 13,
+        "fixture_reason": "Temporary directory nested under a repository inherited the parent pytest configuration.",
+        "fixture_setup_errors": 38,
+        "reason": "Locked SciPy Mach-O extension dlopen error; pure import independently reproduced."
+      },
+      "full_branch_coverage_percent": 91.01269944643438,
+      "full_counts": {
+        "errors": 38,
+        "failures": 13,
+        "passed": 1667,
+        "skipped": 0,
+        "total": 1718
+      },
+      "full_native_outcome_sha256": "763876cd18b52e3f7f7c1993ed268f03cb10a930d5767f0a98d692e97a9d541c",
+      "linux_ci_is_separate": true,
+      "native_records_retained_privately": true,
+      "python": "3.10.20",
+      "scikit_learn": "1.7.2",
+      "scipy": "1.15.3",
+      "source_commit": "e46d5ebf813cd1eb9d1919a2a7a57ae5456caa7b",
+      "status": "FULL_COMPATIBILITY_NOT_ACCEPTED"
+    }
+  },
   "bibliography_entry_count": 31,
   "figure_labels": [
     "fig:graphical_abstract",
@@ -20,25 +61,29 @@
   "frozen_hosted_plan_source_commit": "f18a5befed721f735e1637289337318e12a9e112",
   "independent_review_receipts_retained_privately": {
     "actual_hosted_expansion_artifacts": "f2d1058ecd6ce56e81bb07839ef2305186ac822e0dd356a4052194192211a622",
-    "current_public_selection_privacy": "94199ea822d1adf8fc4d3dc54fe4a1649e09ef9bc04da30c910861b009d99b4c",
+    "bounded_verbose_test_labels": "5421810932fd9c3363029485e81af3cc476154b53a0c9e7e5807a707af5649db",
+    "current_G_manuscript_presentation": "0aee2f3c49b69a6c99002340dd0bc651bc6734388ab2a6e103dca55b18c21a81",
+    "current_G_public_selection_projection_disclosure": "7837c6404b62f567f412dc72b627d1cab131e9760fe9120c903fb2bdd79de927",
     "direct_retry_status": "06df261c11ab5efd24c53434fae4a254b28b83e2eb0560ac2b37e3a4dd50c418",
-    "fresh_cancellation_revision_artifacts": "2af348c5379975b858f456b5338b9d14b93164e391671c4c1f1587be7567f498",
+    "oversized_ci_log_investigation_cause_unknown": "d0cfad479a6d10d73841c1091a4572d00ad67da26c8034f2f8fa817aba38162b",
     "package_checker": "179f4f4c4f362b62640f4ec946718773173186a3955fbbe1786098216385e19c",
     "paired_comparison": "8da38f27cbe541f9d4da3a0f657324ecd02e0015047319f210922947e337a54d",
+    "prior_current_public_selection_privacy": "94199ea822d1adf8fc4d3dc54fe4a1649e09ef9bc04da30c910861b009d99b4c",
+    "prior_fresh_cancellation_revision_artifacts": "2af348c5379975b858f456b5338b9d14b93164e391671c4c1f1587be7567f498",
+    "prior_verification_projection": "92e02b812a8f33615a1536b9cb44bca765201bf43bb94f155e2ced066f57483b",
     "public_source_projection": "f57513bc19754ce4d174d383adc910096fe78f0661052a63ded9f304f4666c97",
     "python310_cancellation_and_deadline": "d881f20f78a667e5c4dd7128b067d6e77ba71d13e821252675761e8f39f6ac45",
     "raw_vector_landscape_source": "c31a8805466cfc1106562df177b6aad0c1eb52086641df2fa7f42281d1ae80d9",
-    "static_inventory": "1de85e298a1883ebf5b10c662ad748c8a0366ce5f36a7da306d5f13214edbebe",
-    "verification_projection": "92e02b812a8f33615a1536b9cb44bca765201bf43bb94f155e2ced066f57483b"
+    "static_inventory": "1de85e298a1883ebf5b10c662ad748c8a0366ce5f36a7da306d5f13214edbebe"
   },
-  "manuscript_source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
-  "manuscript_source_date_epoch": "1791503951",
+  "manuscript_source_build_commit": "e46d5ebf813cd1eb9d1919a2a7a57ae5456caa7b",
+  "manuscript_source_date_epoch": "1791506780",
   "package_source_build_commit": "680a73573f77ad3cd89c662c0f83504bc4379087",
   "package_source_date_epoch": "1791503951",
   "pdf": {
-    "bytes": 1577840,
+    "bytes": 1577836,
     "path": "output/pdf/daf-jev-0.7.0-manuscript.pdf",
-    "sha256": "6a705987998f3a701e1e28f19eace1328513d550b14f1e9c7cc9d98113823bf1"
+    "sha256": "d0fa9ce1ae61763cf12d33b1f2155effdb8852ba67273d46b10f7e77424420c0"
   },
   "pdf_page_count": 27,
   "registry_figure_count": 13,
@@ -51,7 +96,8 @@
       "Public summaries do not expose full private original run journals, prepared corpora, runtime inventories or billing/account records. Public selected summaries and figure/map inputs reproduce the manuscript; complete journal-level recomputation also requires the retained private evidence.",
       "The historical hosted summary-reviewed.pdf retains a relative link to an excluded older diagnostic companion PDF; its bytes are historical and unchanged. The new release manuscript is the current companion.",
       "GitHub publication and software checks do not complete the hosted/native comparative study or reconcile billing.",
-      "The nonexecutable hosted obligation preserves its original f18a5be SDK identity; execution requires a newly frozen manifest and accepted shared-allocation admission after billing closure."
+      "The nonexecutable hosted obligation preserves its original f18a5be SDK identity; execution requires a newly frozen manifest and accepted shared-allocation admission after billing closure.",
+      "The locked Mac/Python3.10 optional compiled benchmark environment failed SciPy loading and is not accepted. Core-only Python3.10 installed-wheel checks, Mac/Python3.14 aggregate checks, and Ubuntu CI are distinct evidence lanes."
     ],
     "package": "Check out package_source_build_commit; use exact package-inputs.json bytes and recorded SOURCE_DATE_EPOCH; build tools are represented by package metadata and retained receipts. The sdist-to-wheel comparison passed on this host.",
     "pdf": "Clone the public Git repository; check out manuscript_source_build_commit. Overlay released selected evidence, figures, saved map and publication selection. Run scripts/render_pdf.py with fresh output/artifacts paths. HEAD-derived source epoch must match this record."
@@ -69,12 +115,12 @@
     "shared_allocation_execution_guard_accepted": false
   },
   "sdk_file_map_sha256": "a50a2f4a8e21d1b4883956e69c78db76cd229e2dee681103b19c642f3f60983a",
-  "second_pdf_retained_privately_sha256": "6a705987998f3a701e1e28f19eace1328513d550b14f1e9c7cc9d98113823bf1",
+  "second_pdf_retained_privately_sha256": "d0fa9ce1ae61763cf12d33b1f2155effdb8852ba67273d46b10f7e77424420c0",
   "selected_inputs": {
     "manuscript/evidence.json": {
-      "bytes": 1636,
+      "bytes": 1638,
       "path": "manuscript/evidence.json",
-      "sha256": "755fcf9b4975bc1b00e0bcd31380e227df5672c957761156fee89eeb928f6df9"
+      "sha256": "f3653ac2d9438ebb73d6984ff54c845eb0b9bac6e0149db8eb32dcd929e62ba3"
     },
     "manuscript/references.bib": {
       "bytes": 17805,
@@ -114,7 +160,7 @@
     "output/data/manuscript_variables.json": {
       "bytes": 3588,
       "path": "output/data/manuscript_variables.json",
-      "sha256": "b04ae444e9399265e42035becab255ec7788a09be410813c446303cfc2f0d113"
+      "sha256": "b3077c0a4da60b5467aee05a2670db86ab99ac14f0ecd5f39af6ab5b79a3d416"
     },
     "output/figures/architecture.mmd": {
       "bytes": 882,
@@ -331,30 +377,30 @@
       "path": "output/reports/hosted-pilot-20261008/summary.json",
       "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
     },
-    "output/verification/v0.7.0-public-cancellation-20261008/coverage.json": {
-      "bytes": 750659,
-      "path": "output/verification/v0.7.0-public-cancellation-20261008/coverage.json",
-      "sha256": "d16883a4d45cd30f1ac95d2a561427717f0d7b0a789fa107b1cdf51a7413aa5c"
+    "output/verification/v0.7.0-public-bounded-labels-20261008/coverage.json": {
+      "bytes": 750657,
+      "path": "output/verification/v0.7.0-public-bounded-labels-20261008/coverage.json",
+      "sha256": "ff4bf504771a86fbbe814b6cf842cd575d8dfd7551e2e0f172f93a07093827ec"
     },
-    "output/verification/v0.7.0-public-cancellation-20261008/junit.xml": {
-      "bytes": 1287115,
-      "path": "output/verification/v0.7.0-public-cancellation-20261008/junit.xml",
-      "sha256": "d1c402967e8588d270cbcead736cdef59f6fe85d6cabcf98ea4df51f8b15870b"
+    "output/verification/v0.7.0-public-bounded-labels-20261008/junit.xml": {
+      "bytes": 238365,
+      "path": "output/verification/v0.7.0-public-bounded-labels-20261008/junit.xml",
+      "sha256": "299c5293c5301b4f94f3424f66f98f2776c7b1a0555e58f87a3d653aad788c67"
     },
-    "output/verification/v0.7.0-public-cancellation-20261008/live-collection.txt": {
+    "output/verification/v0.7.0-public-bounded-labels-20261008/live-collection.txt": {
       "bytes": 581,
-      "path": "output/verification/v0.7.0-public-cancellation-20261008/live-collection.txt",
-      "sha256": "3880d50616762b9daf2eb33f3798c54ea754d290b5450f90d53ab78e84f7b4d1"
+      "path": "output/verification/v0.7.0-public-bounded-labels-20261008/live-collection.txt",
+      "sha256": "6251f1718fdb0d256677fbcf30767cdf80b2dc622ac609a78ee5dd97a5560b8b"
     },
-    "output/verification/v0.7.0-public-cancellation-20261008/unit.txt": {
-      "bytes": 1247910,
-      "path": "output/verification/v0.7.0-public-cancellation-20261008/unit.txt",
-      "sha256": "2db1ee81509128b6c4b15e816d1628a498a06fc2693ad36d1eb7731b9e74a80f"
+    "output/verification/v0.7.0-public-bounded-labels-20261008/unit.txt": {
+      "bytes": 199279,
+      "path": "output/verification/v0.7.0-public-bounded-labels-20261008/unit.txt",
+      "sha256": "dfa882aa55cad21c32ab81d57f437c2ac5640943e2367ad63de901ea981c377f"
     },
-    "output/verification/v0.7.0-public-cancellation-20261008/verification.json": {
-      "bytes": 93958,
-      "path": "output/verification/v0.7.0-public-cancellation-20261008/verification.json",
-      "sha256": "5c6289540229a562fe5c63de6aa21fab7a745b01a4379edd580fc261def2831f"
+    "output/verification/v0.7.0-public-bounded-labels-20261008/verification.json": {
+      "bytes": 93956,
+      "path": "output/verification/v0.7.0-public-bounded-labels-20261008/verification.json",
+      "sha256": "fb5eb3262527fe8a9f145618da529fa0ccf4f6224ae1c21ca7dac2d1a9c6ad58"
     }
   },
   "standalone_plan_figure_count": 1,
@@ -406,7 +452,7 @@
     }
   },
   "verification": {
-    "coverage_percent": 93.07,
+    "coverage_percent": 93.05,
     "live_tests_collected": 2,
     "live_tests_executed": 0,
     "public_capture_is_declared_privacy_derivative": true,
