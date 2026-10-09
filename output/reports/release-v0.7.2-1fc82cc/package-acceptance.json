@@ -1,0 +1,56 @@
+{
+  "async_connection_reused": true,
+  "dependencies_extras_entrypoints_equal": true,
+  "format": "dafjev.independent-installed-package-acceptance-public/1",
+  "full_test_suite": "SEPARATE_NOT_EXECUTED_BY_PACKAGE_REVIEW",
+  "hosted_requests": 0,
+  "installed_cli_checks_passed": 14,
+  "installed_core_only": true,
+  "installed_distribution_count": 11,
+  "installed_extra_probe_failures": [
+    {
+      "classification": "UNSUPPORTED_OUTSIDE_GIT_SOURCE_CHECKOUT",
+      "exit_code": 1,
+      "mutation_before_failure": false,
+      "operation": "benchmark plan",
+      "reason": "Installed planner requires Git-backed source provenance; no frozen plan was created."
+    }
+  ],
+  "installed_loopback_requests": 3,
+  "installed_planning": {
+    "contract": "docs/reproducibility.md:43",
+    "inference_attempted": false,
+    "reason": "source_checkout_required",
+    "run_created": false,
+    "status": "UNSUPPORTED"
+  },
+  "malformed_recovery_refused": true,
+  "model_requests": 0,
+  "offline_synthetic_examples": 12,
+  "optional_runtime_acceptance": "UNVERIFIED",
+  "pep561": true,
+  "prior_public_proposal_sha256": "3e2fcb391fe55f28d52721dd7ff59014c8fcc573bb800a355238a72ff41e2900",
+  "private_package_inspector_sha256": "c94808399ae1775b27fd074b640d1740f17a384cda176dcb0226e79284416582",
+  "private_planning_assessment_sha256": "3e2fd90c33e2e56c7b52c12ce51e6572b5bea92b26116ace2ea73a112baded1b",
+  "private_review_sha256": "f950b665177126123a3d751fabc0050c130ddb4cb2eef1fec7c89b9488b5b9f7",
+  "python": "3.10.20",
+  "read_only_custody_held": true,
+  "sdist": {
+    "bytes": 307908,
+    "name": "daf_jev-0.7.2.tar.gz",
+    "sha256": "d2aa8f9101bf6d8e1a9c72ed84a9fb4b3b28d3b7ea6f3bd30ad95d8ed1b8392d"
+  },
+  "sdist_rebuilt_wheel_byte_identical": true,
+  "source_custody_held": true,
+  "source_date_epoch": "1791578224",
+  "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300",
+  "source_modules_equal": 50,
+  "status": "PASS_CORE_AND_SDIST_REPRODUCTION_WITH_INSTALLED_PLANNING_LIMITATION",
+  "tracked_inventory_count": 490,
+  "version": "0.7.2",
+  "wheel": {
+    "bytes": 285991,
+    "name": "daf_jev-0.7.2-py3-none-any.whl",
+    "sha256": "72d17cbcf3beebc32c43019b76565c700a46769847a0933bb6a9fd5135f63d20"
+  }
+}

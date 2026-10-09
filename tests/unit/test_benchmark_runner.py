@@ -834,6 +834,347 @@ def _priced_profile():
         "options": {"max_tokens": 20}}
 
 
+def _supported_native_profile():
+    return {"id": "jev-native", "kind": "http", "hosted": True, "mode": "systemone",
+        "model": "typesafe/jev-1.13", "endpoint": "https://openrouter.ai/api/alpha/decisions",
+        "context_length": 64000, "api_key_env": "DAFJEV_BENCHMARK_FIXTURE_CREDENTIAL",
+        "pricing": {"source": "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints",
+                    "snapshot_at": "2026-10-09T17:40:17Z",
+                    "native_billing_contract": "openrouter-typesafe-jev-1.13-input32000/1",
+                    "rates": {"prompt": "0.000000042", "completion": "0", "discount": "0"}},
+        "options": {"provider": {"only": ["typesafe"], "allow_fallbacks": False,
+            "require_parameters": True, "max_price": {"prompt": .042, "completion": 0,
+                                                       "request": 0, "image": 0}}}}
+
+
+def test_supported_native_contract_freezes_code_owned_bound_and_sent_ceiling(tmp_path):
+    profile = _supported_native_profile()
+    profile["context_length"] = 64000000  # catalog/caller context cannot widen this guarantee
+    profile["artifact"] = {"aggregate_input_tokens": 99999999}
+    profile["options"]["provider"]["max_price"]["prompt"] = .05
+    with localcontext() as ambient:
+        ambient.prec = 2
+        ambient.rounding = ROUND_DOWN
+        ambient.Emax = 0
+        ambient.traps[Inexact] = True
+        store = plan_run(_config(tmp_path, backends=[profile]), tmp_path / "runs")
+        frozen = store.manifest["backends"][0]
+        assert Decimal(frozen["liability_usd"]) == Decimal("0.001600000")
+        assert ambient.prec == 2 and ambient.traps[Inexact]
+    contract = frozen["native_billing_contract"]
+    assert contract["id"] == profile["pricing"]["native_billing_contract"]
+    assert contract["max_input_tokens"] == 32000 and contract["input_scope"] == "state plus questions"
+    assert tuple(contract["sources"]) == ("https://openrouter.ai/docs/guides/community/jev",
+        "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints")
+    assert content_hash(frozen["options"]) == content_hash(profile["options"])
+    assert frozen["admission_reason"] is None
+
+
+@pytest.mark.parametrize("defect", [
+    "missing_selector", "unknown_selector", "alias", "kev", "model_variant", "systemone_endpoint",
+    "chat_endpoint", "mode", "source", "missing_time", "missing_provider", "missing_only",
+    "other_provider", "fallback", "required_parameters", "extra_route", "extra_price_cap",
+    "missing_price_cap", "temperature", "max_tokens", "plugins", "response_format",
+    "output_rate", "output_ceiling", "request_price", "image_price", "surcharge",
+    "cache_premium", "insufficient_input_ceiling",
+])
+def test_native_billing_contract_refuses_unsupported_identity_or_controls(defect):
+    from daf_jev.benchmark_runner import _liability
+
+    profile = _supported_native_profile()
+    pricing, options = profile["pricing"], profile["options"]
+    provider = options["provider"]
+    if defect == "missing_selector":
+        pricing.pop("native_billing_contract")
+    elif defect == "unknown_selector":
+        pricing["native_billing_contract"] += "-caller-extension"
+    elif defect in {"alias", "kev", "model_variant"}:
+        profile["model"] = {"alias": "typesafe/jev", "kev": "kev/kev-0.8b",
+                            "model_variant": "typesafe/jev-1.13-20260917"}[defect]
+    elif defect in {"systemone_endpoint", "chat_endpoint"}:
+        profile["endpoint"] = "https://openrouter.ai/api/v1/" + (
+            "systemone" if defect == "systemone_endpoint" else "chat/completions")
+    elif defect == "mode":
+        profile["mode"] = "chat"
+    elif defect == "source":
+        pricing["source"] = "caller-declared guarantee"
+    elif defect == "missing_time":
+        pricing.pop("snapshot_at")
+    elif defect == "missing_provider":
+        options.pop("provider")
+    elif defect == "missing_only":
+        provider.pop("only")
+    elif defect == "other_provider":
+        provider["only"].append("another-provider")
+    elif defect == "fallback":
+        provider["allow_fallbacks"] = True
+    elif defect == "required_parameters":
+        provider["require_parameters"] = False
+    elif defect == "extra_route":
+        provider["sort"] = "price"
+    elif defect == "extra_price_cap":
+        provider["max_price"]["web_search"] = 0
+    elif defect == "missing_price_cap":
+        provider["max_price"].pop("request")
+    elif defect in {"temperature", "max_tokens", "plugins", "response_format"}:
+        options[defect] = 1
+    elif defect in {"output_rate", "request_price", "image_price", "surcharge", "cache_premium"}:
+        key = {"output_rate": "completion", "request_price": "request", "image_price": "image",
+               "surcharge": "internal_reasoning", "cache_premium": "input_cache_write"}[defect]
+        pricing["rates"][key] = "0.1"
+    elif defect == "output_ceiling":
+        provider["max_price"]["completion"] = .1
+    else:
+        provider["max_price"]["prompt"] = .041
+    before = json.dumps(profile, sort_keys=True)
+    assert _liability(profile) is None
+    # Rejected explicit selectors must not be rescued by mutating route flags.
+    if defect not in {"missing_selector", "missing_time"}:
+        assert json.dumps(profile, sort_keys=True) == before
+
+
+def test_native_contract_profile_metadata_cannot_be_declared_by_caller(tmp_path):
+    profile = _supported_native_profile()
+    profile["native_billing_contract"] = {"max_input_tokens": 99999999}
+    with pytest.raises(ValueError, match="metadata is derived"):
+        plan_run(_config(tmp_path, backends=[profile]), tmp_path / "runs")
+    assert not (tmp_path / "runs").exists()
+
+
+@pytest.mark.parametrize("defect", ["missing_descriptor", "enlarged_bound", "scope", "sources", "missing_selector"])
+def test_execution_rejects_native_contract_descriptor_drift_without_transport(tmp_path, defect):
+    planned = plan_run(_config(tmp_path, backends=[_supported_native_profile()]), tmp_path / "planned")
+    manifest = json.loads(json.dumps(planned.manifest))
+    frozen = manifest["backends"][0]
+    if defect == "missing_descriptor":
+        frozen.pop("native_billing_contract")
+    elif defect == "enlarged_bound":
+        frozen["native_billing_contract"]["max_input_tokens"] = 64000
+    elif defect == "scope":
+        frozen["native_billing_contract"]["input_scope"] = "each question independently"
+    elif defect == "sources":
+        frozen["native_billing_contract"]["sources"] = ["caller document"]
+    else:
+        frozen["pricing"].pop("native_billing_contract")
+    store = RunStore.create(tmp_path / "stale", manifest)
+    (store.directory / "inputs").mkdir()
+    shutil.copyfile(planned.directory / "inputs/dataset-0.json", store.directory / "inputs/dataset-0.json")
+    before = (store.directory / "manifest.json").read_bytes()
+    report = execute_run(store.directory)
+    assert report["denominators"] == {"unattempted": 4}
+    assert {cell["reason"] for cell in report["cells"]} == {"frozen_native_billing_contract_mismatch"}
+    assert not any(e["event"] in {"backend_ready", "attempt_started", "attempt_finished"} for e in store.events())
+    assert (store.directory / "manifest.json").read_bytes() == before
+
+
+def test_supported_native_frozen_contract_reaches_budget_guard_without_io(tmp_path, monkeypatch):
+    monkeypatch.setenv("DAFJEV_BENCHMARK_FIXTURE_CREDENTIAL", "public-unit-test-placeholder")
+    store = plan_run(_config(tmp_path, backends=[_supported_native_profile()]), tmp_path / "runs")
+    before = (store.directory / "manifest.json").read_bytes()
+    assert Decimal(store.manifest["backends"][0]["liability_usd"]) == Decimal("0.001344000")
+    report = execute_run(store.directory)
+    assert report["denominators"] == {"unattempted": 4}
+    assert any(e["event"] == "backend_ready" for e in store.events())
+    assert not any(e["event"] == "attempt_started" for e in store.events())
+    assert (store.directory / "manifest.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("input_tokens", [32000, 32001])
+def test_native_contract_receipt_retained_before_durable_shared_stop(tmp_path, input_tokens):
+    from daf_jev.benchmark_runner import (
+        _native_billing_contract,
+        _NativeContractObserver,
+    )
+    from daf_jev.benchmark_store import BudgetStopped, SpendLedger
+    from daf_jev.decision_backends import CallReceipt, utc_now
+
+    profile = _supported_native_profile()
+    store = plan_run(_config(tmp_path, backends=[profile], budget="25"), tmp_path / "runs")
+    allocation = AllocationLedger(tmp_path / "fixture-allocation")
+    cell = store.manifest["cells"][0]
+    contract = _native_billing_contract(profile)
+    assert contract is not None
+    with allocation.execution(store):
+        ledger = SpendLedger(store, limit="25", allocation=allocation)
+        observer = _NativeContractObserver(ledger.observer(cell_id=cell["id"], hosted=True,
+            liability_usd=store.manifest["backends"][0]["liability_usd"]), ledger, contract)
+        attempt = observer.before("public-fixture-hash", profile["model"], profile["endpoint"])
+        # Deliberate synthetic billing fixture, never a provider observation.
+        receipt = CallReceipt(attempt, utc_now(), profile["endpoint"], profile["model"], profile["model"],
+                              "TypeSafe", "public-fixture-response", "public-fixture-hash",
+                              .1, 200, input_tokens, 0, ".000001", "reported")
+        if input_tokens > 32000:
+            with pytest.raises(BudgetStopped, match="contract breached"):
+                observer.after(receipt)
+            with pytest.raises(BudgetStopped):
+                observer.before("retry-fixture-hash", profile["model"], profile["endpoint"])
+        else:
+            observer.after(receipt)
+        finished = [e["receipt"] for e in store.events() if e["event"] == "attempt_finished"]
+        assert finished == [receipt.to_dict()]
+        snapshot = ledger.snapshot()
+        assert Decimal(snapshot["reported_cost_usd"]) == Decimal(".000001")
+        assert snapshot["reserved_usd"] == "0" and snapshot["unresolved_attempts"] == []
+        assert snapshot["admission_stopped"] is (input_tokens > 32000)
+    snapshot = AllocationLedger(tmp_path / "fixture-allocation", read_only=True).snapshot()
+    assert snapshot["admission_stopped"] is (input_tokens > 32000)
+    assert ("native_input_contract_breach" in snapshot["stop_reasons"]) is (input_tokens > 32000)
+
+
+@pytest.mark.parametrize("options", [77, 151])
+@pytest.mark.parametrize("status,input_tokens", [(200, 32000), (200, 32001), (503, 32001)])
+def test_native_contract_real_keyless_http_full_vocab_preserves_receipt_on_breach(tmp_path, stub,
+                                                                                options, status, input_tokens):
+    from daf_jev import choice
+    from daf_jev.benchmark_runner import (
+        _native_billing_contract,
+        _NativeContractObserver,
+    )
+    from daf_jev.benchmark_store import BudgetStopped, SpendLedger
+    from daf_jev.decision_backends import (
+        AsyncHTTPDecisionBackend,
+        BackendCapabilities,
+        DecisionRequest,
+    )
+
+    # Loopback validates wire/receipt behavior; it cannot establish hosted acceptance.
+    store = RunStore.create(tmp_path / "loopback", {"fixture": "native full vocabulary"})
+    ledger = SpendLedger(store)
+    contract = _native_billing_contract(_supported_native_profile())
+    assert contract is not None
+    observer = _NativeContractObserver(ledger.observer(cell_id="loopback-cell", hosted=False,
+                                                       liability_usd="0"), ledger, contract)
+    labels = [f"option-{i:03}" for i in range(options)]
+    probabilities = {label: float(index == 0) for index, label in enumerate(labels)}
+    body = {"model": "typesafe/jev-1.13", "answers": {"decision": {"type": "choice",
+            "choice": labels[0], "probabilities": probabilities, "confidence": 1}},
+            "usage": {"input_tokens": input_tokens, "output_tokens": 0}}
+    stub.enqueue(status, body=body)
+
+    async def call():
+        backend = AsyncHTTPDecisionBackend(endpoint=stub.base_url + "/api/alpha/decisions",
+            model="typesafe/jev-1.13", capabilities=BackendCapabilities(max_options=255))
+        request = DecisionRequest("public keyless native fixture", {"decision": choice("Choose.",
+                                  dict.fromkeys(labels))}, observer=observer)
+        try:
+            if input_tokens > 32000:
+                with pytest.raises(BudgetStopped, match="contract breached"):
+                    await backend.predict(request)
+            else:
+                result = await backend.predict(request)
+                assert result.predictions["decision"].value == labels[0]
+        finally:
+            await backend.close()
+
+    asyncio.run(call())
+    assert len(stub.hits) == 1 and list(stub.hits[0]["json"]["questions"]["decision"]["criteria"]) == labels
+    assert "authorization" not in stub.hits[0]["headers"]
+    receipts = [e["receipt"] for e in store.events() if e["event"] == "attempt_finished"]
+    assert len(receipts) == 1 and receipts[0]["input_tokens"] == input_tokens
+    assert receipts[0]["status_code"] == status and receipts[0]["cost_status"] == "local"
+    assert receipts[0]["request_hash"] == content_hash(stub.hits[0]["json"])
+    assert receipts[0]["error"] == ("BackendHTTPError" if status == 503 else None)
+    assert ledger.snapshot()["admission_stopped"] is (input_tokens > 32000)
+
+
+def test_native_contract_stop_excludes_racing_admission(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+    from daf_jev.benchmark_runner import (
+        _native_billing_contract,
+        _NativeContractObserver,
+    )
+    from daf_jev.benchmark_store import BudgetStopped, SpendLedger
+    from daf_jev.decision_backends import CallReceipt, utc_now
+
+    store = RunStore.create(tmp_path / "race", {"fixture": "native contract race"})
+    ledger = SpendLedger(store)
+    delegate = ledger.observer(cell_id="owned-race", hosted=True, liability_usd=".001344")
+    entered, release, racing = threading.Event(), threading.Event(), threading.Event()
+
+    class PausedFinalizer:
+        def before(self, request_hash, model, endpoint):
+            return delegate.before(request_hash, model, endpoint)
+
+        def after(self, receipt):
+            entered.set()
+            assert release.wait(2)
+            delegate.after(receipt)
+
+    profile = _supported_native_profile()
+    contract = _native_billing_contract(profile)
+    assert contract is not None
+    observer = _NativeContractObserver(PausedFinalizer(), ledger, contract)
+    attempt = observer.before("public-race-first", profile["model"], profile["endpoint"])
+    receipt = CallReceipt(attempt, utc_now(), profile["endpoint"], profile["model"], profile["model"],
+                          "TypeSafe", "public-race-response", "public-race-first", .1,
+                          200, 32001, 0, ".000001", "reported")
+
+    def race():
+        racing.set()
+        with pytest.raises(BudgetStopped):
+            observer.before("public-race-second", profile["model"], profile["endpoint"])
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        finalization = pool.submit(observer.after, receipt)
+        assert entered.wait(2)
+        admission = pool.submit(race)
+        assert racing.wait(2)
+        try:
+            with pytest.raises(TimeoutError):
+                admission.result(timeout=.05)
+        finally:
+            release.set()
+        with pytest.raises(BudgetStopped, match="contract breached"):
+            finalization.result(timeout=2)
+        admission.result(timeout=2)
+    assert len([e for e in store.events() if e["event"] == "attempt_started"]) == 1
+    assert [e["receipt"] for e in store.events() if e["event"] == "attempt_finished"] == [receipt.to_dict()]
+
+
+def test_native_contract_observer_preserves_cancelled_keyless_http_receipt(tmp_path, stub):
+    from daf_jev import choice
+    from daf_jev.benchmark_runner import (
+        _native_billing_contract,
+        _NativeContractObserver,
+    )
+    from daf_jev.benchmark_store import SpendLedger
+    from daf_jev.decision_backends import AsyncHTTPDecisionBackend, DecisionRequest
+
+    store = RunStore.create(tmp_path / "cancel", {"fixture": "native contract cancellation"})
+    ledger = SpendLedger(store)
+    contract = _native_billing_contract(_supported_native_profile())
+    assert contract is not None
+    observer = _NativeContractObserver(ledger.observer(cell_id="owned-cancellation", hosted=False,
+                                                       liability_usd="0"), ledger, contract)
+    stub.enqueue(body=_native(), delay=.3)
+
+    async def call():
+        backend = AsyncHTTPDecisionBackend(endpoint=stub.base_url + "/api/alpha/decisions",
+                                           model="typesafe/jev-1.13")
+        request = DecisionRequest("owned public cancellation fixture", {"decision": choice("Choose.",
+                                   {"billing": None, "account": None, "technical": None})}, observer=observer)
+        task = asyncio.create_task(backend.predict(request))
+        try:
+            for _ in range(100):
+                if stub.hits:
+                    break
+                await asyncio.sleep(.005)
+            assert len(stub.hits) == 1
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        finally:
+            await backend.close()
+
+    asyncio.run(call())
+    receipts = [e["receipt"] for e in store.events() if e["event"] == "attempt_finished"]
+    assert len(receipts) == 1 and receipts[0]["error"] == "CancelledError"
+    assert receipts[0]["input_tokens"] is None and receipts[0]["cost_status"] == "local"
+    assert ledger.snapshot()["reserved_usd"] == "0"
+    assert "authorization" not in stub.hits[0]["headers"]
+
+
 def test_actual_sent_price_ceiling_is_reserved_instead_of_catalog_minimum(tmp_path):
     from daf_jev import choice
     from daf_jev.benchmark_store import BudgetStopped, SpendLedger
@@ -1136,32 +1477,59 @@ def test_cascade_strong_admission_stop_retains_completed_weak_as_failed_workflow
 
 @pytest.mark.parametrize("local_limit", [.02, .2])
 def test_cascade_weak_deadline_cancels_without_strong_call_or_implicit_retry(tmp_path, monkeypatch, local_limit):
+    import daf_jev.benchmark_runner as runner
+
+    class ProfileClock:
+        now = 0.0
+
+        def perf_counter(self):
+            return self.now
+
+    clock, awaited_deadlines = ProfileClock(), []
+
+    class RunnerAsyncio:
+        def __getattr__(self, name):
+            return getattr(asyncio, name)
+
+        async def wait_for(self, future, *, timeout):
+            awaited_deadlines.append(timeout)
+            try:
+                return await asyncio.wait_for(future, timeout=timeout)
+            finally:
+                # Setup/reporting speed does not spend the controlled profile
+                # budget. The real awaited deadline expires its remaining cells.
+                clock.now = local_limit + 1.0
+
+    # Replace only the runner's bindings; transport, resource sampling and the
+    # event loop retain their real clocks and the unchanged .02/.2 deadlines.
+    monkeypatch.setattr(runner, "time", clock)
+    monkeypatch.setattr(runner, "asyncio", RunnerAsyncio())
     with _blocked_cascade_server() as server:
         store = _http_cascade_store(tmp_path, server, monkeypatch, local_limit=local_limit)
-        began = time.perf_counter()
         report = execute_run(store.directory)
-        assert time.perf_counter() - began < .9
         repeated = execute_run(store.directory)
         assert all(hit["path"] == "/weak" for hit in server.hits)
+        assert len(server.hits) <= 1
     events = store.events()
     starts = [event for event in events if event["event"] == "attempt_started"]
     receipts = [event["receipt"] for event in events if event["event"] == "attempt_finished"]
-    # Durable admission happens before the first transport await. A profile
-    # deadline may expire during setup or after admission but before TCP I/O;
-    # neither outcome establishes that the server observed a request.
-    assert len(starts) == len(receipts) <= 1
-    if starts:
-        assert starts[0]["attempt_id"] == receipts[0]["attempt_id"]
-        assert receipts[0]["error"] == "CancelledError"
-        failed = next(event for event in events if event["event"] == "cell_finished" and event["status"] == "failed")
-        assert failed["error"] == "TimeoutError"
-        assert failed["workflow"]["weak_status"] == "unresolved"
-        assert failed["workflow"]["strong_status"] == "unattempted"
-        assert failed["workflow"]["observed_receipts"] == receipts
-        assert report["denominators"] == {"failed": 1, "unattempted": len(store.manifest["cells"]) - 1}
-    else:
-        assert report["denominators"] == {"unattempted": len(store.manifest["cells"])}
-        assert all(cell["reason"] == "local_execution_deadline" for cell in report["cells"])
+    # The controlled profile clock reaches the real transport await. Durable
+    # admission/cancellation alone does not establish that the server saw I/O.
+    assert len(starts) == len(receipts) == 1
+    assert starts[0]["attempt_id"] == receipts[0]["attempt_id"]
+    assert receipts[0]["error"] == "CancelledError"
+    assert receipts[0]["status_code"] is None
+    failed = next(event for event in events if event["event"] == "cell_finished" and event["status"] == "failed")
+    assert failed["error"] == "TimeoutError"
+    assert failed["workflow"]["weak_status"] == "unresolved"
+    assert failed["workflow"]["strong_status"] == "unattempted"
+    assert failed["workflow"]["strong_invoked"] is False
+    assert failed["workflow"]["attempt_ids"] == {"weak": [receipts[0]["attempt_id"]], "strong": []}
+    assert failed["workflow"]["observed_receipts"] == receipts
+    assert report["denominators"] == {"failed": 1, "unattempted": len(store.manifest["cells"]) - 1}
+    assert all(cell["reason"] == "local_execution_deadline"
+               for cell in report["cells"] if cell["status"] == "unattempted")
+    assert awaited_deadlines == [local_limit]
     assert all(not event["hosted"] for event in starts)
     resources = [event for event in events if event["event"] == "resources_observed"]
     assert resources[0]["backend"] == "weak" and resources[0]["resources"]["wall_s"] >= local_limit

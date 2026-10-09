@@ -8,8 +8,10 @@ retains the run ledger and does not require hosted accounting.
 
 The first research allocation remains **USD 25 total**, including probes,
 failures and retries. Its original failed hosted probe has unknown billing.
-Importing that evidence must retain the uncertainty and stop further hosted
-admission. Account aggregate usage, a free catalog price or an absent activity
+Importing that evidence retains the uncertainty and stops further hosted
+admission by default. An explicitly accepted, independently reviewed upper-bound
+exception for a finished attempt can permit continuation without reconciling its
+charge or enlarging the allowance. Account aggregate usage, a free catalog price or an absent activity
 row does not establish the charge of that individual attempt.
 
 ## Explicit operations
@@ -84,7 +86,8 @@ first reserves bounded liability in the shared journal, then records the run
 intent. Only then can transport begin. Completion saves the run receipt before
 shared reconciliation. A crash or inconsistent second write cannot silently
 release a shared reservation. Unknown billing retains liability and stops new
-hosted requests, including attempts with zero nominal reservation.
+hosted requests, including attempts with zero nominal reservation, unless the
+exact finished historical attempt receives the reviewed exception below.
 Shared completion must match the exact durable per-run receipt, including its
 cost and billing provenance, before releasing liability for another admission.
 A valid journal hash chain alone cannot authorize a contradictory charge.
@@ -128,8 +131,8 @@ change or new manifest cannot reset historical local execution allowances.
 
 No automatic process-liveness inference, uncertain-attempt replay or
 account-aggregate reconciliation closes a stop. Retain original evidence and
-obtain evidence for the exact attempted call before any additional hosted
-execution. Administrative evidence cannot fabricate a reported provider cost.
+obtain exact charge evidence or accept a reviewed request-specific upper bound
+for the finished attempted call before additional hosted execution. Administrative evidence cannot fabricate a reported provider cost.
 
 ## External evidence for a finished UNKNOWN attempt
 
@@ -225,3 +228,67 @@ unrecorded historical calls. The declared allocation and import inventory need
 human ownership and independent review. The frozen expanded hosted proposal
 remains a research obligation until a newly accepted executable cohort has
 actual receipts and reconciled accounting.
+
+## Reviewed continuation with a bounded UNKNOWN
+
+A bounded exception is different from billing reconciliation. It preserves the
+original UNKNOWN receipt and import, holds the reviewed maximum against the
+same allowance, and permits continuation only for the exact finished imported
+attempt accepted by the operator. The default unknown-billing rule stays strict.
+An unfinished request, a conflicting receipt, durability rejection, structural
+stop or known overcharge cannot receive this exception. It does not create a
+new allowance or claim that a nominally free failed call was charged zero.
+
+```bash
+uv run daf-jev benchmark allocation bounded-unknown-target \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --legacy-manifest-hash ORIGINAL_MANIFEST_HASH --attempt-id ORIGINAL_ATTEMPT_ID
+uv run daf-jev benchmark allocation preview-bounded-unknown \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --evidence bound.json --evidence-sha256 EXACT_BOUND_SHA256 \
+  --review review.json --review-sha256 EXACT_REVIEW_SHA256
+uv run daf-jev benchmark allocation accept-bounded-unknown \
+  .benchmarks/allocations/FIRST_ALLOCATION \
+  --evidence bound.json --evidence-sha256 EXACT_BOUND_SHA256 \
+  --review review.json --review-sha256 EXACT_REVIEW_SHA256
+```
+
+Evidence `dafjev.bounded-unknown-evidence/1` binds the allocation journal tip,
+exact imported run and attempt, an exact-request tariff document, USD bound,
+source authority/reference and collector. The document
+`dafjev.exact-request-tariff-bound/1` binds the complete attempt and explains
+how the request, routing, tariff and billing contract establish that bound.
+A reconstructed semantic request must match the retained request hash; it is
+not evidence that raw wire bytes or the omitted response have been recovered.
+
+A distinct reviewer records `dafjev.bounded-unknown-review/1`, approving
+`approve_bounded_unknown_continuation`, binding evidence/document/target hashes
+and the exact allocation tip, and verifying contract origin, unique attempt
+attribution and the upper bound. Reducing the original reservation additionally
+requires explicit independent verification. Hashes and review flags preserve
+local custody; they do not authenticate a provider or prove its enforcement.
+
+Snapshots retain `unknown_attempts` and `historical_unknown_attempts` and add
+`bounded_unknown_attempts` and `held_upper_bound_usd`. Known effective charges
+remain reported plus externally verified charges. Admission uses those charges,
+pending reservations and held bounds together; the original USD 25 cap applies
+to the whole total. A later exact-charge reconciliation releases that hold and
+debits the actual charge. Any reviewed-bound breach remains a stop.
+
+## Jev native input contract
+
+The supported Jev contract pins `typesafe/jev-1.13`, the Decisions endpoint and
+TypeSafe-only routing. The [official Jev guide](https://openrouter.ai/docs/guides/community/jev)
+defines the input window as state plus questions; the
+[endpoint declaration](https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints)
+declares a 32,000-token maximum prompt and zero output tariff. The larger
+catalog context is not substituted for that input limit. At the captured input
+rate USD 0.000000042 per token, the conditional single-attempt reservation is
+USD 0.001344. Each retry reserves separately. Actual `usage.cost` remains the
+billing observation, and a usage/charge breach stops the runner.
+
+Use the [native recipe](../benchmarks/configs/native-jev-pilot.yaml) with an
+explicit existing allocation binding and newly frozen source snapshots. The
+recipe admits no auxiliary paid service, alternate provider, silent vocabulary
+reduction or substitution of a chat model. Other native models require their
+own supported billing contracts; Jev's guarantee cannot be transferred to them.

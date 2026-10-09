@@ -481,8 +481,32 @@ wire path is silently coerced.
   verification inputs before/after, retains native exports and command logs in
   a fresh confined nonsymlink directory, and writes
   `dafjev.verification-evidence/1` even for a failed capture. Only its owned
-  private raw coverage files are removed. Capture does not change the
+  private raw coverage files are removed. Fresh captures record
+  `environment.stdlib_directory` from the actual capturing interpreter's
+  `sysconfig` alongside its version and platform; this is private original
+  provenance, never inferred or backfilled into older receipts. Capture does not change the
   publication selection or publish results; live collection is not live acceptance.
+- `scripts/project_verification.py` creates a fresh, hash-bound public derivative
+  of successful original captures. It relocates project/interpreter display and
+  removes JUnit hostname attributes. An explicitly captured canonical absolute
+  POSIX `lib/pythonX.Y` or `lib64/pythonX.Y` standard-library prefix matching the
+  recorded Python version may additionally become `<PYTHON_STDLIB>`; the
+  transformation is declared in the derivative. Prefix siblings, traversal,
+  backslash/control-character suffixes, relative prepends, third-party package
+  directories in prefix ancestry or suffixes, and other private paths still
+  fail before output creation. Captured interpreter display must name a
+  canonical absolute narrow Python executable; every replacement checks both
+  path boundaries. Coverage JSON is strictly decoded before recursive string
+  key/value relocation, collision checking and declared JSON serialization, so
+  escape spelling cannot conceal recognized private data. Parsed XML attribute,
+  text and tail values are checked before serialization. Credential markers
+  (Bearer/Basic schemes, recognized API-key and private-key prefixes) are
+  rejected before path relocation; residual POSIX/Windows user-path markers
+  are rejected afterward. A bounded scan also inspects HTML, URL and hexadecimal
+  display encodings without editing the emitted text. These checks detect the
+  documented markers, not arbitrary secrets; independent artifact review
+  remains necessary. Missing stdlib provenance supplies no substitution. Native
+  files, result values and before/after source inventories remain unchanged.
 - `scripts/check_benchmark_runtime.py` — `check_runtime() -> dict` imports real
   SciPy sparse linear algebra and fits/predicts the public structured comparator
   on bounded owned toy data with a complete absent-class vocabulary. CLI has
@@ -536,12 +560,37 @@ wire path is silently coerced.
   schematic without measurements and preserves the cover as registry figure 1.
 - `study_evidence.py` — pure selected aggregate consumption, no model execution
   or plotting. `load_studies(project_root) -> StudyEvidence` consumes SHA-bound
-  `study_summaries.cpu` and `.hosted` through `evidence.selected_study_bytes`.
+  `study_summaries.cpu`, `.hosted` and optional `.native_hosted` through
+  `evidence.selected_study_bytes`.
   It rejects malformed formats, duplicate arm identities, invalid metrics,
   inconsistent status/attempt/gate denominators and non-finite currency.
   `arm(...)` requires a unique declared cohort; `limits(...)` consumes retained
   grouped percentile intervals without refitting. `tokens()` emits optional
   `STUDY_*` measured variables. It preserves null risk for ineligible gates.
+  Native summaries use `dafjev.native-hosted-study-summary/1`. All five global
+  statuses and each phase's status rows conserve the frozen plan. Physical
+  attempts remain distinct from cells. Successful native completions require a
+  final HTTP 200 receipt with response-body custody, usage, reported charge and
+  matching dataset/phase identities. The initial capability cut explicitly
+  excludes predictive-quality and maximum-boundary claims; its historical
+  bounded UNKNOWN charge remains separate. Selecting this summary adds seven
+  `NATIVE_HOSTED_*` variables without altering legacy measured tokens.
+- `scripts/export_native_capabilities.py` — explicit offline export of an
+  original executable manifest, immutable terminal capability journal prefix
+  and report, each selected by expected SHA-256. It opens no live run/head,
+  allocation or credential and performs no network calls. The journal prefix
+  is retained byte for byte; manifest/report projections declare their exact
+  original hashes and documentary substitutions and cannot resume execution.
+  Decoded fields are checked for private paths and credentials before a fresh
+  destination is created. Report, journal, receipt and status conservation must
+  agree; the exported capability cut cannot acquire later quality outcomes.
+- `figures.NATIVE_FIGURE_NAME` — optional `native_capabilities` figure from the
+  selected native summary. It writes PNG, vector PDF and plotted-data JSON with
+  exact manifest/journal/inference-source/Git/cut provenance in the registry.
+  Requested vocabulary, observed HTTP latency and reported charges describe
+  actual selected probes; these measurements establish neither accuracy nor
+  maximum supported boundaries. Existing core and study figures remain
+  unchanged when no native summary is selected.
 - `study_figures.py` — optional headless matplotlib figures `cpu_quality`,
   `wine_ordinal`, `cohort_sensitivity`, `validation_folds`, `selective_validation`
   and `execution_coverage`. `generate(name, out_dir, project_root)` reads selected
@@ -581,6 +630,8 @@ wire path is silently coerced.
   studies fail in both strict and draft mode. These retained study values preserve
   their original execution/source identity rather than acquiring the current
   software-verification identity.
+  An optional selected native hosted summary adds seven `NATIVE_HOSTED_*`
+  variables from its conserved plan, phase counts and per-attempt accounting.
   Optional `manuscript/evidence.json` `verification={path,sha256}` selects a
   completed capture through `evidence.selected_verification`. Unit/live counts,
   coverage and Python/platform then derive from those retained outputs; variable
@@ -1367,8 +1418,13 @@ and [reproducibility.md](reproducibility.md).
   modalities=("text", "json"), max_options=None, max_questions=None,
   max_context_chars=None, batching=True, authentication="none", probability_source="native",
   confidence_semantics="provider_defined", probability_rounding_digits=2,
-  evidence="declared_unverified", probability_semantics=None)` declares eligibility and provenance;
+  evidence="declared_unverified", probability_semantics=None,
+  max_score_levels=None)` declares eligibility and provenance;
   capability declarations do not establish runtime acceptance.
+  The appended optional `max_score_levels` independently limits Score criteria;
+  it accepts an integer >= 2 or `None`. An over-limit Score fails before
+  reservation/transport without shortening levels. Existing `max_options`
+  behavior and default unlimited Score capability remain unchanged.
   HTTP adapters bind effective authentication to `bearer` for hosted requests
   and `none` for loopback; frozen HTTP profiles record that effective mode.
 - Frozen `DecisionRequest(state, questions, model=None, timeout=60.0,
@@ -1729,7 +1785,8 @@ it is not the total validation/test quality-control physical row count.
   import completeness. `import_run(binding)` appends verified legacy accounting
   only while inactive; every declared required import must be satisfied before
   execution. Unknown or abandoned imported work stops shared admission even
-  for zero-bound requests. These are cooperating local POSIX filesystem
+  for zero-bound requests unless a separately reviewed finished-attempt upper
+  bound has been explicitly accepted. Abandoned transport is never eligible. These are cooperating local POSIX filesystem
   controls, not account-wide billing completeness or cross-machine authority.
 - `AllocationLedger.execution(store)` takes the exclusive allocation lease
   before the run lease. `bind_run(store)` is execution-only. Separate runs are
@@ -1771,6 +1828,26 @@ it is not the total validation/test quality-control physical row count.
   Older readers reject the new event rather than overlook an effective charge.
   See [shared allocations](shared_allocations.md#external-evidence-for-a-finished-unknown-attempt).
 
+- `bounded_unknown_target(manifest_hash, attempt_id)` reads the exact finished
+  imported UNKNOWN target. `preview_bounded_unknown(*, evidence: Path,
+  evidence_sha256, review: Path, review_sha256)` validates without writing;
+  `accept_bounded_unknown` accepts the same arguments and appends one
+  `allocation_legacy_unknown_bounded` event under the inactive allocation lease.
+  Strict schemas are `dafjev.bounded-unknown-evidence/1`,
+  `dafjev.bounded-unknown-review/1` and `dafjev.exact-request-tariff-bound/1`.
+  The reviewed bound is held against the same allocation and original run cap,
+  distinct from known effective charges. `unknown_attempts` and historical
+  receipts retain UNKNOWN; `bounded_unknown_attempts` identifies accepted
+  exceptions and `held_upper_bound_usd` records their liability. A finished
+  reviewed exception can permit new admission; unfinished requests and
+  structural/durability/overcharge stops remain ineligible. Reopen and admission
+  revalidate exact proof bytes, physical identities, original attempt custody,
+  reviewer separation and target binding. Conflicting/reused proof is rejected;
+  an identical acceptance is an idempotent no-op. Later exact reconciliation
+  releases the hold and debits the independently verified charge; a breach of
+  the reviewed bound remains stopped. Operator review binds local evidence,
+  not provider-origin authentication or a guarantee of invoice correctness.
+
 - `RunStore.create(root, manifest) -> RunStore` creates a UUID run;
   `RunStore.create_at(directory, manifest) -> RunStore` is explicit exclusive
   creation at a caller-selected path, used by allocation initialization. Both
@@ -1794,11 +1871,56 @@ it is not the total validation/test quality-control physical row count.
   advertised context and the frozen output-token limit, conditional on those
   limits and tariffs being enforced. A catalog context window does not establish
   an aggregate billable-token bound for a native request's state, questions and
-  options. Paid native input therefore has unavailable liability with
+  options. Paid native input ordinarily has unavailable liability with
   `admission_reason="native_aggregate_billing_unverified"`; nonzero native output
-  tariffs also remain unbounded. No independently verified native aggregate
-  guarantee is currently supported, and caller-declared numeric bounds cannot
-  enable admission. All-zero admitted native tariffs and surcharge ceilings
+  tariffs remain unbounded. The explicit supported contract
+  `pricing.native_billing_contract="openrouter-typesafe-jev-1.13-input32000/1"`
+  admits only pinned `typesafe/jev-1.13` at
+  `https://openrouter.ai/api/alpha/decisions` through TypeSafe-only routing.
+  Its code-owned input ceiling is 32,000 tokens across state and all questions,
+  independently of the catalog context length. Output, request, image and
+  auxiliary charges must be zero; only provider execution settings are allowed.
+  The derived `native_billing_contract` descriptor freezes the primary source
+  URLs, identity and input scope. Execution recomputes and checks the descriptor
+  and actual sent settings. Receipt input usage above the ceiling is retained
+  before a durable `native_input_contract_breach` stop. Caller numeric bounds,
+  mutable latest aliases, other providers and other native models cannot enable
+  this contract. Its reservation is conditional on the documented contract and
+  enforced tariffs, not a measured charge.
+  A separate explicit contract
+  `pricing.native_billing_contract="openrouter-perplexity-pplx-decider-v1.1-27b-input262143/1"`
+  admits only `perplexity/pplx-decider-v1.1-27b` at the same Decisions endpoint,
+  with Perplexity-only routing, no fallback, required parameters and no
+  auxiliary/generative controls. The [primary request/pricing documentation](https://docs.perplexity.ai/docs/decisions/quickstart)
+  bounds input **under 262,144** tokens across state, images and all questions.
+  Its code-owned maximum is 262,143; catalog context cannot widen it. This
+  contract requires exact `max_questions=128`, `max_options=255`,
+  `max_score_levels=10` and `probability_rounding_digits=None` declarations.
+  Strict `1e-6` mass validation is an adapter protocol; hosted precision and
+  calibration remain unknown. The exact nominal input tariff is USD 0.02 per
+  million, with the same sent prompt ceiling and zero completion/request/image,
+  cache premium and auxiliary tariffs. Its conditional reservation is
+  USD 0.00524286 per physical attempt. The frozen descriptor carries tariff,
+  scope, limits and exact acceptable resolution identities: the namespace
+  model, documented short model `pplx-decider-v1.1-27b`, or the exact discovered
+  canonical ID `perplexity/pplx-decider-v1.1-27b-20261006`, and provider name
+  `Perplexity` or tag `perplexity`. `resolution_evidence` binds the retained
+  catalog and provider endpoint SHA-256 values and public URLs. Accepting that
+  discovered literal does not establish physically served weights. Other
+  suffixes, aliases and revisions are not guessed.
+  Successful receipts with missing/different resolution identities stop
+  admission; reported cost must not exceed `usage.input_tokens` times the
+  pinned tariff. Missing billed input usage also stops. Failed HTTP responses
+  may lack resolution identity; unknown billing still remains unresolved.
+  After receipt retention/reconciliation, all these violations latch the
+  existing durable `native_input_contract_breach` reason, with per-run
+  `breach_dimension` identifying `input_tokens`, `reported_cost`,
+  `missing_billed_input_usage` or `resolved_identity`. Reconciliation and stop
+  share the admission lock; cancellation/finalization preserve receipts.
+  This contract does not modify the global allocation policy or Jev descriptor.
+  See [Perplexity preparation](perplexity_native.md); actual hosted acceptance
+  is **UNATTEMPTED** until independent review and admitted probes.
+  All-zero admitted native tariffs and surcharge ceilings
   still yield zero liability. Execution rechecks these contracts and refuses
   older stored numeric reservations that no longer have a supported bound,
   preserving their immutable manifests. Every hosted HTTP mode additionally

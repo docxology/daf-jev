@@ -37,8 +37,9 @@ receipts retain their partial outcomes; new source and full-cohort proposals
 cannot reuse those primaries. The hosted full proposal has 15 arms and 376,155
 planned cells and remains unattempted. The separate pilot below made one failed
 probe; its charge is unknown. The existing USD 25 allocation
-does not guarantee completion, and paid native aggregate billing is still
-unbounded. Model execution requires actual resource, capability, credential and
+does not guarantee completion. Paid native aggregate billing was unsupported
+at that historical source revision; the current [native continuation](native_hosted_study.md)
+supports a narrowly pinned Jev contract and separately reviewed historical bound. Model execution requires actual resource, capability, credential and
 accounting admission; neither a frozen proposal nor a CPU result supplies that
 evidence.
 
@@ -87,8 +88,8 @@ This first pilot used frozen hosted concurrency one for serial billing
 reconciliation. The general concurrency-four default is a separate throughput
 treatment. The owned process closed cleanly, but process closure does not resolve
 billing or establish inference quality. Further hosted execution requires actual
-billing evidence for this attempt and the unchanged source, input and admission
-checks. The pilot-source software verification recorded 1,519 passing unit tests and
+exact billing evidence or an explicitly accepted independently reviewed bound
+for this finished attempt, plus unchanged source, input and admission checks. The pilot-source software verification recorded 1,519 passing unit tests and
 93.15% combined line and branch coverage; its two live tests were collected only.
 
 To recompute the selected run locally without inference, choose a fresh output

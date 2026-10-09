@@ -62,8 +62,14 @@ class BackendCapabilities:
     probability_rounding_digits: int | None = 2
     evidence: str = "declared_unverified"
     probability_semantics: str | None = None
+    max_score_levels: int | None = None
 
     def __post_init__(self) -> None:
+        if self.max_score_levels is not None and (
+            isinstance(self.max_score_levels, bool) or not isinstance(self.max_score_levels, int)
+            or self.max_score_levels < 2
+        ):
+            raise ValueError("max_score_levels must be an integer >= 2 or None")
         if self.probability_semantics is not None and (
             not isinstance(self.probability_semantics, str) or not self.probability_semantics.strip()
         ):
@@ -290,6 +296,9 @@ class _HTTPAdapter:
                 raise ValueError(f"unsupported primitive {question['type']}")
             if caps.max_options and len(question.get("criteria", {})) > caps.max_options:
                 raise ValueError("unsupported option count; vocabulary was not shortened")
+            if (question["type"] == "score" and caps.max_score_levels is not None
+                    and len(question["criteria"]) > caps.max_score_levels):
+                raise ValueError("unsupported score level count; levels were not shortened")
         if self.hosted and (request.settings or (request.model and request.model != self.model)):
             raise ValueError("hosted settings/model are frozen in the backend profile")
         model = request.model or self.model

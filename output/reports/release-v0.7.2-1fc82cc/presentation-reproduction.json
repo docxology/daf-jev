@@ -1,0 +1,50 @@
+{
+  "all_pages_individually_visually_reviewed": true,
+  "compiler_gates": {
+    "bibtex_missing": 0,
+    "bibtex_warnings": 0,
+    "overfull_horizontal_boxes": 0,
+    "overfull_vertical_boxes": 0,
+    "undefined_citations": 0,
+    "undefined_references": 0,
+    "unloadable_images": 0
+  },
+  "coverage_display_percent": "92.95",
+  "extra_numbered_figure": "Explicitly historical admission matrix",
+  "figure_numeric_sidecars_exact_regeneration": 8,
+  "figure_registry_exact_regeneration": true,
+  "figure_registry_sha256": "73d06998c70613be5ddc6d3856b7f1aac6bcf47ecd9434b6b3f69727d397dba2",
+  "final_variables_exact_regeneration": true,
+  "format": "dafjev.presentation-reproduction/1",
+  "horizontal_text_overflow_found": false,
+  "independent_figure_image_byte_equality_claimed": false,
+  "independent_review_sha256": "89920592da4850cb953899a7a6fddbc48d3a528211bb9eba655c4ffb413df57c",
+  "live_tests_executed": false,
+  "manuscript_variables_sha256": "36817cb4d8dff182e7d422daf751ffd7fee158bfb8c213e2f1dff9d0ce4e0a9f",
+  "native_corrected_pdf_byte_identical": true,
+  "numbered_pdf_figures": 16,
+  "pdf": {
+    "pages": 30,
+    "path": "output/pdf/daf-jev-0.7.2-manuscript.pdf",
+    "sha256": "c5b3f5d21eee2a0b4ef7d44378eed85eb3e2af5a2c64888081ea9823bde4c7b6"
+  },
+  "publication_selection_sha256": "4434ef2368f6ab8059b4aed49fcc4c689259bafbd523c4d67128931f2298c164",
+  "recognized_private_path_or_credential_markers": 0,
+  "registered_figures": 15,
+  "scope": "Independent presentation and retained-evidence review. It does not establish a completed local/hosted comparative quality study or reconcile unknown historical billing.",
+  "section_headings": 10,
+  "selected_native_cut": {
+    "actual_transport_attempts": 12,
+    "capability_probes_completed": 12,
+    "full_comparative_study_complete": false,
+    "quality_predictions_completed": 0,
+    "reported_cost_usd": "0.000556920",
+    "warm_predictions_completed": 0
+  },
+  "source_bibliography_entries": 33,
+  "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300",
+  "static_source_inputs": 307,
+  "status": "PASS",
+  "unit_tests_passed": 2436,
+  "used_citations": 29
+}

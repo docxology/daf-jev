@@ -13,6 +13,7 @@ import os
 import platform
 import subprocess
 import sys
+import sysconfig
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -42,7 +43,8 @@ def capture(root: Path, out_dir: Path) -> int:
     record: dict[str, object] = {
         "format": "dafjev.verification-evidence/1", "before": before,
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "environment": {"python_version": platform.python_version(), "platform": platform.platform()},
+        "environment": {"python_version": platform.python_version(), "platform": platform.platform(),
+                        "stdlib_directory": str(Path(sysconfig.get_path("stdlib")).absolute())},
         "unit_command": unit_command, "live_collection_command": live_command,
         "live_execution": False,
     }

@@ -57,12 +57,17 @@ def register_benchmark_parser(parser: argparse.ArgumentParser) -> None:
     legacy = accounting.add_parser("import-legacy", help="append verified old-run accounting explicitly")
     legacy.add_argument("directory", type=Path)
     legacy.add_argument("--binding", required=True, type=Path)
-    target = accounting.add_parser("reconciliation-target", help="read exact imported UNKNOWN attempt identity; no proof or writes")
-    target.add_argument("directory", type=Path)
-    target.add_argument("--legacy-manifest-hash", required=True)
-    target.add_argument("--attempt-id", required=True)
-    for name in ("preview-reconciliation", "reconcile"):
-        recovery = accounting.add_parser(name, help="validate exact provider evidence offline" if name.startswith("preview") else "explicit append-only externally reviewed legacy charge")
+    for name in ("reconciliation-target", "bounded-unknown-target"):
+        target = accounting.add_parser(name, help="read exact imported UNKNOWN attempt identity; no proof or writes")
+        target.add_argument("directory", type=Path)
+        target.add_argument("--legacy-manifest-hash", required=True)
+        target.add_argument("--attempt-id", required=True)
+    for name in ("preview-reconciliation", "reconcile", "preview-bounded-unknown", "accept-bounded-unknown"):
+        help_text = ("validate reviewed upper-bound evidence offline" if name == "preview-bounded-unknown"
+                     else "append a reviewed hold preserving UNKNOWN" if name == "accept-bounded-unknown"
+                     else "validate exact provider evidence offline" if name.startswith("preview")
+                     else "explicit append-only externally reviewed legacy charge")
+        recovery = accounting.add_parser(name, help=help_text)
         recovery.add_argument("directory", type=Path)
         recovery.add_argument("--evidence", required=True, type=Path)
         recovery.add_argument("--evidence-sha256", required=True)
@@ -149,16 +154,22 @@ def main(args: argparse.Namespace) -> int:
             ledger = AllocationLedger.create(args.directory, allocation_id=args.allocation_id,
                                              limit=args.limit_usd, required_imports=required)
         else:
-            ledger = AllocationLedger(args.directory, read_only=args.allocation_command in {"inspect", "reconciliation-target", "preview-reconciliation"})
+            ledger = AllocationLedger(args.directory, read_only=args.allocation_command in {
+                "inspect", "reconciliation-target", "bounded-unknown-target", "preview-reconciliation", "preview-bounded-unknown"})
             if args.allocation_command == "import-legacy":
                 ledger.import_run(binding(args.binding))
-            elif args.allocation_command == "reconciliation-target":
-                result = ledger.reconciliation_target(args.legacy_manifest_hash, args.attempt_id)
+            elif args.allocation_command in {"reconciliation-target", "bounded-unknown-target"}:
+                target_operation = (ledger.reconciliation_target if args.allocation_command == "reconciliation-target"
+                             else ledger.bounded_unknown_target)
+                result = target_operation(args.legacy_manifest_hash, args.attempt_id)
                 print(canonical_json(result))
                 return 0
-            elif args.allocation_command in {"preview-reconciliation", "reconcile"}:
-                operation = ledger.preview_reconciliation if args.allocation_command == "preview-reconciliation" else ledger.reconcile
-                result = operation(evidence=args.evidence, evidence_sha256=args.evidence_sha256,
+            elif args.allocation_command in {"preview-reconciliation", "reconcile", "preview-bounded-unknown", "accept-bounded-unknown"}:
+                proof_operation = {"preview-reconciliation": ledger.preview_reconciliation,
+                             "reconcile": ledger.reconcile,
+                             "preview-bounded-unknown": ledger.preview_bounded_unknown,
+                             "accept-bounded-unknown": ledger.accept_bounded_unknown}[args.allocation_command]
+                result = proof_operation(evidence=args.evidence, evidence_sha256=args.evidence_sha256,
                                    review=args.review, review_sha256=args.review_sha256)
                 print(canonical_json(result))
                 return 0

@@ -14,7 +14,7 @@ import time
 import uuid
 from collections import Counter, defaultdict
 from collections.abc import AsyncIterator
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 from dataclasses import asdict
 from decimal import Decimal, localcontext
 from pathlib import Path
@@ -52,8 +52,10 @@ from daf_jev.benchmark_store import (
 from daf_jev.benchmark_workflows import CascadeDecisionBackend, gate_from_dict
 from daf_jev.decision_backends import (
     AsyncHTTPDecisionBackend,
+    AttemptObserver,
     BackendCapabilities,
     BackendHTTPError,
+    CallReceipt,
     DecisionRequest,
     DecisionResult,
     PriorBackend,
@@ -67,6 +69,165 @@ from daf_jev.decision_backends import (
 FORMAT = "dafjev.benchmark-run/1"
 ROOT = Path(__file__).resolve().parents[2]
 EXECUTION_PHASES = ("capability_probe", "quality", "warm_repeat", "graphical")
+_JEV_NATIVE_CONTRACT = "openrouter-typesafe-jev-1.13-input32000/1"
+_PPL_NATIVE_CONTRACT = "openrouter-perplexity-pplx-decider-v1.1-27b-input262143/1"
+
+
+def _native_billing_contract(profile: dict[str, Any]) -> dict[str, Any] | None:
+    with localcontext(currency_context()):
+        return _resolve_native_billing_contract(profile)
+
+
+def _resolve_native_billing_contract(profile: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve one code-owned, explicitly selected native billing guarantee.
+
+    Catalog context limits and caller-declared token bounds cannot widen it.
+    Each provider's documented aggregate input limit is code-owned. Other
+    models, aliases, endpoints and execution options remain
+    outside this contract, including generative controls and auxiliary services.
+    """
+    pricing = profile.get("pricing", {})
+    if isinstance(pricing, dict) and pricing.get("native_billing_contract") == _PPL_NATIVE_CONTRACT:
+        return _perplexity_billing_contract(profile)
+    if (not isinstance(pricing, dict)
+            or pricing.get("native_billing_contract") != _JEV_NATIVE_CONTRACT
+            or pricing.get("source") != "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints"
+            or not pricing.get("snapshot_at")
+            or profile.get("hosted") is not True
+            or profile.get("kind", "http") != "http"
+            or profile.get("mode", "systemone") != "systemone"
+            or profile.get("model") != "typesafe/jev-1.13"
+            or profile.get("endpoint") != "https://openrouter.ai/api/alpha/decisions"):
+        return None
+    options = profile.get("options")
+    if not isinstance(options, dict) or set(options) != {"provider"}:
+        return None
+    provider = options["provider"]
+    if (not isinstance(provider, dict)
+            or set(provider) != {"only", "allow_fallbacks", "require_parameters", "max_price"}
+            or provider.get("only") != ["typesafe"]
+            or provider.get("allow_fallbacks") is not False
+            or provider.get("require_parameters") is not True):
+        return None
+    ceilings = provider["max_price"]
+    rates = pricing.get("rates")
+    if (not isinstance(ceilings, dict) or set(ceilings) != {"prompt", "completion", "request", "image"}
+            or not isinstance(rates, dict) or "prompt" not in rates or "completion" not in rates):
+        return None
+    input_rate = usd(rates["prompt"])
+    if (usd(rates["completion"]) or any(usd(value) for key, value in rates.items()
+            if key not in {"prompt", "completion", "input_cache_read", "input_cache_write"})
+            or any(usd(rates.get(key, "0")) > input_rate for key in ("input_cache_read", "input_cache_write"))
+            or any(usd(ceilings[key]) for key in ("completion", "request", "image"))
+            or usd(ceilings["prompt"]) / Decimal(1_000_000) < input_rate):
+        return None
+    return {"format": "dafjev.native-billing-contract/1", "id": _JEV_NATIVE_CONTRACT,
+            "model": "typesafe/jev-1.13", "endpoint": "https://openrouter.ai/api/alpha/decisions",
+            "provider_tag": "typesafe", "input_scope": "state plus questions",
+            "max_input_tokens": 32000, "completion_price_usd_per_token": "0",
+            "sources": ["https://openrouter.ai/docs/guides/community/jev",
+                        "https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints"]}
+
+
+def _perplexity_billing_contract(profile: dict[str, Any]) -> dict[str, Any] | None:
+    """The documented request-wide bound, not the catalog context window.
+
+    Strict mass validation is a consumer protocol; hosted numerical precision
+    and resolved identity conventions still require actual capability receipts.
+    """
+    model = "perplexity/pplx-decider-v1.1-27b"
+    source = f"https://openrouter.ai/api/v1/models/{model}/endpoints"
+    pricing = profile["pricing"]
+    if (pricing.get("source") != source or not pricing.get("snapshot_at")
+            or profile.get("hosted") is not True or profile.get("kind", "http") != "http"
+            or profile.get("mode", "systemone") != "systemone" or profile.get("model") != model
+            or profile.get("endpoint") != "https://openrouter.ai/api/alpha/decisions"):
+        return None
+    options, caps = profile.get("options"), profile.get("capabilities")
+    if not isinstance(options, dict) or set(options) != {"provider"} or not isinstance(caps, dict):
+        return None
+    # These independently declared limits must match the executable profile.
+    # Unknown capabilities and Jev rounding cannot inherit this billing proof.
+    if (any(isinstance(caps.get(key), bool) or not isinstance(caps.get(key), int)
+            or caps.get(key) != value for key, value in
+            {"max_options": 255, "max_questions": 128, "max_score_levels": 10}.items())
+            or "probability_rounding_digits" not in caps or caps["probability_rounding_digits"] is not None):
+        return None
+    provider = options["provider"]
+    if (not isinstance(provider, dict)
+            or set(provider) != {"only", "allow_fallbacks", "require_parameters", "max_price"}
+            or provider["only"] != ["perplexity"] or provider["allow_fallbacks"] is not False
+            or provider["require_parameters"] is not True):
+        return None
+    ceilings, rates = provider["max_price"], pricing.get("rates")
+    if (not isinstance(ceilings, dict) or set(ceilings) != {"prompt", "completion", "request", "image"}
+            or not isinstance(rates, dict) or not {"prompt", "completion"} <= set(rates)
+            or set(rates) - {"prompt", "completion", "discount", "request", "image",
+                             "input_cache_read", "input_cache_write"}
+            or usd(rates["prompt"]) != Decimal("0.00000002")
+            or any(usd(value) for key, value in rates.items() if key != "prompt")
+            or usd(ceilings["prompt"]) != Decimal("0.02")
+            or any(usd(ceilings[key]) for key in ("completion", "request", "image"))):
+        return None
+    return {"format": "dafjev.native-billing-contract/1", "id": _PPL_NATIVE_CONTRACT,
+            "model": model, "endpoint": "https://openrouter.ai/api/alpha/decisions",
+            "provider_tag": "perplexity", "input_scope": "state, images and all questions",
+            "max_input_tokens": 262143, "input_price_usd_per_token": "0.00000002",
+            "completion_price_usd_per_token": "0", "max_questions": 128,
+            "max_choice_options": 255, "max_score_levels": 10,
+            "resolved_models": [model, "pplx-decider-v1.1-27b",
+                                "perplexity/pplx-decider-v1.1-27b-20261006"],
+            "resolved_providers": ["Perplexity", "perplexity"],
+            "resolution_evidence": {
+                "catalog": {"url": "https://openrouter.ai/api/v1/models?output_modalities=decisions",
+                    "sha256": "594c20ac042cd08ee79e6f5fed8a8dd87a50f47a510903115c77cc3097f959be"},
+                "provider_endpoint": {"url": source,
+                    "sha256": "514320287e5e45d6845c89fa48cd5273a7c01e6f1bf7447584994350a55a9e0c"}},
+            "sources": ["https://docs.perplexity.ai/docs/decisions/quickstart",
+                        "https://docs.perplexity.ai/api-reference/decisions-post", source]}
+
+
+class _NativeContractObserver:
+    """Retain each physical receipt before stopping on a supported-contract breach."""
+
+    def __init__(self, observer: AttemptObserver, ledger: SpendLedger,
+                 contract: dict[str, Any]) -> None:
+        self.observer, self.ledger, self.contract = observer, ledger, contract
+
+    def before(self, request_hash: str, model: str, endpoint: str) -> str:
+        return self.observer.before(request_hash, model, endpoint)
+
+    def after(self, receipt: CallReceipt) -> None:
+        ledger, shared = self.ledger, self.ledger.allocation
+        # Match SpendLedger's lock order. Reconciliation and the durable stop
+        # share one critical section, excluding admission between the two.
+        with ledger._lock, (shared.transaction() if shared is not None else nullcontext()), ledger.store.transaction():
+            self.observer.after(receipt)
+            breach = None
+            if receipt.input_tokens is not None and receipt.input_tokens > self.contract["max_input_tokens"]:
+                breach = "input_tokens"
+            elif self.contract["id"] == _PPL_NATIVE_CONTRACT:
+                if (receipt.status_code is not None and 200 <= receipt.status_code < 300
+                        and (receipt.requested_model != self.contract["model"]
+                             or receipt.resolved_model not in self.contract["resolved_models"]
+                             or receipt.provider not in self.contract["resolved_providers"])):
+                    breach = "resolved_identity"
+                elif receipt.cost_status == "reported":
+                    with localcontext(currency_context()):
+                        if receipt.input_tokens is None:
+                            breach = "missing_billed_input_usage"
+                        elif usd(receipt.cost_usd) > Decimal(receipt.input_tokens) * usd(self.contract["input_price_usd_per_token"]):
+                            breach = "reported_cost"
+            if breach is not None:
+                ledger.store.append({"event": "accounting_rejected", "attempt_id": receipt.attempt_id,
+                                     "reason": "native_input_contract_breach", "contract_id": self.contract["id"],
+                                     **({"breach_dimension": breach} if self.contract["id"] == _PPL_NATIVE_CONTRACT else {}),
+                                     "input_tokens": receipt.input_tokens,
+                                     "max_input_tokens": self.contract["max_input_tokens"]})
+                ledger.stopped = True
+                if shared is not None:
+                    shared.reject("native_input_contract_breach")
+                raise BudgetStopped("native input billing contract breached")
 
 
 def _file_hash(path: Path) -> str:
@@ -218,6 +379,9 @@ def _priced_liability(profile: dict[str, Any]) -> str | None:
     pricing = profile.get("pricing")
     if not isinstance(pricing, dict) or not pricing.get("source") or not pricing.get("snapshot_at"):
         return None
+    native_contract = _native_billing_contract(profile)
+    if pricing.get("native_billing_contract") is not None and native_contract is None:
+        return None  # explicit unsupported contracts cannot fall back to a wider pricing rule
     # Non-token surcharges are ineligible unless an explicit upper bound exists.
     rates = pricing.get("rates", {})
     if any(usd(rates[key]) != 0 for key in set(rates) - {"prompt", "completion", "input_cache_read", "input_cache_write"}):
@@ -249,9 +413,10 @@ def _priced_liability(profile: dict[str, Any]) -> str | None:
     if input_rate < nominal_input:
         return None  # ceiling insufficient for the frozen declared cache rates
     if profile.get("mode", "systemone") == "systemone":
-        # A model context window is not an established bound on aggregate native
-        # billing across state, questions and options. No such frozen contract
-        # is currently supported; caller-declared numeric bounds cannot enable it.
+        if native_contract is not None:
+            return str(Decimal(native_contract["max_input_tokens"]) * input_rate)
+        # Context is not aggregate native billing proof. Only the explicitly
+        # selected code-owned contract above permits a paid native request.
         if input_rate or output_rate:
             return None
         return "0"  # every admitted tariff and surcharge ceiling is zero
@@ -267,6 +432,10 @@ def _priced_liability(profile: dict[str, Any]) -> str | None:
 
 def _liability_reason(profile: dict[str, Any]) -> str:
     """Explain unavailable admission without treating catalog context as proof."""
+    pricing = profile.get("pricing", {})
+    if (isinstance(pricing, dict) and pricing.get("native_billing_contract") is not None
+            and _native_billing_contract(profile) is None):
+        return "native_billing_contract_unsupported"
     if profile.get("kind", "http") == "http" and profile.get("mode", "systemone") == "systemone":
         pricing = profile.get("pricing", {})
         rates = pricing.get("rates", {}) if isinstance(pricing, dict) else {}
@@ -375,6 +544,8 @@ def plan_run(config_path: Path, output_root: Path) -> RunStore:
     for profile in profiles:
         if not isinstance(profile, dict) or not isinstance(profile.get("id"), str):
             raise ValueError("backend profile requires an id")
+        if "native_billing_contract" in profile:
+            raise ValueError("native_billing_contract profile metadata is derived by planning")
         names.append(profile["id"])
         allowed_datasets = profile.get("datasets")
         if allowed_datasets is not None and (not isinstance(allowed_datasets, list)
@@ -394,6 +565,9 @@ def plan_run(config_path: Path, output_root: Path) -> RunStore:
             profile["gate_sha256"] = hashlib.sha256(evidence_bytes).hexdigest()
             profile["hosted"] = True
         profile["liability_usd"] = _liability(profile)
+        native_contract = _native_billing_contract(profile)
+        if native_contract is not None:
+            profile["native_billing_contract"] = native_contract
         if profile.get("hosted"):
             profile["admission_reason"] = _liability_reason(profile) if profile["liability_usd"] is None else None
     lookup = {p["id"]: p for p in profiles}
@@ -601,14 +775,19 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
     unknown = started - completed
     profiles = {p["id"]: p for p in store.manifest["backends"]}
     execution_liabilities = {name: profile.get("liability_usd") for name, profile in profiles.items()}
+    execution_contracts: dict[str, dict[str, Any]] = {}
     admission_unavailable = {}
     for name, profile in profiles.items():
         if profile.get("hosted") and profile.get("kind", "http") == "http":
             # Preserve immutable old manifests. The pricing helper fills route
             # defaults, so evaluate an independent plain JSON working copy.
             current = strict_json_loads(canonical_json(profile))
+            native_contract = _native_billing_contract(current)
             recomputed = _liability(current)
-            if recomputed is None:
+            if canonical_json(profile.get("native_billing_contract")) != canonical_json(native_contract):
+                execution_liabilities[name] = None
+                admission_unavailable[name] = "frozen_native_billing_contract_mismatch"
+            elif recomputed is None:
                 execution_liabilities[name] = None
                 admission_unavailable[name] = _liability_reason(current)
             elif canonical_json(current.get("options")) != canonical_json(profile.get("options")):
@@ -619,6 +798,14 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
             elif profile.get("liability_usd") != recomputed:
                 execution_liabilities[name] = None
                 admission_unavailable[name] = "frozen_liability_mismatch"
+            elif native_contract is not None:
+                execution_contracts[name] = native_contract
+
+    def attempt_observer(profile: dict[str, Any], identity: str) -> AttemptObserver:
+        observer = ledger.observer(cell_id=identity, hosted=bool(profile.get("hosted")),
+                                   liability_usd=execution_liabilities[profile["id"]])
+        contract = execution_contracts.get(profile["id"])
+        return _NativeContractObserver(observer, ledger, contract) if contract is not None else observer
     protocol = store.manifest["protocol"]
     backends: dict[tuple[str, int], Any] = {}
     failures: dict[tuple[str, int], str] = {}
@@ -731,6 +918,7 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
         dependency = profile.get("strong") if profile.get("kind") == "cascade" else profile["id"]
         if (profile["id"] in admission_unavailable
                 or admission_unavailable.get(dependency) in {"native_aggregate_billing_unverified",
+                    "native_billing_contract_unsupported", "frozen_native_billing_contract_mismatch",
                     "frozen_execution_settings_unbounded", "frozen_liability_mismatch"}):
             finish({"event": "cell_finished", "cell_id": identity, "status": "unattempted",
                     "reason": admission_unavailable[dependency], "admission_backend": dependency})
@@ -779,7 +967,7 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
                 weak, strong = await make_backend(weak_profile, dataset_index), await make_backend(strong_profile, dataset_index)
                 def child_observer(child: str) -> Any:
                     arm = weak_profile if child == "weak" else strong_profile
-                    return ledger.observer(cell_id=identity, hosted=bool(arm.get("hosted")), liability_usd=execution_liabilities[arm["id"]])
+                    return attempt_observer(arm, identity)
                 backend = CascadeDecisionBackend(weak, strong, gate=gate_from_dict(gates[0]["calibration"]), observers=child_observer)
             else:
                 backend = await make_backend(profile, dataset_index)
@@ -798,7 +986,7 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
             finish({"event": "cell_finished", "cell_id": identity, "status": "unattempted",
                     "reason": "local_execution_deadline"})
             return
-        observer = ledger.observer(cell_id=identity, hosted=bool(profile.get("hosted")), liability_usd=execution_liabilities[profile["id"]])
+        observer = attempt_observer(profile, identity)
         request = DecisionRequest(example.state, example.questions, timeout=protocol["timeout_s"], observer=observer)
         if cell["phase"] == "graphical" and backend.capabilities.probability_source is None:
             finish({"event": "cell_finished", "cell_id": identity, "status": "unsupported", "reason": "graphical_requires_genuine_beliefs"})

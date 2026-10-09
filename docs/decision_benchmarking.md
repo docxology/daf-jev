@@ -381,6 +381,13 @@ and satisfy their declared mass/rounding contract; scoring never renormalizes
 them. Zero probability on a true target produces an explicitly infinite-loss
 status and count, not clipped probabilities or nonfinite JSON.
 
+Rounded rows can satisfy their declared precision allowance while their reported
+mass differs from one. Reports retain those deviations. Scores computed on such
+rows describe the supplied numerical approximation; strict propriety statements
+assume a genuine simplex distribution. A reported rounded zero can produce
+infinite reported log loss without establishing zero probability in an
+unobserved higher-precision forecast. No latent distribution is reconstructed.
+
 Confidence calibration depends on what the confidence field means. Raw entropy
 and distribution concentration can inform a policy but do not automatically
 mean P(correct). Generated-label arms have no probability/ECE/Brier estimate

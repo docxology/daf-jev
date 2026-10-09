@@ -7,6 +7,11 @@ package, server readiness, capability probes and labeled evaluation are distinct
 steps. Read [backend contracts](providers.md), [the experiment protocol](decision_benchmarking.md)
 and [evidence custody](reproducibility.md) alongside this guide.
 
+[Perplexity native preparation](perplexity_native.md) concerns a hosted API
+contract. Its public local checkpoint has a separate 8,192-token branch limit
+and repeated-state accounting; no local Perplexity Mac profile is accepted
+here, and hosted bounds must not be transferred to an unverified local server.
+
 ## Initial profiles
 
 The initial target machine is an Apple M5 with 16 GB of unified memory. These

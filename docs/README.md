@@ -28,6 +28,8 @@ Documentation for daf-jev.
   benchmark adapters, output semantics, capability evidence and accounting.
 - [local_serving.md](local_serving.md) — isolated Mac runtimes, full-input
   admission, resident model ownership, counterbalanced passes and resource limits.
+- [perplexity_native.md](perplexity_native.md) — separate source-bound native
+  Perplexity billing/capability preparation; actual hosted acceptance unattempted.
 - [decision_benchmarking.md](decision_benchmarking.md) — plan/run/resume/report,
   quality/timing/cost metrics, policies and partial-run interpretation.
 - [shared_allocations.md](shared_allocations.md) — explicit shared spending
@@ -120,6 +122,14 @@ even in draft mode. The legacy raw path remains available; retain fresh ephemera
 [reproduction contract](reproducibility.md#retained-verification-for-exact-offline-regeneration)
 for the record and selection format.
 Missing or stale evidence cannot be repaired by hand-editing measured values.
+
+The [native hosted study guide](native_hosted_study.md#retained-native-capability-cut)
+describes the selected terminal capability cut and its public export. Optional
+`study_summaries.native_hosted` selects the summary by SHA-256; the
+`native_capabilities` figure and `NATIVE_HOSTED_*` variables consume that exact
+cut. They do not infer quality from successful probes or consume a changing
+live journal. Public verification exports likewise declare their relocation
+transformations while preserving original private captures and source hashes.
 
 A layout-only rerender may consume an unchanged, already validated saved map.
 Choose fresh paths to preserve previous outputs and retain diagnostic inputs:
@@ -238,3 +248,5 @@ means agreement with the modal choice across repeats — a self-consistency
 correctness proxy, never ground-truth accuracy; results land in
 unique `output/benchmarks/calibration_<UTC>_<UUID>.json` receipts. The retained
 dated September receipt remains unchanged.
+
+- [Native hosted continuation](native_hosted_study.md): pinned decision-model execution, reviewed UNKNOWN bounds and complete study obligations.

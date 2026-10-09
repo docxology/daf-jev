@@ -1,0 +1,50 @@
+# Native decision model only. Bind the existing shared allocation before planning.
+# Refresh the endpoint snapshot and freeze it with the executable manifest.
+format: dafjev.benchmark-run/1
+seed: 20261007
+budget_usd: '25'
+capability_probes: true
+hosted_concurrency: 4
+timeout_s: 60
+timing_samples: 100
+timing_repetitions: 5
+sampling: pilot
+datasets:
+  - {id: banking77, path: ../../.benchmarks/data/banking77-canonical.json}
+  - {id: clinc150, path: ../../.benchmarks/data/clinc150-canonical.json}
+  - {id: wine, path: ../../.benchmarks/data/wine-canonical.json}
+backends:
+  - id: jev-1.13-typesafe-native
+    kind: http
+    hosted: true
+    mode: systemone
+    endpoint: https://openrouter.ai/api/alpha/decisions
+    model: typesafe/jev-1.13
+    api_key_env: OPENROUTER_API_KEY
+    context_length: 64000
+    options:
+      provider:
+        only: [typesafe]
+        allow_fallbacks: false
+        require_parameters: true
+        max_price: {prompt: 0.042, completion: 0, request: 0, image: 0}
+    capabilities:
+      primitives: [noul, choice, score]
+      max_options: 255
+      probability_source: native
+      probability_rounding_digits: 2
+      confidence_semantics: provider_defined
+      evidence: primary_documentation_unverified_execution
+    pricing:
+      native_billing_contract: openrouter-typesafe-jev-1.13-input32000/1
+      source: https://openrouter.ai/api/v1/models/typesafe/jev-1.13/endpoints
+      snapshot_at: '2026-10-09'
+      rates: {prompt: '0.000000042', completion: '0'}
+    artifact:
+      canonical_slug: typesafe/jev-1.13-20260917
+      provider: TypeSafe
+      provider_tag: typesafe
+      license: consult_model_card
+      weights_sha256: provider_opaque_unknown
+      tokenizer_sha256: provider_opaque_unknown
+      extraction: native_Noul_Choice_Score

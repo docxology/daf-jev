@@ -38,6 +38,7 @@ _STOP_REASONS = {
     "run_binding_changed", "legacy_binding_changed",
     "admission_pair_mismatch",
     "reconciliation_durability_failure",
+    "bounded_unknown_durability_failure", "native_input_contract_breach",
 }
 _EVENT_FIELDS = {
     "allocation_run_bound": {"binding"},
@@ -46,6 +47,7 @@ _EVENT_FIELDS = {
     "allocation_attempt_finished": {"run_manifest_hash", "attempt_id", "cell_id", "receipt_sha256", "run_event_hash", "cost_status", "cost_usd"},
     "allocation_stopped": {"reason"},
     "allocation_legacy_billing_reconciled": {"evidence", "review", "document"},
+    "allocation_legacy_unknown_bounded": {"evidence", "review", "document"},
 }
 
 _PROOF_LIMIT = 1024 * 1024
@@ -265,6 +267,9 @@ class AllocationLedger:
         self._unknown: set[str] = set()
         self._historical_unknown: set[str] = set()
         self._reconciliations: dict[str, dict[str, Any]] = {}
+        self._bounded_unknown: dict[str, dict[str, Any]] = {}
+        self._held_bounds: dict[str, Decimal] = {}
+        self._held_by_run: dict[str, Decimal] = {}
         self._proof_claims: dict[tuple[str, str], str] = {}
         self._proof_documents: dict[str, str] = {}
         self._externally_verified = Decimal(0)
@@ -357,7 +362,8 @@ class AllocationLedger:
                     if attempt in self._reconciliations:
                         raise ValueError("duplicate legacy billing reconciliation")
                     self._check_proof_reuse(proposal)
-                    bound = self._reservations[attempt]
+                    original_bound = usd(proposal["original_liability_usd"])
+                    bound = self._held_bounds.get(attempt, original_bound)
                     cost = usd(proposal["cost_usd"])
                     self._reconciliations[attempt] = row
                     self._proof_claims[(proposal["authority"], proposal["reference"])] = attempt
@@ -365,16 +371,33 @@ class AllocationLedger:
                     self._externally_verified += cost
                     key = proposal["legacy_manifest_hash"]
                     self._external_by_run[key] = self._external_by_run.get(key, Decimal(0)) + cost
-                    del self._reservations[attempt]
+                    self._reservations.pop(attempt, None)
+                    held = self._held_bounds.pop(attempt, Decimal(0))
+                    self._held_by_run[key] = self._held_by_run.get(key, Decimal(0)) - held
                     self._unknown.remove(attempt)
-                    if cost > bound:
+                    if cost > bound or cost > original_bound:
                         self._stopped = True
                         self._reasons.add("externally_verified_cost_exceeds_reservation")
                     binding = LegacyRunBinding.from_dict(self._imports[key]["binding"])
                     original = RunStore(binding.directory, read_only=True)
-                    if usd_total(self._imports[key]["accounting"]["reported_cost_usd"]) + self._external_by_run[key] > usd(original.manifest.get("budget_usd", "25")):
+                    if self._legacy_liability(key) > usd(original.manifest.get("budget_usd", "25")):
                         self._stopped = True
                         self._reasons.add("externally_verified_cost_exceeds_run_limit")
+                elif kind == "allocation_legacy_unknown_bounded":
+                    proposal = self._validate_bounded_unknown(row, expected_tip=row["previous"])
+                    attempt = proposal["attempt_id"]
+                    if attempt in self._bounded_unknown or attempt in self._reconciliations:
+                        raise ValueError("duplicate or reconciled bounded UNKNOWN")
+                    self._check_proof_reuse(proposal)
+                    self._check_bound_limits(proposal)
+                    bound = usd(proposal["upper_bound_usd"])
+                    key = proposal["legacy_manifest_hash"]
+                    self._bounded_unknown[attempt] = row
+                    self._held_bounds[attempt] = bound
+                    self._held_by_run[key] = self._held_by_run.get(key, Decimal(0)) + bound
+                    self._proof_claims[(proposal["authority"], proposal["reference"])] = attempt
+                    self._proof_documents[proposal["document_sha256"]] = attempt
+                    del self._reservations[attempt]
                 elif kind == "allocation_attempt_started":
                     attempt = _text(row["attempt_id"], "attempt_id")
                     key = _digest(row["run_manifest_hash"])
@@ -385,7 +408,7 @@ class AllocationLedger:
                     for name in ("cell_id", "request_hash", "model", "endpoint"):
                         _text(row[name], name)
                     bound = usd(row["liability_usd"])
-                    if self._stopped or self._unknown or not self._required_complete() or self._effective_cost() + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
+                    if self._stopped or self._blocking_unknown() or not self._required_complete() or self._total_liability() + bound > self.limit:
                         raise ValueError("global attempt violates shared admission")
                     self._all_attempts.add(attempt)
                     self._admissions[attempt] = row
@@ -427,6 +450,12 @@ class AllocationLedger:
                     self._reasons.add(row["reason"])
                 else:
                     raise ValueError("invalid allocation event")
+                # A later hold or exact charge cannot erase an earlier cap
+                # breach on full replay that already stopped an incremental
+                # reader. Enforce the same boundary after every durable event.
+                if self._total_liability() > self.limit:
+                    self._stopped = True
+                    self._reasons.add("total_liability_exceeds_allocation")
             if self._charged > self.limit:
                 self._stopped = True
                 self._reasons.add("reported_cost_exceeds_allocation")
@@ -438,10 +467,26 @@ class AllocationLedger:
         # after it released a reservation. Reopen and every admission recheck it.
         for reconciliation in self._reconciliations.values():
             self._validate_reconciliation(reconciliation, expected_tip=reconciliation["previous"])
+        for bounded in self._bounded_unknown.values():
+            self._validate_bounded_unknown(bounded, expected_tip=bounded["previous"])
 
     def _effective_cost(self) -> Decimal:
         with localcontext(currency_context()):
             return self._charged + self._externally_verified
+
+    def _blocking_unknown(self) -> set[str]:
+        return self._unknown.difference(self._held_bounds)
+
+    def _held_total(self) -> Decimal:
+        return sum(self._held_bounds.values(), Decimal(0))
+
+    def _total_liability(self) -> Decimal:
+        return self._effective_cost() + self._held_total() + sum(self._reservations.values(), Decimal(0))
+
+    def _legacy_liability(self, key: str) -> Decimal:
+        accounting = self._imports[key]["accounting"]
+        pending = sum((self._reservations[a] for a in accounting["attempt_ids"] if a in self._reservations), Decimal(0))
+        return usd_total(accounting["reported_cost_usd"]) + self._external_by_run.get(key, Decimal(0)) + self._held_by_run.get(key, Decimal(0)) + pending
 
     def _check_proof_reuse(self, proposal: dict[str, Any]) -> None:
         for existing in (self._proof_claims.get((proposal["authority"], proposal["reference"])),
@@ -606,6 +651,142 @@ class AllocationLedger:
                     self.reject("reconciliation_durability_failure")
                     raise
             return {"operation": "reconcile", "already_recorded": duplicate,
+                    **{k: v for k, v in proposal.items() if k not in {"authority", "reference"}}, "accounting": self.snapshot()}
+
+    def bounded_unknown_target(self, manifest_hash: str, attempt_id: str) -> dict[str, Any]:
+        """Read an eligible finished imported UNKNOWN; no charge is inferred."""
+        with self.transaction():
+            self._sync()
+            rows = self.store._read()
+            tip = rows[-1]["hash"] if rows else self.store.manifest_hash
+            target = self._reconciliation_target(manifest_hash, _text(attempt_id, "attempt_id"), tip)
+            if (self._stopped or attempt_id in self._bounded_unknown or attempt_id in self._reconciliations
+                    or self._legacy_structural_stop(LegacyRunBinding.from_dict(target["legacy_run"]))):
+                raise ValueError("bounded UNKNOWN requires an eligible unbounded legacy attempt without structural stops")
+            return target
+
+    def _validate_bounded_unknown(self, row: Mapping[str, Any], *, expected_tip: str) -> dict[str, Any]:
+        evidence_ref = _retained_proof(row["evidence"])
+        review_ref = _retained_proof(row["review"])
+        document_ref = _retained_proof(row["document"])
+        evidence, _ = _proof(Path(evidence_ref["path"]), evidence_ref["sha256"], evidence_ref)
+        review, _ = _proof(Path(review_ref["path"]), review_ref["sha256"], review_ref)
+        document, _ = _proof(Path(document_ref["path"]), document_ref["sha256"], document_ref)
+        evidence = _object(evidence, {"format", "scope", "target", "source_kind", "document", "authority", "reference", "collected_by", "currency", "upper_bound_usd"}, "bounded UNKNOWN evidence")
+        if (evidence["format"] != "dafjev.bounded-unknown-evidence/1"
+                or evidence["scope"] != "exact_finished_attempt_upper_bound"
+                or evidence["source_kind"] != "reviewed_request_tariff_contract" or evidence["currency"] != "USD"):
+            raise ValueError("bounded UNKNOWN requires a reviewed exact-request USD tariff contract")
+        if not isinstance(evidence["upper_bound_usd"], str):
+            raise ValueError("upper bound must be an exact decimal string")
+        bound = usd(evidence["upper_bound_usd"])
+        for name in ("authority", "reference", "collected_by"):
+            if len(_text(evidence[name], name)) > 512:
+                raise ValueError("bounded UNKNOWN evidence text exceeds limit")
+        target = _object(evidence["target"], {"allocation", "legacy_run", "import_event_hash", "attempt"}, "bounded UNKNOWN target")
+        legacy = LegacyRunBinding.from_dict(target["legacy_run"])
+        attempt = target["attempt"]
+        if not isinstance(attempt, Mapping):
+            raise ValueError("invalid bounded UNKNOWN attempt target")
+        expected = self._reconciliation_target(legacy.manifest_hash, _text(attempt.get("attempt_id"), "attempt_id"), expected_tip)
+        if target != expected or self._legacy_structural_stop(legacy):
+            raise ValueError("bounded UNKNOWN target/cut changed or has a structural stop")
+        declared = _object(evidence["document"], {"path", "sha256", "bytes"}, "tariff document reference")
+        if dict(declared) != {k: document_ref[k] for k in ("path", "sha256", "bytes")}:
+            raise ValueError("tariff document binding changed")
+        review = _object(review, {"format", "decision", "reviewer", "evidence_sha256", "document_sha256", "allocation_tip", "target_sha256", "contract_origin_verified", "unique_exact_attempt_verified", "upper_bound_verified", "original_reservation_reduction_verified", "rationale"}, "independent bounded UNKNOWN review")
+        if (review["format"] != "dafjev.bounded-unknown-review/1"
+                or review["decision"] != "approve_bounded_unknown_continuation"
+                or len(_text(review["reviewer"], "reviewer")) > 512 or review["reviewer"] == evidence["collected_by"]
+                or review["evidence_sha256"] != evidence_ref["sha256"] or review["document_sha256"] != document_ref["sha256"]
+                or review["allocation_tip"] != expected_tip or review["target_sha256"] != content_hash(expected)
+                or any(review[name] is not True for name in ("contract_origin_verified", "unique_exact_attempt_verified", "upper_bound_verified"))
+                or not isinstance(review["original_reservation_reduction_verified"], bool)
+                or (bound < usd(attempt["liability_usd"]) and review["original_reservation_reduction_verified"] is not True)
+                or len(_text(review["rationale"], "review rationale")) > 4096):
+            raise ValueError("independent exact-contract upper-bound review is required")
+        contract = _object(document, {"format", "scope", "authority", "reference", "request", "currency", "upper_bound_usd", "rationale"}, "exact request tariff bound")
+        if (contract["format"] != "dafjev.exact-request-tariff-bound/1"
+                or contract["scope"] != "exact_finished_attempt_upper_bound"
+                or contract["authority"] != evidence["authority"] or contract["reference"] != evidence["reference"]
+                or contract["request"] != dict(attempt) or contract["currency"] != "USD"
+                or not isinstance(contract["upper_bound_usd"], str) or usd(contract["upper_bound_usd"]) != bound
+                or len(_text(contract["rationale"], "contract rationale")) > 4096):
+            raise ValueError("tariff document must bind the exact attempt and reviewed USD upper bound")
+        return {"attempt_id": attempt["attempt_id"], "legacy_manifest_hash": legacy.manifest_hash,
+                "upper_bound_usd": str(bound), "original_liability_usd": attempt["liability_usd"],
+                "authority": evidence["authority"], "reference": evidence["reference"], "document_sha256": document_ref["sha256"],
+                "billing_provenance": "reviewed_upper_bound_only; observed charge remains UNKNOWN",
+                "provider_authentication": "trusted_independent_local_operator_attestation; not automatic authentication"}
+
+    def _check_bound_limits(self, proposal: Mapping[str, Any]) -> None:
+        attempt, key = proposal["attempt_id"], proposal["legacy_manifest_hash"]
+        if self._stopped or attempt not in self._unknown or attempt not in self._reservations:
+            raise ValueError("bounded UNKNOWN cannot override a stop or reuse a completed target")
+        increase = usd(proposal["upper_bound_usd"]) - self._reservations[attempt]
+        binding = LegacyRunBinding.from_dict(self._imports[key]["binding"])
+        original = RunStore(binding.directory, read_only=True)
+        if self._legacy_liability(key) + increase > usd(original.manifest.get("budget_usd", "25")):
+            raise BudgetStopped("reviewed upper bounds exceed original run USD limit")
+        if self._total_liability() + increase > self.limit:
+            raise BudgetStopped("reviewed upper bounds exceed shared USD allocation")
+
+    def _bounded_unknown_proposal(self, *, evidence: Path, evidence_sha256: str,
+                                  review: Path, review_sha256: str) -> tuple[dict[str, Any], dict[str, Any], bool]:
+        value, evidence_ref = _proof(evidence, evidence_sha256)
+        _, review_ref = _proof(review, review_sha256)
+        if not isinstance(value, Mapping) or not isinstance(value.get("document"), Mapping):
+            raise ValueError("invalid bounded UNKNOWN evidence")
+        declared = _object(value["document"], {"path", "sha256", "bytes"}, "tariff document reference")
+        _, document_ref = _proof(Path(_text(declared["path"], "document path")), declared["sha256"])
+        candidate = {"event": "allocation_legacy_unknown_bounded", "evidence": evidence_ref,
+                     "review": review_ref, "document": document_ref}
+        existing = next((r for r in self._bounded_unknown.values() if all(r[n] == candidate[n] for n in ("evidence", "review", "document"))), None)
+        rows = self.store._read()
+        tip = existing["previous"] if existing is not None else rows[-1]["hash"] if rows else self.store.manifest_hash
+        proposal = self._validate_bounded_unknown(candidate, expected_tip=tip)
+        attempt = proposal["attempt_id"]
+        if attempt in self._reconciliations:
+            raise ValueError("reconciled billing cannot become bounded UNKNOWN")
+        if existing is None:
+            if attempt in self._bounded_unknown:
+                raise ValueError("conflicting or reconciled bounded UNKNOWN target")
+            self._check_bound_limits(proposal)
+        self._check_proof_reuse(proposal)
+        return candidate, proposal, existing is not None
+
+    def preview_bounded_unknown(self, *, evidence: Path, evidence_sha256: str,
+                                review: Path, review_sha256: str) -> dict[str, Any]:
+        """Validate a reviewed hold offline; preserve all UNKNOWN and receipts."""
+        with self.transaction(), localcontext(currency_context()):
+            self._sync()
+            self._validate_retained_runs()
+            _, proposal, duplicate = self._bounded_unknown_proposal(evidence=evidence, evidence_sha256=evidence_sha256,
+                                                                   review=review, review_sha256=review_sha256)
+            increase = Decimal(0) if duplicate else usd(proposal["upper_bound_usd"]) - self._reservations[proposal["attempt_id"]]
+            return {"operation": "preview_bounded_unknown", "already_recorded": duplicate,
+                    **{k: v for k, v in proposal.items() if k not in {"authority", "reference"}},
+                    "total_liability_after_usd": str(self._total_liability() + increase),
+                    "evidence": "offline_local_attestation; no inference or provider lookup"}
+
+    def accept_bounded_unknown(self, *, evidence: Path, evidence_sha256: str,
+                               review: Path, review_sha256: str) -> dict[str, Any]:
+        """Append a reviewed hold, never a measured charge or receipt rewrite."""
+        if self.read_only or self._active_store is not None:
+            raise ValueError("bounded UNKNOWN acceptance requires a writable inactive allocation")
+        with self.store.lease(), self.transaction(), localcontext(currency_context()):
+            self._sync()
+            self._validate_retained_runs()
+            candidate, proposal, duplicate = self._bounded_unknown_proposal(evidence=evidence, evidence_sha256=evidence_sha256,
+                                                                           review=review, review_sha256=review_sha256)
+            if not duplicate:
+                try:
+                    self.store.append(candidate)
+                    self._sync()
+                except BaseException:
+                    self.reject("bounded_unknown_durability_failure")
+                    raise
+            return {"operation": "accept_bounded_unknown", "already_recorded": duplicate,
                     **{k: v for k, v in proposal.items() if k not in {"authority", "reference"}}, "accounting": self.snapshot()}
 
     def require_execution(self, store: RunStore) -> None:
@@ -808,10 +989,10 @@ class AllocationLedger:
             except (ValueError, OSError, TypeError):
                 self.reject("admission_pair_mismatch")
                 raise
-            if self._stopped or self._unknown or not self._required_complete() or liability is None:
+            if self._stopped or self._blocking_unknown() or not self._required_complete() or liability is None:
                 raise BudgetStopped("shared admission stopped: unknown or unbounded liability")
             bound = usd(liability)
-            if self._effective_cost() + sum(self._reservations.values(), Decimal(0)) + bound > self.limit:
+            if self._total_liability() + bound > self.limit:
                 raise BudgetStopped("shared USD allocation exhausted")
             if attempt_id in self._all_attempts:
                 raise ValueError("duplicate global attempt identity")
@@ -888,8 +1069,12 @@ class AllocationLedger:
                 "externally_verified_cost_usd": str(self._externally_verified),
                 "effective_cost_usd": str(self._effective_cost()),
                 "reserved_usd": str(sum(self._reservations.values(), Decimal(0))),
+                "held_upper_bound_usd": str(self._held_total()),
+                "total_liability_usd": str(self._total_liability()),
                 "pending_attempts": sorted(self._reservations), "unknown_attempts": sorted(self._unknown),
                 "historical_unknown_attempts": sorted(self._historical_unknown),
+                "bounded_unknown_attempts": sorted(self._held_bounds),
+                "historical_bounded_unknown_attempts": sorted(self._bounded_unknown),
                 "externally_reconciled_attempts": sorted(self._reconciliations),
                 "required_imports_complete": complete,
                 "admission_stopped": self._stopped or not complete or bool(self._reservations and self._active_store is None),

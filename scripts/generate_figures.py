@@ -48,11 +48,11 @@ for _candidate in (_PROJECT_ROOT, _PROJECT_ROOT / "src"):
 def _registry_names() -> str:
     """Sorted registered figure names, or a hint when matplotlib is absent."""
     try:
-        from daf_jev.figures import FIGURE_FILENAMES
+        from daf_jev.figures import FIGURE_FILENAMES, NATIVE_FIGURE_NAME
         from daf_jev.study_figures import FILENAMES
     except ImportError:
         return "install the `figures` extra to list the valid names"
-    return ", ".join(sorted(FIGURE_FILENAMES | FILENAMES))
+    return ", ".join(sorted(set(FIGURE_FILENAMES) | set(FILENAMES) | {NATIVE_FIGURE_NAME}))
 
 
 def main() -> int:
@@ -71,7 +71,7 @@ def main() -> int:
         help=f"Render a single figure instead of the full registry (one of: {_registry_names()})",
     )
     parser.add_argument("--include-study", action="store_true",
-                        help="Append six selected empirical study figures and their data/vector companions")
+                        help="Append selected empirical study figures and their data/vector companions")
     args = parser.parse_args()
 
     try:
@@ -90,8 +90,9 @@ def main() -> int:
 
     try:
         if args.only is not None:
+            from daf_jev.figures import NATIVE_FIGURE_NAME
             from daf_jev.study_figures import FILENAMES
-            if args.only in FILENAMES and not args.include_study:
+            if args.only in (set(FILENAMES) | {NATIVE_FIGURE_NAME}) and not args.include_study:
                 raise ValueError("study figures require --include-study")
             written = [generate_one(args.only, args.out_dir, _PROJECT_ROOT, include_study=args.include_study)]
         else:

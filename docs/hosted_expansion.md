@@ -1,11 +1,16 @@
 # Hosted expansion: fixed obligations and admission
 
+This page preserves the earlier mixed-cohort obligation projection. The current
+[hosted continuation](native_hosted_study.md) uses native decision models only.
+Its supported Jev input contract and reviewed historical-UNKNOWN exception are
+separate from the old projection; no historical manifest or receipt is replaced.
+
 The expansion is a **non-executable plan**, with no new inference results. It
 retains the original `first-authorized-hosted-usd25` allocation and its USD 25
 total ceiling. The earlier Mercury validation probe returned HTTP 404 without
 reported billing or a retained response body. That charge remains unknown;
-numeric ledger totals of zero do not establish that it was free. All new
-admission remains blocked. The [recorded hosted summary](../output/reports/hosted-pilot-20261008/summary.json)
+numeric ledger totals of zero do not establish that it was free. At the source revision of this
+projection, all new admission was blocked. The [recorded hosted summary](../output/reports/hosted-pilot-20261008/summary.json)
 and its original source identity remain separate from this proposal.
 
 The [offline generator](../scripts/prepare_hosted_expansion.py) creates the
@@ -15,7 +20,8 @@ Do not pass this obligation projection to `benchmark run`. The current ledger
 accounts one RunStore; a fresh store's empty ledger does not import an older
 charge. Any future executor needs a reviewed shared-allocation guard that binds
 the prior manifest, journal/head and billing evidence, permits only one admitted
-executor, and refuses the retained unknown. A new plan cannot create another
+executor, and requires exact reconciliation or an accepted reviewed bound for
+the retained finished unknown. A new plan cannot create another
 USD 25 budget.
 
 ## Cohort and selection

@@ -1,0 +1,87 @@
+{
+  "acceptance_limits": [
+    "No optional local serving runtime acceptance",
+    "No complete hosted quality study acceptance",
+    "No deployment acceptance",
+    "No remote CI or publication acceptance implied by local checks"
+  ],
+  "format": "dafjev.native-source-acceptance-public/1",
+  "package_evidence": [
+    "package-acceptance.json",
+    "package-reproduction.json"
+  ],
+  "repository_history_secret_scan": {
+    "commits": 7,
+    "findings": 0,
+    "range": "8011e4075f96929845caee6804bc67571c20c496..1fc82cc427cb4300985d3738bfff95f3550ae300",
+    "tool": "gitleaks",
+    "version": "8.30.1"
+  },
+  "source_build_commit": "1fc82cc427cb4300985d3738bfff95f3550ae300",
+  "source_checks": [
+    {
+      "exit_code": 0,
+      "name": "ruff",
+      "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300"
+    },
+    {
+      "exit_code": 0,
+      "name": "mypy",
+      "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300"
+    },
+    {
+      "exit_code": 0,
+      "name": "docs_snapshot",
+      "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300"
+    }
+  ],
+  "source_checks_private_receipt_sha256": "4fb9b112a7dea31cfa8f81382d6129238270c1da93dd348ccf39bc4fa46f0966",
+  "source_date_epoch": 1791578224,
+  "status": "PASS_SOFTWARE_SOURCE",
+  "verification": [
+    {
+      "coverage_meaning": "combined line and branch coverage under repository configuration",
+      "coverage_percent": 92.95327489819863,
+      "environment": {
+        "platform": "macOS-27.0.1-arm64-arm-64bit",
+        "python_version": "3.10.20"
+      },
+      "independent_projection_review_sha256": "6f53b911bbf7ecf7f822f88ed31e147ebacf96bdce7c3fe484fd7e6abe70131e",
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 2436
+      },
+      "live_execution": false,
+      "source_input_count": 307,
+      "source_inputs_sha256": "18ec2846247164d9899d447ffa76f2f497388ca0c38fdf6c2644862af98598a3",
+      "verification": {
+        "path": "output/verification/v0.7.2-public-mac310-1fc82cc/verification.json",
+        "sha256": "2a6076df2c6cac40f7c083a628d05fd199bc56d4929b214ddd2c5e4839a7f7c0"
+      }
+    },
+    {
+      "coverage_meaning": "combined line and branch coverage under repository configuration",
+      "coverage_percent": 92.90251311792322,
+      "environment": {
+        "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "python_version": "3.14.4"
+      },
+      "independent_projection_review_sha256": "ec36c64895362138a8b897996f4dbc08462981ddb4864b55c21af877894ab525",
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 2436
+      },
+      "live_execution": false,
+      "source_input_count": 307,
+      "source_inputs_sha256": "18ec2846247164d9899d447ffa76f2f497388ca0c38fdf6c2644862af98598a3",
+      "verification": {
+        "path": "output/verification/v0.7.2-public-mac314-1fc82cc/verification.json",
+        "sha256": "624b87f8bf00bb00ef43d6def114a673a96fd02a6e9ee82853fd393c5f0ba55c"
+      }
+    }
+  ]
+}

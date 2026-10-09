@@ -31,10 +31,14 @@
     "hosted": {
       "path": "output/reports/hosted-pilot-20261008/summary.json",
       "sha256": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+    },
+    "native_hosted": {
+      "path": "output/reports/native-hosted-capability-20261009-v2/summary.json",
+      "sha256": "3bd7239260016809d97fee578340a4a3651efcb547ea5caa3919f8a964f55e74"
     }
   },
   "verification": {
-    "path": "output/verification/billing-recovery-20261009-mac310-57ff1cd1/verification.json",
-    "sha256": "3c3827e0b3273d00c20fdefb187ba5c3539868e50f1386df6740a320d591505b"
+    "path": "output/verification/v0.7.2-public-mac310-1fc82cc/verification.json",
+    "sha256": "2a6076df2c6cac40f7c083a628d05fd199bc56d4929b214ddd2c5e4839a7f7c0"
   }
 }

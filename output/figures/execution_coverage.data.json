@@ -40,6 +40,7 @@
   "scope": "Status fractions preserve each distinct study denominator. CPU studies, the older partial native study and the hosted pilot have different cohorts and source identities. The full hosted proposal is unexecuted. Completion counts include capability work and cannot be read as quality sample counts.",
   "selected_input_sha256": {
     "cpu": "e018869c8a448cc04710ae4b691616daa563b31c4f0901e8a1a73766df04a0b7",
-    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524"
+    "hosted": "19189e91902469e9e3de3f62119c26cec20e923983fad03b75e3f8ef0a19d524",
+    "native_hosted": "3bd7239260016809d97fee578340a4a3651efcb547ea5caa3919f8a964f55e74"
   }
 }

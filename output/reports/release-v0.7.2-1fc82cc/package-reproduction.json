@@ -1,0 +1,33 @@
+{
+  "byte_identical": true,
+  "distribution_declarations_equal": true,
+  "format": "dafjev.sdist-wheel-reproduction-check-public/1",
+  "hosted_requests": 0,
+  "initial_build_python": "3.14.4",
+  "member_content_differences": [],
+  "member_count": 57,
+  "member_order_equal": true,
+  "model_requests": 0,
+  "offline": true,
+  "optional_runtime_acceptance": "UNVERIFIED",
+  "package_inspector_sha256": "03a6f1a55953defc9d591e2d5ee743bb470cbd1dcdd98e6dc98afd875ac5cbc5",
+  "private_review_sha256": "91e53de4568651f168cac5073d5ecba8a0c2e58890140ea26c6f2681bbedbed3",
+  "rebuild_python": "3.10.20",
+  "rebuilt_wheel_sha256": "72d17cbcf3beebc32c43019b76565c700a46769847a0933bb6a9fd5135f63d20",
+  "sdist": {
+    "bytes": 307908,
+    "name": "daf_jev-0.7.2.tar.gz",
+    "sha256": "d2aa8f9101bf6d8e1a9c72ed84a9fb4b3b28d3b7ea6f3bd30ad95d8ed1b8392d"
+  },
+  "setuptools": "84.0.0",
+  "source_date_epoch": "1791578224",
+  "source_git_head": "1fc82cc427cb4300985d3738bfff95f3550ae300",
+  "source_modules_equal": 50,
+  "typed_marker_equal": true,
+  "wheel": {
+    "bytes": 285991,
+    "name": "daf_jev-0.7.2-py3-none-any.whl",
+    "sha256": "72d17cbcf3beebc32c43019b76565c700a46769847a0933bb6a9fd5135f63d20"
+  },
+  "zip_timestamp_differences": []
+}

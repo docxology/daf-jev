@@ -131,7 +131,9 @@ derived privacy projection that does not claim to be the original receipt.
 creates that declared derivative: it relocates project/interpreter display and
 removes JUnit hostname attributes while retaining results, coverage and source
 identities. It binds original and emitted file hashes, preserves the original
-capture and refuses unknown private path display. Review the resulting archive
+capture and refuses recognized credential and private-path markers, including
+Windows user paths and common escaped display spellings. This bounded check
+does not establish that arbitrary private information is absent. Review the resulting archive
 and its selected-evidence references before publishing; the transformation is
 privacy preparation, not a new test execution or runtime acceptance.
 Public summaries can retain unavailable private-evidence references with an

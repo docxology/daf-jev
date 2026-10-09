@@ -97,6 +97,16 @@ def has_study_selection(project_root: Path) -> bool:
     return (path.exists() or path.is_symlink()) and "study_summaries" in _selection(project_root)
 
 
+def has_selected_study(project_root: Path, name: str) -> bool:
+    """Optional named studies are absent by default; malformed maps still fail."""
+    if not has_study_selection(project_root):
+        return False
+    summaries = _selection(project_root)["study_summaries"]
+    if not isinstance(summaries, dict):
+        raise ValueError("study publication selection must contain an object")
+    return name in summaries
+
+
 def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
     """Inventory code and static documentation consumed by checks and renders.
 
