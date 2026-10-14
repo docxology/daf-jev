@@ -111,6 +111,67 @@ def test_composite_score_requires_probabilities() -> None:
         composite_score(answer, weights=[1.0, 2.0, 3.0])
 
 
+@pytest.mark.parametrize("magnitude", [1.7e308, 1e-323])
+def test_composite_score_preserves_scale_invariance_for_extreme_finite_weights(
+    magnitude: float,
+) -> None:
+    answer = _score_answer({"0": 0.25, "1": 0.25, "2": 0.25, "3": 0.25})
+
+    result = composite_score(answer, [magnitude] * 4)
+
+    assert result == pytest.approx(1.5)
+
+
+def test_composite_score_preserves_mass_with_zero_probability_extreme_weight() -> None:
+    answer = _score_answer({"0": 1.0, "1": 0.0})
+    assert composite_score(answer, [1e-200, 1e200]) == 0.0
+
+
+def test_composite_score_preserves_tiny_active_weights() -> None:
+    answer = _score_answer({"0": 0.5, "1": 0.5, "2": 0.0})
+    assert composite_score(answer, [1e-200, 2e-200, 1e200]) == pytest.approx(2 / 3)
+
+
+def test_composite_score_accepts_negative_mass_with_positive_weight_sum() -> None:
+    answer = _score_answer({"0": 0.9, "1": 0.1})
+
+    result = composite_score(answer, [-1.0, 2.0])
+
+    assert result == pytest.approx(-2 / 7)
+
+
+@pytest.mark.parametrize("weights", [[-1.0, 2.0], [2.0, -1.0]])
+def test_composite_score_preserves_signed_result_outside_level_bounds(
+    weights: list[float],
+) -> None:
+    answer = _score_answer({"0": 0.5, "1": 0.5})
+
+    result = composite_score(answer, weights)
+
+    assert result == pytest.approx(weights[1])
+
+
+@pytest.mark.parametrize("weights", [None, [1.0]])
+def test_composite_score_rejects_unrepresentable_result(
+    weights: list[float] | None,
+) -> None:
+    answer = ScoreAnswer(score=0.0, legend={}, probabilities={str(10**309): 1.0}, confidence=1.0)
+
+    with pytest.raises(ValueError, match="composite score must be finite"):
+        composite_score(answer, weights)
+
+
+@pytest.mark.parametrize("weights", [None, [1.0, 1.0]])
+def test_composite_score_cancels_huge_opposing_level_indices(
+    weights: list[float] | None,
+) -> None:
+    answer = ScoreAnswer(score=0.0, legend={}, probabilities={str(-(10**309)): 0.5, str(10**309): 0.5}, confidence=1.0)
+
+    result = composite_score(answer, weights)
+
+    assert result == 0.0
+
+
 def test_composite_score_rejects_non_finite_probability_on_both_paths() -> None:
     # Distribution validation is shared by both weighting paths and names
     # the offending key.

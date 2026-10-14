@@ -195,7 +195,16 @@ wire path is silently coerced.
     finite, sum positive, weighted mass non-zero (each `ValueError`). The
     `[min index, max index]` range guarantee holds for non-negative weights;
     negative weights are accepted deliberately (scale-invariant reweighting)
-    but void it.
+    but void it. The normalized signed coefficients need not form a probability
+    distribution; a negative weighted mass is valid when the weight sum is
+    positive and the weighted mass is non-zero. Exact rational arithmetic
+    preserves the ratios of finite inputs without intermediate float overflow
+    or underflow, including accumulated integer aliases. A final result that
+    cannot be represented as a finite float raises `ValueError`; there is no
+    additional level-range restriction on signed reweighting.
+    The offline source-test profile is `dev`, `figures`, and `benchmark`, as
+    declared by CI. The `build` dependency group locks the declared setuptools
+    backend for wheel builds with `uv build --wheel --no-build-isolation`.
   - `confidence_gate(answer, *, threshold: float, below: str = "review") -> str`
     — returns the primary value when confidence >= threshold else `below`;
     a Score answer's level maps via `round` (nearest, ties to even) clamped

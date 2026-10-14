@@ -2,6 +2,9 @@
 requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
+[dependency-groups]
+build = ["setuptools>=77.0.3"]
+
 [project]
 name = "daf-jev"
 version = "0.7.2"

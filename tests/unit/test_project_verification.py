@@ -259,7 +259,8 @@ def test_coverage_key_collision_after_relocation_refuses_before_output(projectio
 def test_legacy_capture_without_stdlib_provenance_cannot_gain_ambient_relocation(projection_fixture):
     root, path, record, _ = projection_fixture
     record["environment"].pop("stdlib_directory")
-    path.write_text(json.dumps(record))
+    _replace_log(root, path, record,
+                 f'File "/private/synthetic-fixture/lib/python{sys.version_info.major}.{sys.version_info.minor}/socketserver.py", line 123\n')
     out = root / "verification/rejected"
     with pytest.raises(ValueError, match="private data"):
         _PROJECTOR.project(root, path, out)

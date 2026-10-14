@@ -1,0 +1,9 @@
+project:
+  name: daf-jev
+  repo: docxology/daf-jev
+tasks:
+  - id: daf-jev-stack-onboarding
+    title: Verify the offline package gate for stack onboarding
+    status: done
+    validationCommand: bash scripts/gate.sh
+    notes: "Offline unit and local HTTP fixture tests pass. The live marker is explicitly deselected; live API and benchmark results are outside this task."

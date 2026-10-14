@@ -8,6 +8,7 @@ by code. No I/O.
 
 import math
 from collections.abc import Callable, Mapping, Sequence
+from fractions import Fraction
 from typing import TypeVar
 
 from daf_jev._types import ChoiceAnswer, ScoreAnswer, validate_probability_row
@@ -54,20 +55,25 @@ def composite_score(
     Malformed probability mass raises instead of being repaired.
 
     With ``weights`` (one per level, positional order matching the sorted
-    level indices): the probability distribution is re-weighted —
+    level indices): the probabilities are re-weighted into normalized coefficients —
     ``q_i = p_i * w_i / sum(p_j * w_j)`` — and the result is
     ``sum(q_i * i)``. Only the weight ratios matter (scale-invariant:
     ``[2, 6]`` and ``[1, 3]`` give the same value). For non-negative
     weights the result lies within ``[min index, max index]``; negative
     weights are accepted deliberately (scale-invariant reweighting) but
-    void that range guarantee.
+    void that range guarantee. Signed coefficients need not form a probability
+    distribution, and the weighted mass may be negative. Exact arithmetic
+    preserves finite weight ratios even when intermediate float sums overflow
+    or products underflow; the returned score must be representable as a
+    finite float.
 
     ``ValueError`` if any probability is not a finite number in [0, 1],
     the row mass exceeds the declared native rounding allowance,
     a probability key is not an integer level index, the weights length
     does not match the level count, any weight is not finite, the weights
     do not sum to a positive value, or ``sum(p_j * w_j) == 0`` (the
-    weights assign no mass to probable levels).
+    weights assign no mass to probable levels), or the resulting score cannot
+    be represented as a finite float.
     """
     probs = answer.probabilities
     if not probs:
@@ -79,7 +85,7 @@ def composite_score(
     # paths, so both iterate the same canonical sorted level indices and
     # bad keys/values fail before any arithmetic. Duplicate integer
     # spellings of one level ('1' and '01') accumulate onto that level.
-    by_index: dict[int, float] = {}
+    by_index: dict[int, Fraction] = {}
     for key, value in probs.items():
         try:
             index = int(key)
@@ -92,33 +98,35 @@ def composite_score(
                 f"probability {key!r} must be a finite non-negative number, "
                 f"got {value!r}"
             )
-        by_index[index] = by_index.get(index, 0.0) + value
+        by_index[index] = by_index.get(index, Fraction()) + Fraction(value)
 
     validate_probability_row(probs, rounding_digits=2)
 
     indices = sorted(by_index)
-    if weights is None:
-        return math.fsum(index * by_index[index] for index in indices) / math.fsum(by_index.values())
+    weighted = by_index
+    if weights is not None:
+        if len(weights) != len(indices):
+            raise ValueError(
+                f"weights length {len(weights)} does not match level count {len(indices)}"
+            )
+        if not all(_finite_weight(w) for w in weights):
+            raise ValueError("weights must all be finite")
+        exact_weights = [Fraction(weight) for weight in weights]
+        if sum(exact_weights, Fraction()) <= 0:
+            raise ValueError("weights must sum to a positive value")
+        weighted = {index: by_index[index] * weight for index, weight in zip(indices, exact_weights, strict=True)}
 
-    if len(weights) != len(indices):
-        raise ValueError(
-            f"weights length {len(weights)} does not match level count {len(indices)}"
-        )
-    if not all(_finite_weight(w) for w in weights):
-        raise ValueError("weights must all be finite")
-    total_weight = sum(weights)
-    if not _finite_weight(total_weight):
-        raise ValueError("weights must have a finite sum")
-    if total_weight <= 0:
-        raise ValueError("weights must sum to a positive value")
-
-    weighted = [(idx, by_index[idx] * w) for idx, w in zip(indices, weights, strict=True)]
-    mass = sum(m for _, m in weighted)
-    if not math.isfinite(mass) or any(not math.isfinite(m) for _, m in weighted):
-        raise ValueError("weighted probability mass must be finite")
+    mass = sum(weighted.values(), Fraction())
     if mass == 0:
         raise ValueError("weights assign no mass to probable levels")
-    return sum(idx * m for idx, m in weighted) / mass
+    numerator = sum((index * probability for index, probability in weighted.items()), Fraction())
+    try:
+        result = float(numerator / mass)
+    except OverflowError:
+        raise ValueError("composite score must be finite") from None
+    if not math.isfinite(result):
+        raise ValueError("composite score must be finite")
+    return result
 
 
 def confidence_gate(
