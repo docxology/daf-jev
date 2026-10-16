@@ -146,3 +146,6 @@ ignore_missing_imports = true
 module = ["sklearn", "sklearn.*", "psutil", "psutil.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[tool.uv]
+required-version = "==0.13.1"
