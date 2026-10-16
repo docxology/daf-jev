@@ -1198,3 +1198,14 @@ Methodology and the committed-receipts policy:
   directory into the agent's skills location — see
   [`skills/README.md`](skills/README.md).
 - [Map](#map) — deep links to every module, example, script, and receipt.
+
+Development defaults to uv 0.13.1 and Python 3.15. Supported Python minimums remain declared in `pyproject.toml`.
+
+Use the latest stable CPython by default for working and new environments,
+primary CI, tests, package builds, helper tools, workers, notebooks, and
+generated projects. Keep the current reproducible pin in `.python-version`.
+An older runtime requires a named dependency, host prerequisite, or runtime
+contract for the affected profile, plus a removal check. Review the exception
+when that requirement or the latest stable CPython release changes; remove it
+once the blocker clears and the affected locked profile installs and passes
+its declared checks on the latest stable CPython.

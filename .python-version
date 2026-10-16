@@ -1,0 +1,3 @@
+# Default uv: 0.13.1.
+# Development default; supported minimum remains in pyproject.toml.
+3.15
