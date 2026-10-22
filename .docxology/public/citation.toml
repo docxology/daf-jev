@@ -1,0 +1,10 @@
+# CITATION.cff-equivalent identity fields for daf-jev.
+# Hand-editable after `init` — free-form; the tool never rewrites this
+# file once scaffolded. Field meanings: docs/format-spec.md in the
+# docxology/daf-sidecar repo.
+
+authors = ["Daniel Ari Friedman"]  # array — add co-authors as needed
+title = "daf-jev"           # human-readable project title
+orcid = "0000-0001-6232-9096"     # primary author's ORCID
+year = ""                        # release/publication year, e.g. "2026"
+url = ""                         # canonical repo or citation URL

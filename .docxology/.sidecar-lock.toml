@@ -1,0 +1,5 @@
+schema_version = 1
+mode = "plain"
+recipients = []
+
+[sealed_files]

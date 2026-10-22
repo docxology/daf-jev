@@ -1,0 +1,8 @@
+schema_version = 1
+repo_id = "daf-jev"
+repo_name = "daf-jev"
+owner = "daniel@humlab.com"
+orcid = "0000-0001-6232-9096"
+hum_lab_project = ""
+tags = []
+license_note = ""

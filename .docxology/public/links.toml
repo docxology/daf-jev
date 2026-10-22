@@ -1,0 +1,18 @@
+# Cross-repo / Hum Lab project links for daf-jev.
+# Free-form and unparsed by the tool — a human-readable record of this
+# repo's relationships to other docxology or Hum Lab projects. (The
+# machine-readable Hum Lab link lives in manifest.toml's
+# `hum_lab_project` field.)
+#
+# Example shape (uncomment and edit):
+# related = ["docxology/other-repo"]
+
+
+# Human navigation only; these fields are not validation or identity proof.
+related = ["docxology/daf-stack", "docxology/daf-sidecar", "docxology/daf-operator", "docxology/daf-dot"]
+component_role = "Typed decisions, model evaluation and posterior interchange"
+integration_contract = "docs/stack-integration.md"
+native_gate = "bash scripts/gate.sh"
+verification_status = "daf-jev verification-status --root ABS_CHECKOUT"
+voice_protocol = "docxology/daf-dot"
+spatial_information = "docxology/daf-operator"
