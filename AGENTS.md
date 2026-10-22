@@ -748,3 +748,15 @@ MCP full handshake needs the optional `mcp` package (also in `dev`); connect a
 client to `daf-jev serve` over stdio. `examples/providers_example.py` uses an
 injected transport and makes no network call even with a key. Other examples
 keep the keyless SKIP contract described above.
+
+
+## Stack verification status
+
+`daf-jev verification-status --root PATH` reads selected native unit execution
+and live-test collection without new execution. See
+[docs/stack-integration.md](docs/stack-integration.md) and the CLI architecture
+contract. `current` exits 0; unavailable/invalid evidence exits 1 with null
+statistics. Gate wrappers (`scripts/*.sh`) and `tasks.yaml` now participate in
+the existing verification inventory, so old captures need recapture. Preserve
+historical publication selections; a current capture, fixed Stack gate,
+Sidecar coverage, hosted runtime and publication acceptance are separate proof.

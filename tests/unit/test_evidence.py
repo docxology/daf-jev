@@ -382,3 +382,83 @@ def test_native_junit_preserves_properties_and_aggregates_valid_suites() -> None
            '</testsuite><testsuite tests="1" failures="0" errors="0" skipped="0">'
            '<testcase><system-out>public fixture output</system-out></testcase></testsuite></testsuites>')
     assert _unit_count(raw.encode()) == 2
+
+
+def test_verification_status_reads_native_capture_without_writes(
+    captured: tuple[Path, Path], capsys: pytest.CaptureFixture[str],
+) -> None:
+    from daf_jev.cli import main
+
+    root, _ = captured
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    capsys.readouterr()
+    assert main(["verification-status", "--root", str(root), "--pretty"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    statistics = selected_verification(root)
+    assert statistics is not None
+    assert result == {
+        "format": "dafjev.verification-status/1", "status": "current",
+        "scope": "selected_unit_execution_and_live_collection",
+        "statistics": {"unit_count": 3, "live_count": 2, "coverage_percent": 100.0,
+                       "python_version": statistics.python_version,
+                       "platform": statistics.platform},
+        "error": None, "live_execution": False,
+    }
+    assert {p: p.read_bytes() for p in root.rglob("*") if p.is_file()} == before
+
+
+@pytest.mark.parametrize("name", ["scripts/gate.sh", "tasks.yaml"])
+def test_stack_gate_and_board_changes_invalidate_capture(
+    captured: tuple[Path, Path], name: str, capsys: pytest.CaptureFixture[str],
+) -> None:
+    from daf_jev.cli import main
+
+    root, _ = captured
+    path = root / name
+    path.parent.mkdir(exist_ok=True)
+    # Even an added file must invalidate the prior inventory.
+    path.write_text("# first version\n")
+    first = verification_inputs(root)
+    assert name in first
+    path.write_text("# changed version\n")
+    assert verification_inputs(root) != first
+    capsys.readouterr()
+    assert main(["verification-status", "--root", str(root)]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "invalid"
+    assert result["statistics"] is None
+    assert "does not match" in result["error"]["message"]
+
+
+@pytest.mark.parametrize(("selection", "expected"), [
+    (None, "unavailable"),
+    ('{"format":"dafjev.publication-evidence/1"}', "unavailable"),
+    ('{"format":"bad"}', "invalid"),
+    ('{"format":"bad","format":"dafjev.publication-evidence/1"}', "invalid"),
+    ('{"format":"dafjev.publication-evidence/1","verification":{}}', "invalid"),
+])
+def test_verification_status_absent_and_invalid_are_never_current(
+    tmp_path: Path, selection: str | None, expected: str, capsys: pytest.CaptureFixture[str],
+) -> None:
+    from daf_jev.cli import main
+
+    (tmp_path / "src/daf_jev").mkdir(parents=True)
+    (tmp_path / "pyproject.toml").write_text('[project]\nname="daf-jev"\n')
+    if selection is not None:
+        (tmp_path / "manuscript").mkdir()
+        (tmp_path / "manuscript/evidence.json").write_text(selection)
+    assert main(["verification-status", "--root", str(tmp_path), "--json"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == expected
+    assert result["statistics"] is None
+
+
+def test_verification_status_requires_explicit_checkout(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    from daf_jev.cli import main
+
+    assert main(["verification-status"]) == 2
+    capsys.readouterr()
+    assert main(["verification-status", "--root", str(tmp_path / "missing")]) == 1
+    assert json.loads(capsys.readouterr().out)["status"] == "invalid"

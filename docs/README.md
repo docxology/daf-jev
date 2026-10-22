@@ -104,6 +104,11 @@ retains its declared GraphSpec/posterior seams and verification limits.
 
 ## Verification and reproduction entry points
 
+For Stack/Operator evidence inspection, see [stack integration](stack-integration.md).
+`daf-jev verification-status --root PATH` reads the existing selected native
+capture without running tests or generating outputs. Missing evidence stays
+unavailable and changed evidence stays invalid.
+
 From a prepared checkout, `uv run daf-jev docs-verify` verifies local snapshot
 bytes, sizes and URL-to-path mapping without network or writes. Source checks
 use the commands in [AGENTS.md](../AGENTS.md#verification-commands). Passed-test

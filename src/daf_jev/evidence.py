@@ -127,11 +127,12 @@ def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
             if path.relative_to(project_root).as_posix() == "manuscript/evidence.json":
                 continue
             suffixes = ({".md", ".json", ".yaml", ".yml", ".bib", ".tex"}
-                        if folder in {"docs", "skills", "manuscript"} else {".py"})
+                        if folder in {"docs", "skills", "manuscript"}
+                        else {".py", ".sh"} if folder == "scripts" else {".py"})
             if path.is_file() and path.suffix in suffixes:
                 paths.add(path)
     paths.update(p for name in ("pyproject.toml", "uv.lock", "AGENTS.md",
-                               ".github/workflows/ci.yml", "README.md", "CITATION.cff",
+                               ".github/workflows/ci.yml", "README.md", "tasks.yaml", "CITATION.cff",
                                ".zenodo.json", "src/daf_jev/py.typed")
                  if (p := project_root / name).exists() or p.is_symlink())
     result: dict[str, dict[str, str | int]] = {}

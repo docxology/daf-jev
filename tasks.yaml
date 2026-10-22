@@ -7,3 +7,14 @@ tasks:
     status: done
     validationCommand: bash scripts/gate.sh
     notes: "Offline unit and local HTTP fixture tests pass. The live marker is explicitly deselected; live API and benchmark results are outside this task."
+
+  - id: daf-jev-verification-status
+    title: Inspect selected source-bound verification without execution
+    status: done
+    validationCommand: python -m pytest tests/unit/test_evidence.py
+    notes: "Explicit-root verification-status reuses selected_verification; shell gates and board changes invalidate captures. See docs/stack-integration.md. Native gate results and Sidecar observations remain separate."
+  - id: daf-jev-status-consumer
+    title: Qualify Stack and Operator consumption of verification-status
+    status: todo
+    deps: [daf-jev-verification-status]
+    notes: "Consumer-owned integration: preserve current/unavailable/invalid, scope and native statistics. Re-read before reuse; never convert retained unit/live-collection evidence or Sidecar coverage into hosted acceptance. No consumer registration from this repo."

@@ -1059,6 +1059,14 @@ remain descriptive; no release turns an unattempted study or unknown charge into
 a completed experiment.
 
 
+## Stack integration
+
+`daf-jev verification-status --root PATH` inspects selected, source-bound unit
+execution and live-test collection without model calls or new test execution.
+See [the integration contract](docs/stack-integration.md) for status/exit codes,
+the native offline gate, Sidecar evidence boundaries and remaining consumer work.
+DAF Dot carries the real-time voice protocol; DAF Operator spatializes information.
+
 ## Map
 
 Every module, example, script, and receipt — one click from prose to

@@ -15,6 +15,7 @@ Usage::
                 [--concurrency N] [--model M] [--base-url URL]
                 [--include-records] [--json | --pretty]
     daf-jev docs-verify [--manifest PATH] [--json | --pretty]
+    daf-jev verification-status --root PATH [--json | --pretty]
     daf-jev providers [--json | --pretty]
 
 The global ``--provider NAME`` flag (or ``$DAF_JEV_PROVIDER``) selects a
@@ -492,6 +493,34 @@ def _cmd_docs_verify(args: argparse.Namespace) -> int:
     _emit(summary, args.pretty)
     return 0 if summary["ok"] else 1
 
+
+def _cmd_verification_status(args: argparse.Namespace) -> int:
+    """Inspect selected native verification without executing checks or models."""
+    from daf_jev.evidence import selected_verification
+
+    payload: dict[str, Any] = {
+        "format": "dafjev.verification-status/1",
+        "status": "unavailable",
+        "scope": "selected_unit_execution_and_live_collection",
+        "statistics": None,
+        "error": None,
+        "live_execution": False,
+    }
+    try:
+        root = Path(args.root).absolute()
+        if not (root / "pyproject.toml").is_file() or not (root / "src/daf_jev").is_dir():
+            raise ValueError("root must name a daf-jev source checkout")
+        statistics = selected_verification(root)
+        if statistics is not None:
+            payload["status"] = "current"
+            payload["statistics"] = asdict(statistics)
+    except (OSError, ValueError) as exc:
+        payload["status"] = "invalid"
+        payload["error"] = {"type": type(exc).__name__, "message": str(exc)}
+    _emit(payload, args.pretty)
+    return 0 if payload["status"] == "current" else 1
+
+
 def _cmd_posteriors_load(args: argparse.Namespace) -> int:
     try:
         sidecar = load_posteriors(args.file, graphspec=args.graphspec)
@@ -681,6 +710,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_common(p_verify, base_url=False)
     p_verify.set_defaults(func=_cmd_docs_verify)
+    p_verification = sub.add_parser(
+        "verification-status", help="inspect selected offline verification (no execution)"
+    )
+    p_verification.add_argument("--root", required=True, help="daf-jev source checkout")
+    add_common(p_verification, base_url=False)
+    p_verification.set_defaults(func=_cmd_verification_status)
     p_serve = sub.add_parser(
         "serve", help="serve the daf-jev MCP server (stdio transport)"
     )

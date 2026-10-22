@@ -400,6 +400,17 @@ wire path is silently coerced.
     CWD); prints `{manifest, pages, missing, drifted, added, ok}` where
     `added` lists extra `.md` files the manifest does not list; exit 1 when
     `ok` is False.
+  - `daf-jev verification-status --root PATH [--json | --pretty]` — keyless,
+    read-only inspection through `evidence.selected_verification`; no test
+    collection, raw coverage, provider configuration, subprocess or network.
+    Requires an explicit source checkout. Prints `dafjev.verification-status/1`
+    with `status` (`current`, `unavailable`, `invalid`), `scope`, nullable
+    `statistics`/`error` and `live_execution: false`. `current` means the selected
+    native unit execution/live collection matches the current inventory; exit 0.
+    No selection is `unavailable`; malformed, missing, changed or stale selected
+    inputs are `invalid`; both exit 1 with null statistics (missing --root is
+    usage exit 2). This is a point-in-time observation, not the fixed Stack gate,
+    Sidecar validation, hosted acceptance or publication authority.
   - `daf-jev posteriors-load FILE [--graphspec FILE]` — loads and
     validates a `dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`
     sidecar (same loader as the MCP `jev_posteriors_load` tool);
@@ -2111,10 +2122,13 @@ Publication selection JSON uses the shared strict decoder; duplicate keys and
 nonstandard constants fail.
 `verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]`
 inventories every `.py` file under `src/daf_jev`, `tests`, `scripts`, `benchmarks`
-and `examples`, excluding `__pycache__`; static `.md`, `.json`, `.yaml`, `.yml`,
+and `examples`, plus `.sh` gate wrappers under `scripts`, excluding
+`__pycache__`; static `.md`, `.json`, `.yaml`, `.yml`,
 `.bib` and `.tex` files under `docs`, `skills` and `manuscript`; and
 `pyproject.toml`, `uv.lock`, `AGENTS.md`, `.github/workflows/ci.yml`, `README.md`,
-`CITATION.cff`, `.zenodo.json` and the package `py.typed` marker when present.
+`tasks.yaml`, `CITATION.cff`, `.zenodo.json` and the package `py.typed` marker
+when present. Gate wrappers and the component board participate in freshness;
+older captures omitting those now-present inputs require a new native capture.
 This binds consumed documentation, the reference snapshot manifest, benchmark
 and example code, and render inputs alongside the SDK. Their additions/removals
 affect identity. `manuscript/evidence.json` is explicitly excluded so selecting
