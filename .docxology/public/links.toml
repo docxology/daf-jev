@@ -16,3 +16,16 @@ native_gate = "bash scripts/gate.sh"
 verification_status = "daf-jev verification-status --root ABS_CHECKOUT"
 voice_protocol = "docxology/daf-dot"
 spatial_information = "docxology/daf-operator"
+
+# Nonsecret task navigation only; commands are not validation receipts or execution grants.
+[task_handoff]
+path_base = "repository-root"
+repository = "docxology/daf-jev"
+board = "tasks.yaml"
+todo = "TODO.md"
+native_gate = "bash scripts/gate.sh"
+native_contract = "AGENTS.md"
+stack_registry = "../../Private/daf-stack/src/daf_stack/manifest.py"
+flywheel_contract = "../../Private/daf-flywheel/docs/continuous-factory.md"
+horizon_contract = "../../Private/daf-horizon/docs/evidence.md"
+operator_contract = "../../Private/daf-operator/docs/TASK_MODEL.md"

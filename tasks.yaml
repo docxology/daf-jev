@@ -14,6 +14,7 @@ tasks:
     validationCommand: python -m pytest tests/unit/test_evidence.py
     notes: "Explicit-root verification-status reuses selected_verification; shell gates and board changes invalidate captures. See docs/stack-integration.md. Native gate results and Sidecar observations remain separate."
   - id: daf-jev-status-consumer
+    agentPrompt: "Native metadata handoff: Read docxology/daf-jev AGENTS.md and the owning board docxology/daf-jev/tasks.yaml task daf-jev-status-consumer (Qualify Stack and Operator consumption of verification-status); reread this board for current status, dependencies and owner holds. Acceptance: Qualify the existing verification-status consumer with exact selected input/source bindings. Preserve current/unavailable/invalid, scope and native statistics; a changed or missing input must refuse reuse. Retained tests, hosted execution, scientific results and publication are separate evidence. Native gate in the target checkout: bash scripts/gate.sh. Retain command, exit and source-bound evidence plus a meaningful failing control. A metadata/Sidecar pass is not native execution or acceptance; credentials, spending, dispatch, publication and retained-owner operations need their existing separate authorization."
     title: Qualify Stack and Operator consumption of verification-status
     status: todo
     deps: [daf-jev-verification-status]
