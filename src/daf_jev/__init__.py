@@ -92,6 +92,15 @@ from daf_jev.providers import (
 )
 from daf_jev.reask import ReAskPlan, entropy_bits, next_question, reask_plan
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError, CircuitState
+from daf_jev.stack_roster import (
+    MemberAudit,
+    RosterRepo,
+    StackRoster,
+    UnknownMemberError,
+    audit_member,
+    load_roster,
+    parse_roster,
+)
 
 __version__ = "0.7.2"
 
@@ -130,6 +139,7 @@ __all__ = [
     "JSONContent",
     "JaggednessFixture",
     "JevClient",
+    "MemberAudit",
     "ModelCard",
     "NoulAnswer",
     "NoulQuestion",
@@ -142,18 +152,22 @@ __all__ = [
     "RateLimitError",
     "ReAskPlan",
     "RetryPolicy",
+    "RosterRepo",
     "ScoreAnswer",
     "ScoreQuestion",
     "Settings",
+    "StackRoster",
     "SystemOneResponse",
     "ThreadedAsyncBackend",
     "TypeSafeError",
+    "UnknownMemberError",
     "Usage",
     "UsageLedger",
     "UsageSnapshot",
     "Variable",
     "__version__",
     "answer_from_wire",
+    "audit_member",
     "chi2_sf",
     "choice",
     "composite_score",
@@ -165,6 +179,7 @@ __all__ = [
     "get_provider",
     "list_providers",
     "load_posteriors",
+    "load_roster",
     "load_settings",
     "max_streak",
     "next_question",
@@ -174,6 +189,7 @@ __all__ = [
     "open_client",
     "pair_for_calibration",
     "parse_response",
+    "parse_roster",
     "pick_model",
     "position_slope",
     "propose_structure",

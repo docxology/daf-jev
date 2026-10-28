@@ -16,6 +16,8 @@ Usage::
                 [--include-records] [--json | --pretty]
     daf-jev docs-verify [--manifest PATH] [--json | --pretty]
     daf-jev verification-status --root PATH [--json | --pretty]
+    daf-jev stack-member FILE [--repo NAME] [--root PATH]
+                [--json | --pretty]
     daf-jev providers [--json | --pretty]
 
 The global ``--provider NAME`` flag (or ``$DAF_JEV_PROVIDER``) selects a
@@ -48,6 +50,12 @@ from typing import Any
 from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
 from daf_jev.reask import reask_plan
+from daf_jev.stack_roster import (
+    DEFAULT_MEMBER,
+    UnknownMemberError,
+    audit_member,
+    load_roster,
+)
 
 __all__ = ["main", "parse_question_spec"]
 
@@ -521,6 +529,21 @@ def _cmd_verification_status(args: argparse.Namespace) -> int:
     return 0 if payload["status"] == "current" else 1
 
 
+def _cmd_stack_member(args: argparse.Namespace) -> int:
+    """Audit this checkout against a daf-stack roster entry (read-only)."""
+    try:
+        roster = load_roster(args.roster)
+        audit = audit_member(roster, args.repo, root=args.root)
+    except UnknownMemberError as exc:
+        _emit_error({"error": "UsageError", "message": str(exc)}, args.pretty)
+        return 2
+    except (OSError, ValueError) as exc:
+        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        return 1
+    _emit(audit.to_dict(), args.pretty)
+    return 0 if audit.ok else 1
+
+
 def _cmd_posteriors_load(args: argparse.Namespace) -> int:
     try:
         sidecar = load_posteriors(args.file, graphspec=args.graphspec)
@@ -716,6 +739,29 @@ def _build_parser() -> argparse.ArgumentParser:
     p_verification.add_argument("--root", required=True, help="daf-jev source checkout")
     add_common(p_verification, base_url=False)
     p_verification.set_defaults(func=_cmd_verification_status)
+    p_member = sub.add_parser(
+        "stack-member",
+        help="audit this checkout against a daf-stack roster entry (read-only)",
+    )
+    p_member.add_argument(
+        "roster",
+        metavar="FILE",
+        help="roster JSON from 'daf-stack-doctor roster'",
+    )
+    p_member.add_argument(
+        "--repo",
+        default=DEFAULT_MEMBER,
+        metavar="NAME",
+        help=f"roster entry to audit (default: {DEFAULT_MEMBER})",
+    )
+    p_member.add_argument(
+        "--root",
+        default=None,
+        metavar="PATH",
+        help="override the repository root the roster declares",
+    )
+    add_common(p_member, base_url=False)
+    p_member.set_defaults(func=_cmd_stack_member)
     p_serve = sub.add_parser(
         "serve", help="serve the daf-jev MCP server (stdio transport)"
     )

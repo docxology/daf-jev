@@ -122,7 +122,9 @@ restate them here; there is no `../AGENTS.md` in this location.
     mapping-failure latch resets only after a full successful pipeline.
   - `cli.py` — stdlib argparse: `ask`, `models` (`--pick latest|first|last`,
     `--contains STR`), `evaluate` (`--questions-file`, `--states-file`,
-    `--concurrency`, `--model`, `--include-records`), `docs-verify`, `serve`
+    `--concurrency`, `--model`, `--include-records`), `docs-verify`,
+    `stack-member` (FILE, optional `--repo`/`--root`; read-only audit of a
+    daf-stack roster entry, keyless), `serve`
     (`--transport stdio` — the only choice), `posteriors-load` (FILE +
     optional `--graphspec`; validates a `dafjev.bayesnet-posteriors/1` or
     `gnn.marginals/1` sidecar, keyless), `posteriors-reask` (FILE +
@@ -157,6 +159,17 @@ restate them here; there is no `../AGENTS.md` in this location.
     ok}`. Routed through by `daf-jev docs-verify` and MCP
     `jev_docs_verify`; `DEFAULT_MANIFEST` is module-anchored to the repo
     checkout (installed copies fail — see the docs-verify battery note).
+  - `stack_roster.py` — read-only consumer of daf-stack's `daf-stack-doctor
+    roster` document (`{daf_root, repos: [{name, path, branch,
+    require_board, require_sidecar, gate_cmd, required_files,
+    board_path}]}`), no subprocess or writes: `load_roster` / `parse_roster`
+    are strict (duplicate JSON keys, missing/typed fields, relative or
+    escaping `required_files`, duplicate member names; empty
+    `required_files` and unknown extra fields accepted), `StackRoster.member`
+    raises `UnknownMemberError` for unknown names, and `audit_member`
+    checks the declared files under the declared path (`root=` override)
+    without running the gate, git or the Sidecar CLI; `MemberAudit.to_dict`
+    emits `dafjev.stack-member/1` (CLI `stack-member`).
   - `calibration.py` — pure calibration statistics over `(confidence,
     correct)` pairs: `bucket_index`, `reliability_table`,
     `expected_calibration_error`, `brier_score`; no I/O.
@@ -300,8 +313,8 @@ restate them here; there is no `../AGENTS.md` in this location.
   manuscript_variables, calibration, and mcp_server modules, plus
   test_graphical.py, test_graphical_elicitation.py,
   test_graphical_viz.py, test_graphical_methods.py,
-  test_graphical_animation.py, test_bayesnet_posteriors.py, and
-  test_reask.py),
+  test_graphical_animation.py, test_bayesnet_posteriors.py,
+  test_reask.py, and test_stack_roster.py),
   `tests/live/test_live_api.py` (2 tests, `@pytest.mark.live`). Generated
   counts live in `output/data/manuscript_variables.json` (test_count /
   coverage, refresh via `scripts/z_generate_manuscript_variables.py`).

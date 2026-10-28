@@ -195,6 +195,12 @@ never be committed, printed, or read by tests.
   `verify_manifest(manifest_path)` re-hashes every page of the TypeSafe
   docs-snapshot manifest (flags `missing` / `drifted` / `added`); routed
   through `daf-jev docs-verify` and MCP `jev_docs_verify`.
+- **Stack roster** (`daf_jev.stack_roster`) — read-only consumer of
+  `daf-stack-doctor roster`: `load_roster` / `parse_roster` strictly parse
+  `{daf_root, repos: [...]}`, `StackRoster.member(name="daf-jev")` looks up
+  an entry, and `audit_member` checks its declared `required_files` (echoes
+  branch/gate/board/sidecar facts, never runs them); surfaced as `daf-jev
+  stack-member` and the `dafjev.stack-member/1` payload.
 - **Figures** (`daf_jev.figures`, `figures` extra) — `generate_all()`
   writes the 7 registry-named PNGs + `figure_registry.json` into the
   figures directory; data-driven figures read the explicit hash-bound
@@ -314,6 +320,10 @@ daf-jev evaluate --questions-file PATH --states-file PATH
             [--concurrency N] [--model M] [--base-url URL]
             [--include-records]
 daf-jev docs-verify [--manifest PATH]        # exit 1 on snapshot drift
+daf-jev stack-member FILE [--repo NAME] [--root PATH]
+                                           # read-only roster audit (keyless;
+                                           # 0 ok / 1 missing files, malformed
+                                           # roster, non-dir --root / 2 unknown --repo)
 daf-jev serve [--transport stdio]            # MCP server (stdio default)
 daf-jev providers                           # registry listing (keyless, exit 0)
 daf-jev posteriors-load FILE [--graphspec FILE]

@@ -1063,6 +1063,9 @@ a completed experiment.
 
 `daf-jev verification-status --root PATH` inspects selected, source-bound unit
 execution and live-test collection without model calls or new test execution.
+`daf-jev stack-member FILE` consumes daf-stack's `daf-stack-doctor roster`
+JSON and audits this checkout against the member entry daf-stack declares
+(required files only; no gate, git, Sidecar or subprocess execution).
 See [the integration contract](docs/stack-integration.md) for status/exit codes,
 the native offline gate, Sidecar evidence boundaries and remaining consumer work.
 DAF Dot carries the real-time voice protocol; DAF Operator spatializes information.
@@ -1099,6 +1102,7 @@ source to contract. Module contracts live in
 | `ledger` | [`ledger.py`](src/daf_jev/ledger.py) | `UsageLedger` — thread-safe request/token accounting |
 | `models` | [`models.py`](src/daf_jev/models.py) | `pick_model` over the models listing |
 | `docs_verify` | [`docs_verify.py`](src/daf_jev/docs_verify.py) | docs-snapshot manifest verifier (CLI `docs-verify`, MCP `jev_docs_verify`) |
+| `stack_roster` | [`stack_roster.py`](src/daf_jev/stack_roster.py) | read-only daf-stack roster consumer — strict parse, member lookup, declared-file audit (CLI `stack-member`) |
 | `cli` | [`cli.py`](src/daf_jev/cli.py) | the `daf-jev` argparse CLI (JSON out, exit 0/1/2) |
 | `mcp_server` | [`mcp_server.py`](src/daf_jev/mcp_server.py) | FastMCP stdio server — nine tools + docs resource |
 | `graphical` | [`graphical.py`](src/daf_jev/graphical.py) | `Variable` / `Edge` / `CPT` / `BayesNet` — exact VE, GraphSpec round-trip |

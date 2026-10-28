@@ -411,6 +411,14 @@ wire path is silently coerced.
     inputs are `invalid`; both exit 1 with null statistics (missing --root is
     usage exit 2). This is a point-in-time observation, not the fixed Stack gate,
     Sidecar validation, hosted acceptance or publication authority.
+  - `daf-jev stack-member FILE [--repo NAME] [--root PATH] [--json | --pretty]` —
+    keyless, read-only audit of this checkout against a roster JSON emitted by
+    `daf-stack-doctor roster` (schema in the `stack_roster.py` contract):
+    checks the declared `required_files` under the declared path (or `--root`)
+    and echoes branch/gate/board/sidecar declarations without executing them.
+    Prints `dafjev.stack-member/1`; exit 0 when `ok`, 1 for missing files, a
+    malformed/unreadable roster or a non-directory `--root`, 2 for an unknown
+    `--repo` or usage. No network, subprocess, Sidecar or gate execution.
   - `daf-jev posteriors-load FILE [--graphspec FILE]` — loads and
     validates a `dafjev.bayesnet-posteriors/1` or `gnn.marginals/1`
     sidecar (same loader as the MCP `jev_posteriors_load` tool);
@@ -448,7 +456,9 @@ wire path is silently coerced.
   `decompose_single_parent`), and the posteriors-ingest additions
   (`CalibrationPairing`, `PosteriorsSidecar`, `load_posteriors`,
   `pair_for_calibration`), and the re-ask policy additions
-  (`ReAskPlan`, `entropy_bits`, `next_question`, `reask_plan`), plus
+  (`ReAskPlan`, `entropy_bits`, `next_question`, `reask_plan`), the
+  stack-roster additions (`MemberAudit`, `RosterRepo`, `StackRoster`,
+  `UnknownMemberError`, `audit_member`, `load_roster`, `parse_roster`), plus
   `AsyncDecisionBackend`, `AsyncHTTPDecisionBackend`, `BackendCapabilities`,
   `CallReceipt`, `DecisionBackend`, `DecisionPrediction`, `DecisionRequest`,
   `DecisionResult`, `HTTPDecisionBackend`, `PriorBackend` and
@@ -688,6 +698,26 @@ wire path is silently coerced.
   treats `added` as failure, mirroring `scrape_docs.py --check`);
   `DEFAULT_MANIFEST` is anchored to the repo root this module is installed
   in, not the process CWD.
+- `stack_roster.py` — read-only consumer of daf-stack's roster registry (no
+  subprocess, no writes): `load_roster(path)` / `parse_roster(value)` strictly
+  parse the document `daf-stack-doctor roster` emits (`{daf_root, repos:
+  [{name, path, branch, require_board, require_sidecar, gate_cmd,
+  required_files, board_path}]}`). Roster JSON goes through
+  `strict_json_loads` (duplicate keys rejected); every documented field is
+  required with its documented type, entries with absolute `path`/`daf_root`
+  (nullable `branch`/`gate_cmd`/`board_path`), unique repo names and relative
+  non-escaping `required_files` entries; an empty `required_files` list is
+  accepted (daf-stack declares those files as optional extras) and unknown
+  extra fields are ignored. `StackRoster.member(name="daf-jev")` raises
+  `UnknownMemberError(LookupError)` for unknown names;
+  `audit_member(roster, name="daf-jev", root=None) -> MemberAudit{repo, root,
+  root_exists, missing, ok}` checks only the declared `required_files`
+  entries under the declared path (`root=` overrides it and must be an
+  existing directory, else `ValueError`). A missing declared root is an audit
+  failure (`root_exists: False`, every file missing), not an error.
+  `MemberAudit.to_dict()` emits `dafjev.stack-member/1`. Declared gate,
+  branch, board and sidecar facts are echoed, never executed or verified
+  here; Sidecar evidence stays with the Sidecar CLI and its roster audit.
 - `mcp_server.py` — FastMCP server (`build_server()`,
   `main(transport="stdio")`): 8 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
@@ -1384,6 +1414,13 @@ Line receipts against current source: formats/tolerances
   decider loop end-to-end over the stub server (`tests/unit/test_decider.py`:
   happy path, cache, budget, breaker, consecutive-failure latch, gate,
   mapping/compose errors, no-key/client-error latching, event receipts).
+  Stack-roster additions (`tests/unit/test_stack_roster.py`): strict roster
+  parse (missing/typed fields, duplicate names, absolute paths, escaping
+  `required_files`, duplicate JSON keys, readable/unreadable paths), member
+  lookup, audit over real temp checkouts (conforming, missing file, missing
+  root, `root=` override, empty `required_files`), CLI exit codes
+  (0/1/2 + JSON shapes), and a binding test that this checkout satisfies
+  daf-stack's declared required files.
   Provider-dispatch additions (`tests/unit/test_providers.py`): registry
   order + case-insensitive `get_provider` + unknown/duplicate/invalid-key
   errors; per-provider resolution precedence (explicit arg > provider env

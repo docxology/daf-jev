@@ -59,11 +59,41 @@ coverage is not a source gate, identity authority, adoption or publication proof
 Preserve its manifest/lock formats; use the owner's roster-based fleet audit for
 coverage rather than inventing a second schema or freshness rule here.
 
+## Roster membership
+
+Stack owns the repository registry and publishes it read-only as
+`daf-stack-doctor roster` → `{daf_root, repos: [{name, path, branch,
+require_board, require_sidecar, gate_cmd, required_files, board_path}]}`.
+daf-jev consumes that document as an external dual-use member:
+
+```sh
+daf-stack-doctor roster > /tmp/roster.json        # in the daf-stack checkout
+daf-jev stack-member /tmp/roster.json --pretty
+```
+
+`daf-jev stack-member` parses the roster strictly (duplicate JSON keys,
+missing/typed fields, relative or escaping `required_files` entries and
+duplicate member names fail closed; unknown extra fields are ignored) and
+audits the `daf-jev` entry, or another `--repo NAME`. It checks only that the
+declared `required_files` exist under the declared path, which `--root PATH`
+may override for a moved checkout or install. It prints
+`dafjev.stack-member/1` and exits 0 when the member conforms, 1 for missing
+files or a malformed/unreadable roster, 2 for an unknown `--repo`.
+
+The declared `branch`, `gate_cmd`, `board_path`, `require_board` and
+`require_sidecar` values are echoed, never executed or verified: no git,
+gate, Sidecar CLI or subprocess runs, and a green audit is not daf-stack's
+doctor verdict, the native offline gate, Sidecar coverage or publication
+acceptance. `tests/unit/test_stack_roster.py` also binds this checkout to the
+declared required files, so losing one fails locally rather than silently
+dropping Stack membership.
+
 ## Next integration
 
 Stack owns its manifest and fixed entrypoint admission. Operator can consume
 this explicit-root CLI result as a scoped evidence card, keeping unavailable and
-invalid states visible and re-reading before reuse. No consumer registration,
-dashboard wiring or cross-repo gate admission is performed by this component
-pass. Native source-gate evidence, Sidecar coverage, model execution/billing,
-scientific acceptance and publication remain separate evidence lanes.
+invalid states visible and re-reading before reuse. The roster consumer above
+reads Stack's registry; it does not register components, wire dashboards or
+admit cross-repo gates. Native source-gate evidence, Sidecar coverage, model
+execution/billing, scientific acceptance and publication remain separate
+evidence lanes.
