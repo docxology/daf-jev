@@ -69,9 +69,9 @@ mcp = [
 ]
 benchmark = [
     "scikit-learn>=1.5,<2",
-    # SciPy 1.15.3 CPython 3.10 macOS wheels fail recent dyld zero-fill validation.
-    "scipy>=1.14.1,<1.15; sys_platform == 'darwin' and python_version < '3.11'",
-    "scipy>=1.15.3; sys_platform != 'darwin' and python_version < '3.11'",
+    # The 3.10 scipy workaround pins were retired with the >=3.11 support
+    # floor (7b76479). On 3.11+ scipy arrives through scikit-learn; the
+    # 3.10-only pins are unreachable and no longer lockable.
     "psutil>=6,<8",
 ]
 

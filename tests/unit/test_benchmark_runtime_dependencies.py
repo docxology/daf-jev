@@ -37,9 +37,6 @@ def test_release_checker_preserves_compound_benchmark_markers(system_operator):
 
 
 @pytest.mark.parametrize("system,python,active", [
-    ("darwin", "3.10", "<1.15,>=1.14.1"),
-    ("linux", "3.10", ">=1.15.3"),
-    ("win32", "3.10", ">=1.15.3"),
     ("darwin", "3.11", None),
     ("linux", "3.11", None),
     ("darwin", "3.14", None),
@@ -55,9 +52,6 @@ def test_benchmark_scipy_requirement_is_platform_scoped(system, python, active):
 
 
 @pytest.mark.parametrize("system,python,expected", [
-    ("darwin", "3.10.20", "1.14.1"),
-    ("linux", "3.10.20", "1.15.3"),
-    ("win32", "3.10.20", "1.15.3"),
     ("darwin", "3.11.15", "1.17.1"),
     ("linux", "3.14.4", "1.18.1"),
 ])
