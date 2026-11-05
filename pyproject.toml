@@ -16,7 +16,6 @@ keywords = ["decision-models", "benchmarking", "typed-interfaces", "reproducibil
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Typing :: Typed",
@@ -62,7 +61,8 @@ dev = [
 ]
 figures = [
     "matplotlib>=3.7",
-    "pillow>=10,<13",
+    # 13.0.0 is the first Pillow release with no open advisory. Do not lower this floor.
+    "pillow>=13.0.0",
 ]
 mcp = [
     "mcp>=1.2,<2",
