@@ -12,3 +12,7 @@ remain subject to Operator policy, source freshness and separate execution admis
 - [daf-jev-stack-onboarding](tasks.yaml#L5) — Verify the offline package gate for stack onboarding
 - [daf-jev-verification-status](tasks.yaml#L11) — Inspect selected source-bound verification without execution
 - [daf-jev-status-consumer](tasks.yaml#L16) — Qualify Stack and Operator consumption of verification-status
+
+## Workflowz review — 2026-11-10
+
+- [ ] [WFR1 — Correct advertised Python support floor](tasks.yaml#daf-jev-wfr1)
