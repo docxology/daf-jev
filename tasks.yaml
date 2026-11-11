@@ -19,3 +19,16 @@ tasks:
     status: todo
     deps: [daf-jev-verification-status]
     notes: "Consumer-owned integration: preserve current/unavailable/invalid, scope and native statistics. Re-read before reuse; never convert retained unit/live-collection evidence or Sidecar coverage into hosted acceptance. No consumer registration from this repo."
+  - id: daf-jev-wfr1
+    title: "Align Python version documentation with the >=3.11 package floor"
+    status: todo
+    start: 2026-11-10
+    end: 2026-11-10
+    progress: 0
+    milestone: false
+    deps: []
+    tags:
+      - workflowz-review
+    priority: medium
+    notes: "Observable outcome: README.md no longer advertises Python 3.10+ or its tomli dependency, and its Python badge resolves to the declared >=3.11 package contract. Evidence: README.md:3 shows python-3.10%2B; README.md:102 says Python >= 3.10 and tomli on Python 3.10; pyproject.toml:28 declares >=3.11; pyproject.toml:32 leaves tomli only for python_version < '3.11' and pyproject.toml:72 says the 3.10 workaround was retired. Behavioral probe from repo root: build the distribution in an isolated environment, then run `python -m pip install --dry-run --ignore-installed --python-version 3.10 --only-binary=:all: dist/daf_jev-0.7.2-py3-none-any.whl` and confirm the package floor rejects 3.10; separately activate the README quickstart using a Python 3.11 interpreter and confirm `python -c \"import daf_jev; print(daf_jev.__name__)\"` prints daf_jev after a clean editable install. Update both badge and dependency prose together; do not lower the package floor, make a blind runtime upgrade, or change unrelated classifiers/lint targets without compatibility evidence. Existing daf-jev-status-consumer remains independent."
+    validationCommand: "bash scripts/gate.sh"
