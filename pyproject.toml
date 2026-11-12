@@ -16,7 +16,6 @@ keywords = ["decision-models", "benchmarking", "typed-interfaces", "reproducibil
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Typing :: Typed",
