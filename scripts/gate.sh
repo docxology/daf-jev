@@ -8,4 +8,7 @@ if [ "$#" -ne 0 ]; then
     exit 2
 fi
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-exec uv run --locked --extra dev python -m pytest tests/ -m 'not live' --cov=src --cov-branch --cov-fail-under=90
+# The suite asserts the benchmark runtime and figure paths, so the gate selects the
+# same extras as CI. With `--extra dev` alone a fresh environment failed the
+# benchmark-runtime test; only a venv synced earlier with more extras passed.
+exec uv run --locked --extra dev --extra figures --extra benchmark python -m pytest tests/ -m 'not live' --cov=src --cov-branch --cov-fail-under=90
