@@ -1,6 +1,6 @@
 # daf-jev
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![v0.7.1 on Zenodo](https://img.shields.io/badge/Zenodo-v0.7.1-1F77B4)](https://zenodo.org/records/23266335)
 
@@ -99,8 +99,8 @@ with prepared datasets, durable attempt receipts and separate quality/cost evide
   `jev_posteriors_load`, `jev_reask_plan`) plus a
   `jev://docs/snapshot` resource, over stdio (see [MCP server](#mcp-server)).
 
-Dependencies: Python >= 3.10, `httpx`, `pyyaml`, and `tomli` on Python 3.10 (plus `matplotlib` +
-`pillow` for figures). Managed with `uv`.
+Dependencies: Python >= 3.11, `httpx` and `pyyaml` (plus `matplotlib` + `pillow`
+for figures). Managed with `uv`.
 
 ## Architecture at a glance
 
@@ -164,8 +164,8 @@ flowchart TB
     class CI,MC,QU,EX surf;
 ```
 
-The core uses `httpx` and `pyyaml`, with `tomli` for TOML parsing on Python 3.10;
-Python 3.11 and newer use standard-library `tomllib`. `matplotlib` is optional
+The core uses `httpx` and `pyyaml`; TOML parsing uses the standard-library
+`tomllib`. `matplotlib` is optional
 (the `figures` extra). Inference in `graphical.py` is pure-stdlib
 variable elimination — no numpy, no network at query time.
 
