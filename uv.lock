@@ -645,7 +645,7 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.2,<2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19" },
-    { name = "pillow", marker = "extra == 'figures'", specifier = ">=10,<14" },
+    { name = "pillow", marker = "extra == 'figures'", specifier = ">=13.0.0,<14" },
     { name = "psutil", marker = "extra == 'benchmark'", specifier = ">=6,<8" },
     { name = "pypdf", marker = "extra == 'dev'", specifier = ">=6,<8" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },

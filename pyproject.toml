@@ -61,7 +61,9 @@ dev = [
 ]
 figures = [
     "matplotlib>=3.7",
-    "pillow>=10,<14",
+    # 13.0.0 is the first Pillow release with no open advisory; the lock already
+    # resolves it. Do not lower this floor.
+    "pillow>=13.0.0,<14",
 ]
 mcp = [
     "mcp>=1.2,<2",
