@@ -20,7 +20,7 @@ def test_original_cancellation_and_workflow_survive_wrappers_and_chain_cycles():
     after_error.__context__ = original
     boundary = asyncio.CancelledError()
     boundary.__context__ = original
-    timeout = asyncio.TimeoutError()
+    timeout = TimeoutError()
     timeout.__cause__ = boundary
     assert original_cancellation(boundary) is original
     assert original_cancellation(boundary).__cause__ is after_error
@@ -103,7 +103,7 @@ def test_unrelated_exception_nodes_cannot_supply_cancellation_work():
     unrelated.__context__ = previous
     current = asyncio.CancelledError()
     current.__context__ = unrelated
-    timeout = asyncio.TimeoutError()
+    timeout = TimeoutError()
     timeout.__cause__ = unrelated
     assert original_cancellation(current) is current
     assert cancellation_workflow(current) is None
@@ -115,7 +115,7 @@ def test_unrelated_exception_nodes_cannot_supply_cancellation_work():
 
 def test_unmarked_normalization_cycle_terminates_without_evidence():
     cancellation = asyncio.CancelledError()
-    timeout = asyncio.TimeoutError()
+    timeout = TimeoutError()
     cancellation.__context__ = timeout
     timeout.__cause__ = cancellation
     assert original_cancellation(cancellation) is cancellation

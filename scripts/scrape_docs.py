@@ -35,7 +35,7 @@ import re
 import sys
 import urllib.request
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -164,7 +164,7 @@ def build_manifest(
         "source": SOURCE,
         "base_url": _origin(index_url),
         "index_url": index_url,
-        "scraped_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "scraped_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "index_sha256": page_sha256(index_bytes),
         "page_count": len(pages_meta),
         "pages": pages_meta,

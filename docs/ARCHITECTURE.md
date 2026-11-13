@@ -951,7 +951,7 @@ pure-Python engine turns those factors into exact inference. Jev sits
 UPSTREAM (structure + CPTs), WITHIN (the factors are Jev probabilities),
 and DOWNSTREAM (evidence queries / re-asking). Engines such as GTSAM or
 RxInfer.jl consume the same factors through the GraphSpec interchange
-below. Python >= 3.10, stdlib only — no numpy.
+below. Python >= 3.11, stdlib only — no numpy.
 
 Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
 
@@ -2242,8 +2242,8 @@ file-access attestation, hosted/model acceptance or publication permission.
 ## Conventions (template_code_project)
 
 - uv-managed; thin scripts; logic in src; >= 90% coverage gate on src.
-- Python >= 3.10, httpx + pyyaml core, with tomli on Python 3.10 and standard-library
-  tomllib on newer Python; optional benchmark classifiers
+- Python >= 3.11, httpx + pyyaml core, with standard-library
+  tomllib; optional benchmark classifiers
   and grouped splits use scikit-learn, and figures use matplotlib/Pillow.
 - Every source dir carries README.md/AGENTS.md accurate to disk (docs pass later).
 - Verification follows the active task's ownership and repository checks;

@@ -1033,7 +1033,7 @@ async def _execute(store: RunStore, *, through_phase: str | None = None,
                     left = remaining()
                     await asyncio.sleep(min(delay, max(0, left)) if left is not None else delay)
             error = None if result is not None else error
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             error = "TimeoutError"
             partial = cancellation_workflow(exc)
             if partial is not None:

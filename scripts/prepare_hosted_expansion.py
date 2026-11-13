@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
@@ -324,7 +324,7 @@ def render_matrix(plan: dict[str, Any], directory: Path) -> dict[str, str]:
             "scope": "Static adapter restrictions and tariff bounds only; every arm remains blocked by prior UNKNOWN billing; no inference measurements."}
     data_raw = (canonical_json(data) + "\n").encode()
     (directory / "admission-matrix.json").open("xb").write(data_raw)
-    epoch = datetime(2026, 10, 8, tzinfo=timezone.utc)
+    epoch = datetime(2026, 10, 8, tzinfo=UTC)
     style = {"font.family": "DejaVu Sans", "font.size": 8, "svg.fonttype": "path",
              "svg.hashsalt": content_hash(data), "pdf.fonttype": 42, "axes.grid": False,
              "figure.facecolor": "white", "savefig.facecolor": "white"}
