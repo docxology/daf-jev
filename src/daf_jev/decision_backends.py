@@ -17,7 +17,7 @@ import uuid
 from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlsplit
@@ -45,7 +45,7 @@ def content_hash(value: Any) -> str:
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @dataclass(frozen=True)

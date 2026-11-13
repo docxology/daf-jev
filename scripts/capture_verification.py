@@ -14,7 +14,7 @@ import platform
 import subprocess
 import sys
 import sysconfig
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,7 +42,7 @@ def capture(root: Path, out_dir: Path) -> int:
     live_command = [sys.executable, "-m", "pytest", "tests/live", "--collect-only", "-q"]
     record: dict[str, object] = {
         "format": "dafjev.verification-evidence/1", "before": before,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
         "environment": {"python_version": platform.python_version(), "platform": platform.platform(),
                         "stdlib_directory": str(Path(sysconfig.get_path("stdlib")).absolute())},
         "unit_command": unit_command, "live_collection_command": live_command,
@@ -66,7 +66,7 @@ def capture(root: Path, out_dir: Path) -> int:
         except (OSError, ValueError) as exc:
             record["after"] = None
             record["identity_error"] = type(exc).__name__
-        record["finished_at"] = datetime.now(timezone.utc).isoformat()
+        record["finished_at"] = datetime.now(UTC).isoformat()
         for key, path in (("coverage", coverage), ("junit", junit), ("live_collection", live),
                           ("unit_log", out_dir / "unit.txt")):
             if path.is_file():

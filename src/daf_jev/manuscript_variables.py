@@ -30,14 +30,11 @@ import platform
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+import tomllib
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # Python 3.10
-    import tomli as tomllib
 from ._json import strict_json_loads
 from ._yaml import strict_yaml_loads
 from .evidence import selected_verification
@@ -77,7 +74,7 @@ def _build_timestamp(project_root: Path) -> str:
     """
     epoch = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
     if epoch.isdigit():
-        return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime.fromtimestamp(int(epoch), tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
         proc = subprocess.run(
             ["git", "-C", str(project_root), "log", "-1", "--format=%cI"],
@@ -92,10 +89,10 @@ def _build_timestamp(project_root: Path) -> str:
     if commit_iso:
         try:
             parsed = datetime.fromisoformat(commit_iso.replace("Z", "+00:00"))
-            return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            return parsed.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         except ValueError:
             pass
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _human_bytes(total: int) -> str:
@@ -228,7 +225,7 @@ def _pytest_collected(project_root: Path, test_dir: str) -> int | None:
 
 def _iso_utc(timestamp: float) -> str:
     """UTC ISO-8601 rendering of a filesystem timestamp (for diagnostics)."""
-    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.fromtimestamp(timestamp, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _newest_source_mtime(project_root: Path) -> float | None:

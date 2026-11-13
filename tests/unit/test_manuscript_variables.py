@@ -21,7 +21,7 @@ import platform
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -30,8 +30,8 @@ from daf_jev.manuscript_variables import generate_variables, save_variables
 
 FAKE_VERSION = "1.2.3"
 
-_STALE_TS = datetime(1988, 1, 1, tzinfo=timezone.utc).timestamp()
-_NEWER_TS = datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp()
+_STALE_TS = datetime(1988, 1, 1, tzinfo=UTC).timestamp()
+_NEWER_TS = datetime(2020, 1, 1, tzinfo=UTC).timestamp()
 
 _CONFIG_YAML = """\
 paper:

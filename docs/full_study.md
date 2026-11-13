@@ -268,7 +268,7 @@ The measured environment used Python 3.14.4, scikit-learn 1.9.1, NumPy 2.5.3,
 SciPy 1.18.1, joblib 1.6.0, threadpoolctl 3.7.0, psutil 7.2.2, httpx 0.28.1 and
 PyYAML 6.0.3. Retain `uv.lock` and `pyproject.toml` with the SDK source snapshot;
 check the installed versions rather than treating dependency ranges as pins.
-Python 3.10 remains the minimum package requirement, not the measured runtime.
+Python 3.11 remains the minimum package requirement, not the measured runtime.
 
 ```bash
 uv sync --frozen --python 3.14.4 --extra benchmark --extra figures

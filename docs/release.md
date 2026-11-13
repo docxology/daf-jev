@@ -52,14 +52,15 @@ Build into a fresh directory. Build inputs and archive contents must agree with
 the intended source commit; unrelated ignored files must remain outside it.
 
 ```bash
+VERSION=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
 uv build --out-dir .benchmarks/release-new/dist
-uv venv --python 3.10 .benchmarks/release-new/core
+uv venv --python 3.11 .benchmarks/release-new/core
 uv pip install --python .benchmarks/release-new/core/bin/python \
-    .benchmarks/release-new/dist/daf_jev-0.7.1-py3-none-any.whl
+    .benchmarks/release-new/dist/daf_jev-${VERSION}-py3-none-any.whl
 uv run python scripts/check_release_package.py \
     --source-root . \
-    --wheel .benchmarks/release-new/dist/daf_jev-0.7.1-py3-none-any.whl \
-    --sdist .benchmarks/release-new/dist/daf_jev-0.7.1.tar.gz \
+    --wheel .benchmarks/release-new/dist/daf_jev-${VERSION}-py3-none-any.whl \
+    --sdist .benchmarks/release-new/dist/daf_jev-${VERSION}.tar.gz \
     --python .benchmarks/release-new/core/bin/python \
     --output .benchmarks/release-new/package-check.json
 ```
@@ -106,11 +107,11 @@ Recommended release files are:
 
 | Asset | Permitted contents |
 | --- | --- |
-| `daf_jev-0.7.1-py3-none-any.whl` | Checked installed core package and typing metadata |
-| `daf_jev-0.7.1.tar.gz` | Checked package sdist, source/readme/license |
-| `daf-jev-0.7.1-source.zip` | Reviewed release-commit projection of source, tests, scripts, guides, examples, recipes and manuscript inputs |
-| `daf-jev-0.7.1-manuscript.pdf` | Fresh reviewed release-version PDF with resolved citations, figures, tables and complete page text |
-| `daf-jev-0.7.1-evidence.zip` | Explicit public projection of selected summaries, historical receipts, figure registry, token map and portable verification inputs |
+| `daf_jev-0.7.2-py3-none-any.whl` | Checked installed core package and typing metadata |
+| `daf_jev-0.7.2.tar.gz` | Checked package sdist, source/readme/license |
+| `daf-jev-0.7.2-source.zip` | Reviewed release-commit projection of source, tests, scripts, guides, examples, recipes and manuscript inputs |
+| `daf-jev-0.7.2-manuscript.pdf` | Fresh reviewed release-version PDF with resolved citations, figures, tables and complete page text |
+| `daf-jev-0.7.2-evidence.zip` | Explicit public projection of selected summaries, historical receipts, figure registry, token map and portable verification inputs |
 | `SHA256SUMS` and `release-manifest.json` | Exact asset hashes, source/tag identity, selection provenance and acceptance limits |
 
 The filenames are a proposed contract until the publisher freezes actual assets.

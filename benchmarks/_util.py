@@ -10,7 +10,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from statistics import mean
 from uuid import uuid4
@@ -59,7 +59,7 @@ def write_result(name: str, payload: dict, *, out_dir: Path | None = None) -> Pa
     """Write a unique UTC receipt, exclusively, with strict JSON numbers."""
     if not re.fullmatch(r"[a-z][a-z0-9_-]*", name):
         raise ValueError("benchmark name must contain lowercase letters, digits, underscores or hyphens")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     receipt_id = f"{now.strftime('%Y%m%dT%H%M%S%fZ')}_{uuid4().hex}"
     encoded = json.dumps({**payload, "receipt_id": receipt_id,
                           "generated_utc": now.isoformat(),

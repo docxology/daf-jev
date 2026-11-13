@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import textwrap
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -133,7 +133,7 @@ def write_publication(report: dict[str, Any], path: Path) -> None:
     height_points = page_size[1] * 72
     rows_per_page = int((height_points * (1 - 2 * margin) - font_size) // line_height) + 1
     # Fixed PDF metadata makes repeated reduction of retained observations byte-stable.
-    stamp = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    stamp = datetime(2000, 1, 1, tzinfo=UTC)
     with path.open("xb") as binary_handle, PdfPages(binary_handle, metadata={"Title": "Decision-model benchmark",
         "CreationDate": stamp, "ModDate": stamp, "Subject": report["manifest_hash"]}) as pdf:
         for start in range(0, len(lines), rows_per_page):

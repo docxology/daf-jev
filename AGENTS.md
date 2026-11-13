@@ -405,7 +405,6 @@ restate them here; there is no `../AGENTS.md` in this location.
   `_combined_manuscript.md`, the template-render combined manuscript
   (tracked in git, not gitignored; verified 2026-09-24).
 - `pyproject.toml` — setuptools build, version 0.7.2, `httpx` + `pyyaml`
-  and conditional `tomli` on Python 3.10
   runtime deps, `dev` (pytest, pytest-cov, pytest-timeout, matplotlib, mcp,
   mypy, types-PyYAML, ruff, pypdf), `figures` (matplotlib/Pillow), `benchmark`
   (scikit-learn/psutil), and `mcp` (`mcp>=1.2,<2`, for
@@ -646,8 +645,8 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   `docs/ARCHITECTURE.md`.
 - Score question criteria MUST be a list of >= 2 strings; choice criteria
   non-empty — both raise `ValueError` in `to_wire()`.
-- Python >= 3.10; core dependencies are `httpx`, `pyyaml` and `tomli` on
-  Python 3.10 (`tomllib` is built in on newer Python). The `.env` loader is
+- Python >= 3.11; core dependencies are `httpx` and `pyyaml`
+  (`tomllib` is in the standard library). The `.env` loader is
   a tiny built-in in `config.py`, no python-dotenv dependency. `matplotlib`
   is optional through the `figures` extra; benchmark classifiers/resources use
   their own optional extra.
@@ -702,6 +701,10 @@ uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.
 uv run daf-jev serve --help                 # stdio surface only; does not start serving
 uv run daf-jev benchmark --help             # dispatcher only; no fetch/model call
 ```
+
+`bash scripts/gate.sh` runs `ruff`, `mypy`, `docs-verify` and the offline scraper
+drift check from this list before the offline pytest gate, so a green native gate
+matches the CI lint and docs jobs.
 
 `docs-verify` defaults to the module-anchored repository snapshot. Wheel installs
 do not include `docs/reference/`; use `docs-verify --manifest PATH` with a supplied
