@@ -179,7 +179,7 @@ uv run pytest tests/unit --cov=src
 ```
 
 Use repository configuration and current CI to determine required checks.
-The CI matrix declares Python 3.10 and 3.14 checks with development, figure and
+The CI matrix declares Python 3.14 and 3.15 checks with development, figure and
 benchmark extras. A local gate on one interpreter does not establish the other
 matrix job or remote CI success.
 Tests drive real transports through an ephemeral loopback HTTP server; they do
