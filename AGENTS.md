@@ -702,6 +702,10 @@ uv run daf-jev serve --help                 # stdio surface only; does not start
 uv run daf-jev benchmark --help             # dispatcher only; no fetch/model call
 ```
 
+`bash scripts/gate.sh` runs `ruff`, `mypy`, `docs-verify` and the offline scraper
+drift check from this list before the offline pytest gate, so a green native gate
+matches the CI lint and docs jobs.
+
 `docs-verify` defaults to the module-anchored repository snapshot. Wheel installs
 do not include `docs/reference/`; use `docs-verify --manifest PATH` with a supplied
 snapshot outside the checkout rather than claiming the default is installed data.
