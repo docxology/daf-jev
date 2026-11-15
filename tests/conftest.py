@@ -28,6 +28,7 @@ class StubTypeSafeServer:
       response program; each incoming request pops the next program (an empty
       program means 200 with ``{}``).
     - ``set_delay(seconds)`` delays every response (for timeout tests).
+    - ``wait_for_hits(count, timeout)`` waits for recorded request arrival.
     - ``hits`` records one dict per request:
       ``{method, path, headers (lower-cased), body (raw str), json (parsed)}``.
       A malformed/non-JSON request body records ``json: None`` and answers
@@ -37,7 +38,7 @@ class StubTypeSafeServer:
 
     def __init__(self) -> None:
         self.hits: list[dict[str, Any]] = []
-        self._lock = threading.Lock()
+        self._lock = threading.Condition()
         self._queue: deque[dict[str, Any]] = deque()
         self._delay = 0.0
         outer = self
@@ -85,6 +86,7 @@ class StubTypeSafeServer:
                                 "json": None,
                             }
                         )
+                        outer._lock.notify_all()
                     self._respond(
                         400,
                         b"malformed request body: expected JSON",
@@ -102,6 +104,7 @@ class StubTypeSafeServer:
                             "json": parsed,
                         }
                     )
+                    outer._lock.notify_all()
                 delay = program.get("delay")
                 if delay is None:
                     delay = outer._delay
@@ -166,6 +169,11 @@ class StubTypeSafeServer:
         """Delay every response by ``seconds`` (per-program delay wins)."""
         with self._lock:
             self._delay = seconds
+
+    def wait_for_hits(self, count: int, timeout: float = 5.0) -> bool:
+        """Wait for request recording, independently of client timeout timing."""
+        with self._lock:
+            return self._lock.wait_for(lambda: len(self.hits) >= count, timeout)
 
     def reset(self) -> None:
         with self._lock:

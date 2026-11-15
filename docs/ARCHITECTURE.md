@@ -2159,15 +2159,16 @@ Publication selection JSON uses the shared strict decoder; duplicate keys and
 nonstandard constants fail.
 `verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]`
 inventories every `.py` file under `src/daf_jev`, `tests`, `scripts`, `benchmarks`
-and `examples`, plus `.sh` gate wrappers under `scripts`, excluding
-`__pycache__`; static `.md`, `.json`, `.yaml`, `.yml`,
+and `examples`, plus `.sh` gate wrappers under `scripts` and `.yaml`/`.yml`
+benchmark recipes under `benchmarks`, excluding `__pycache__`; static `.md`,
+`.json`, `.yaml`, `.yml`,
 `.bib` and `.tex` files under `docs`, `skills` and `manuscript`; and
 `pyproject.toml`, `uv.lock`, `AGENTS.md`, `.github/workflows/ci.yml`, `README.md`,
 `tasks.yaml`, `CITATION.cff`, `.zenodo.json` and the package `py.typed` marker
 when present. Gate wrappers and the component board participate in freshness;
 older captures omitting those now-present inputs require a new native capture.
 This binds consumed documentation, the reference snapshot manifest, benchmark
-and example code, and render inputs alongside the SDK. Their additions/removals
+recipes, benchmark/example code, and render inputs alongside the SDK. Their additions/removals
 affect identity. `manuscript/evidence.json` is explicitly excluded so selecting
 a capture does not invalidate its tested inputs. Generated output and private
 run evidence are not static verification inputs.
