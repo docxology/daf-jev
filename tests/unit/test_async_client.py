@@ -319,19 +319,25 @@ def test_models_per_call_timeout_tightens_default(stub) -> None:
 def test_models_per_call_timeout_none_keeps_constructor_default(stub) -> None:
     # An explicit per-call timeout=None must NOT be forwarded to httpx (where
     # it would mean "no timeout"): the constructor default still fires.
-    stub.set_delay(0.5)
     stub.enqueue(body=_models_body())
     client = _make_client(stub, timeout=0.05)
 
     async def main():
         try:
-            with pytest.raises(APITimeoutError):
+            # Establish the real keep-alive connection before the short timeout.
+            # This override must not change the constructor default for later calls.
+            models = await client.models(timeout=5.0)
+            assert [model.name for model in models] == ["jev-latest"]
+            stub.enqueue(body=_models_body(), delay=0.5)
+            with pytest.raises(APITimeoutError) as excinfo:
                 await client.models(timeout=None)
+            assert isinstance(excinfo.value.__cause__, httpx.ReadTimeout)
+            assert await asyncio.to_thread(stub.wait_for_hits, 2)
         finally:
             await client.close()
 
     asyncio.run(main())
-    assert len(stub.hits) == 1
+    assert len(stub.hits) == 2
 
 
 def test_models_request_headers_merge_with_defaults(stub) -> None:
