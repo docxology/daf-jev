@@ -123,6 +123,10 @@ def captured(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             path.write_text("# original static input\n")
+    recipes = root / "benchmarks/configs"
+    recipes.mkdir(parents=True, exist_ok=True)
+    for suffix in (".yaml", ".yml"):
+        (recipes / f"recipe{suffix}").write_text("timing_repetitions: 5\n")
     monkeypatch.setenv("PYTHONPATH", str(root / "src"))
     assert _CAPTURE.capture(root, root / "verification/first") == 0
     record = root / "verification/first/verification.json"
@@ -194,6 +198,44 @@ def test_verification_detects_all_inventory_changes(captured: tuple[Path, Path],
         (root / change).write_text("# new consumed release input\n")
     with pytest.raises(ValueError, match="does not match"):
         selected_verification(root)
+
+
+def test_verification_inventory_includes_checked_in_benchmark_recipes() -> None:
+    root = Path(__file__).resolve().parents[2]
+    required = {
+        f"benchmarks/configs/{name}"
+        for name in ("native-perplexity-pilot.yaml", "native-perplexity-full.yaml",
+                     "native-comparison-full.yaml", "native-jev-pilot.yaml")
+    }
+    assert required <= verification_inputs(root).keys()
+
+
+@pytest.mark.parametrize("suffix", [".yaml", ".yml"])
+@pytest.mark.parametrize("change", ["added", "edited", "removed"])
+def test_benchmark_recipe_changes_invalidate_capture(
+    captured: tuple[Path, Path], suffix: str, change: str, capsys: pytest.CaptureFixture[str],
+) -> None:
+    from daf_jev.cli import main
+
+    root, _ = captured
+    statistics = selected_verification(root)
+    assert statistics is not None and statistics.unit_count == 3
+    recipe = root / f"benchmarks/configs/recipe{suffix}"
+    if change == "added":
+        recipe.with_name(f"added{suffix}").write_text("timing_repetitions: 5\n")
+    elif change == "edited":
+        recipe.write_text("timing_repetitions: 6\n")
+    else:
+        recipe.unlink()
+    with pytest.raises(ValueError, match="does not match"):
+        selected_verification(root)
+    capsys.readouterr()
+    assert main(["verification-status", "--root", str(root)]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "invalid"
+    assert result["statistics"] is None
+    assert result["error"]["type"] == "ValueError"
+    assert "does not match" in result["error"]["message"]
 
 
 @pytest.mark.parametrize("change", ["format", "before", "after", "unit_exit_code", "live_collection_exit_code", "live_execution",

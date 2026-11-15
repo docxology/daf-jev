@@ -24,9 +24,14 @@ from being mistaken for a source checkout.
 This reads `manuscript/evidence.json` through `evidence.selected_verification`,
 including exact bound capture/native-export bytes and before/after/current source
 inventories. It never falls back to raw coverage, a newer result, prose counts,
-pytest collection or execution. The inventory includes shell gates and tasks.yaml;
-captures predating these inputs are stale. The status is a point-in-time source
-observation; re-read before reuse. It is not an atomic filesystem attestation.
+pytest collection or execution. The inventory includes shell gates, tasks.yaml,
+and `.yaml`/`.yml` recipes under `benchmarks/`, including `benchmarks/configs/`.
+Adding, editing or removing a recipe invalidates retained verification even
+when Python sources are unchanged. Captures omitting now-present inventory
+inputs are stale. Preserve historical captures and publication selections;
+a new native capture and deliberate selection are separate, explicitly
+authorized steps. The status is a point-in-time source observation; re-read
+before reuse. It is not an atomic filesystem attestation.
 `current` describes retained unit execution plus live collection, not execution
 of live tests or success of every tool in the fixed Stack gate.
 

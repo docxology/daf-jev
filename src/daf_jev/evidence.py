@@ -108,7 +108,7 @@ def has_selected_study(project_root: Path, name: str) -> bool:
 
 
 def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
-    """Inventory code and static documentation consumed by checks and renders.
+    """Inventory code, configuration and static docs consumed by checks and renders.
 
     File additions/removals participate in identity. Evidence selection is
     excluded so selecting a completed check cannot change its tested inputs.
@@ -128,7 +128,8 @@ def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
                 continue
             suffixes = ({".md", ".json", ".yaml", ".yml", ".bib", ".tex"}
                         if folder in {"docs", "skills", "manuscript"}
-                        else {".py", ".sh"} if folder == "scripts" else {".py"})
+                        else {".py", ".sh"} if folder == "scripts"
+                        else {".py", ".yaml", ".yml"} if folder == "benchmarks" else {".py"})
             if path.is_file() and path.suffix in suffixes:
                 paths.add(path)
     paths.update(p for name in ("pyproject.toml", "uv.lock", "AGENTS.md",
