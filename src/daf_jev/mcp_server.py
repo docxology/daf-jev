@@ -11,10 +11,10 @@ per call via :func:`daf_jev.config.load_settings` for that provider (a
 missing API key raises ``ValueError``, which MCP surfaces as a tool
 error). Client,
 compose and evaluate modules are imported lazily inside the tools,
-mirroring :mod:`daf_jev.cli`; native question mappings and docs
-verification route through the shared :mod:`daf_jev.questions` /
-:mod:`daf_jev.docs_verify` modules; posteriors sidecar ingest routes
-through the shared :mod:`daf_jev.bayesnet_posteriors` module.
+mirroring :mod:`daf_jev.cli`; question inputs normalize through the shared
+:mod:`daf_jev.questions` module, and scientific result/error records through
+:mod:`daf_jev._records`. Docs verification and posteriors sidecar ingest
+retain their shared domain implementations.
 
 Run with ``daf-jev serve`` (stdio transport, the default and only
 supported transport).
@@ -30,9 +30,16 @@ from typing import Any, Literal
 from mcp.server.fastmcp import FastMCP
 
 from daf_jev import config
-from daf_jev._types import JSONContent
-from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
+from daf_jev._records import (
+    error_record,
+    posteriors_record,
+    reask_record,
+    response_record,
+)
+from daf_jev._types import JSONContent, Question
+from daf_jev.bayesnet_posteriors import load_posteriors
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
+from daf_jev.questions import question_from_value
 from daf_jev.reask import reask_plan
 
 __all__ = [
@@ -97,24 +104,9 @@ def _validate_provider(provider: str) -> str:
     return get_provider(provider).key
 
 
-def _question_from_value(value: Any, *, context: str = "question") -> Any:
-    """Build a question object from a CLI ask-spec string or native dict.
-
-    Spec strings are parsed with :func:`daf_jev.cli.parse_question_spec`;
-    native mappings route through
-    :func:`daf_jev.questions.question_from_mapping`.
-    """
-    from daf_jev.cli import parse_question_spec
-    from daf_jev.questions import question_from_mapping
-
-    if isinstance(value, str):
-        return parse_question_spec(value)
-    return question_from_mapping(value, context=context)
-
-
-def _questions_from_mapping(questions: dict[str, Any]) -> dict[str, Any]:
+def _questions_from_mapping(questions: dict[str, Any]) -> dict[str, Question]:
     return {
-        str(qid): _question_from_value(
+        str(qid): question_from_value(
             spec, context=f"question {str(qid)!r}"
         )
         for qid, spec in questions.items()
@@ -154,17 +146,7 @@ async def jev_ask(
     ) as client:
         response = await client.ask(state, questions_obj, model=model)
 
-    payload: dict[str, Any] = {
-        "model": response.model,
-        "answers": {
-            qid: {**dataclasses.asdict(answer), "type": answer.type}
-            for qid, answer in response.answers.items()
-        },
-        "usage": dataclasses.asdict(response.usage),
-    }
-    if response.request_id is not None:
-        payload["request_id"] = response.request_id
-    return payload
+    return response_record(response)
 
 
 async def jev_evaluate(
@@ -379,7 +361,7 @@ async def jev_docs_verify(
         _validate_provider(provider)
         return verify_manifest(manifest_path)
     except ValueError as exc:
-        return {"error": type(exc).__name__, "message": str(exc), "ok": False}
+        return {**error_record(exc), "ok": False}
 
 
 async def jev_posteriors_load(
@@ -399,16 +381,8 @@ async def jev_posteriors_load(
     try:
         sidecar = load_posteriors(path, graphspec=graphspec_path)
     except ValueError as exc:
-        return {"error": type(exc).__name__, "message": str(exc), "ok": False}
-    deviations = list(row_sum_deviations(sidecar).values())
-    return {
-        "ok": True,
-        "format": sidecar.format,
-        "evidence_count": len(sidecar.evidence or {}),
-        "variable_count": len(sidecar.posteriors),
-        "min_row_sum_deviation": min(deviations, default=0.0),
-        "max_row_sum_deviation": max(deviations, default=0.0),
-    }
+        return {**error_record(exc), "ok": False}
+    return posteriors_record(sidecar)
 
 async def jev_reask_plan(
     path: str, graphspec_path: str | None = None, asked: list[str] | None = None
@@ -431,13 +405,8 @@ async def jev_reask_plan(
         sidecar = load_posteriors(path, graphspec=graphspec_path)
         plan = reask_plan(sidecar, asked=asked or ())
     except ValueError as exc:
-        return {"error": type(exc).__name__, "message": str(exc), "ok": False}
-    return {
-        "next_question": plan.next_question,
-        "entropy": plan.entropy,
-        "queue": [list(entry) for entry in plan.queue],
-        "evidence": dict(plan.evidence),
-    }
+        return {**error_record(exc), "ok": False}
+    return reask_record(plan)
 
 # ------------------------------------------------------------- server setup
 
@@ -454,7 +423,7 @@ def _snapshot_summary(manifest_path: Path | None = None) -> dict[str, Any]:
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        return {"error": type(exc).__name__, "message": str(exc), "ok": False}
+        return {**error_record(exc), "ok": False}
     return {
         "page_count": manifest.get("page_count", len(manifest.get("pages", {}))),
         "snapshot_id": manifest.get("snapshot_id"),

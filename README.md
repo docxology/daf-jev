@@ -140,7 +140,7 @@ flowchart TB
         direction LR
         CI["cli.py — daf-jev"]
         MC["mcp_server.py — serve"]
-        QU["questions.py · docs_verify.py<br/>shared CLI/MCP helpers"]
+        QU["questions.py · _records.py · docs_verify.py<br/>shared CLI/MCP helpers"]
         EX["examples/ · skills/"]
     end
     PRV --> CL
@@ -168,6 +168,12 @@ The core uses `httpx` and `pyyaml`; TOML parsing uses the standard-library
 `tomllib`. `matplotlib` is optional
 (the `figures` extra). Inference in `graphical.py` is pure-stdlib
 variable elimination — no numpy, no network at query time.
+
+CLI and MCP share typed SPEC/native question normalization and pure scientific
+record projections. Model and question IDs, probabilities, usage, optional
+request IDs, posterior evidence and re-ask queue order retain their domain
+values. CLI exit codes and MCP error envelopes remain transport-specific;
+shared projection is not new scientific or external-validation evidence.
 
 ## How a decision flows
 

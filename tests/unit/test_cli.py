@@ -134,8 +134,27 @@ def test_cli_ask_with_all_three_spec_forms(stub, monkeypatch, capsys) -> None:
     )
     assert code == 0
     out = json.loads(capsys.readouterr().out)
-    # All output is JSON to stdout; answers must be present.
-    assert "billing" in json.dumps(out)
+    assert out == {
+        "model": "jev-latest",
+        "answers": {
+            "billing": {"noul": 0.5, "type": "noul"},
+            "tone": {
+                "choice": "calm",
+                "probabilities": {"calm": 1.0, "angry": 0.0},
+                "confidence": 0.9,
+                "type": "choice",
+            },
+            "severity": {
+                "score": 1.0,
+                "legend": {"0": "low", "1": "high", "2": "critical"},
+                "probabilities": {"0": 0.25, "1": 0.5, "2": 0.25},
+                "confidence": 0.9,
+                "type": "score",
+            },
+        },
+        "usage": {"input_tokens": 5, "output_tokens": 6},
+        "request_id": "req-cli",
+    }
 
     hit = stub.hits[-1]
     assert hit["method"] == "POST"

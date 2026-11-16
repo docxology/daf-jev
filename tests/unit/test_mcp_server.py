@@ -219,6 +219,7 @@ def test_jev_ask_accepts_dict_state_and_native_question_dicts(mcp_stub_env) -> N
     result = _run(ms.jev_ask({"text": "I was charged twice."}, questions))
 
     assert result["answers"]["billing"]["noul"] == pytest.approx(0.87)
+    assert "request_id" not in result
     hit = mcp_stub_env.hits[0]
     assert hit["json"]["state"] == {"text": "I was charged twice."}
     assert hit["json"]["questions"]["billing"]["type"] == "noul"

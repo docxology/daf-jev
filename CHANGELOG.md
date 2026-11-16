@@ -26,6 +26,12 @@ and private-path markers before output creation,
 and preserve the originals. Offline capability exports validate manifest,
 receipt, journal and report identities before writing a fresh derivative bundle.
 
+CLI and MCP now share typed SPEC/native question normalization and pure
+ask/posterior/re-ask result and error projections. Existing payloads, scientific
+values, optional request IDs, null exhaustion fields and transport-specific
+failure behavior are preserved; no model execution or external validation is
+implied by the refactor.
+
 ## 0.7.1
 
 Shared hosted allocations coordinate reservations and reconciliation across
