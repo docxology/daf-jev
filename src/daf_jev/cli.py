@@ -47,8 +47,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from daf_jev.bayesnet_posteriors import load_posteriors, row_sum_deviations
+from daf_jev._records import (
+    error_record,
+    posteriors_record,
+    reask_record,
+    response_record,
+)
+from daf_jev._types import Question
+from daf_jev.bayesnet_posteriors import load_posteriors
 from daf_jev.docs_verify import DEFAULT_MANIFEST, verify_manifest
+from daf_jev.questions import parse_question_spec, question_from_value
 from daf_jev.reask import reask_plan
 from daf_jev.stack_roster import (
     DEFAULT_MEMBER,
@@ -58,140 +66,6 @@ from daf_jev.stack_roster import (
 )
 
 __all__ = ["main", "parse_question_spec"]
-
-
-# ---------------------------------------------------------------- questions
-
-
-#: Characters a backslash escapes inside a question SPEC.
-_ESCAPABLE = (",", "\\", ":")
-
-
-def _split_unescaped_commas(text: str) -> list[str]:
-    """Split on unescaped commas, honoring ``\\,``/``\\:``/``\\\\`` escapes."""
-    parts: list[str] = []
-    current: list[str] = []
-    i = 0
-    while i < len(text):
-        ch = text[i]
-        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
-            current.append(text[i + 1])
-            i += 2
-            continue
-        if ch == ",":
-            parts.append("".join(current))
-            current = []
-            i += 1
-            continue
-        current.append(ch)
-        i += 1
-    parts.append("".join(current))
-    return parts
-
-
-def _unescape(text: str) -> str:
-    """Resolve ``\\,``/``\\:``/``\\\\`` escapes to literal characters.
-
-    A backslash not followed by an escapable character is kept verbatim,
-    mirroring :func:`_split_unescaped_commas`.
-    """
-    out: list[str] = []
-    i = 0
-    while i < len(text):
-        ch = text[i]
-        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
-            out.append(text[i + 1])
-            i += 2
-            continue
-        out.append(ch)
-        i += 1
-    return "".join(out)
-
-
-def _find_unescaped(text: str, target: str, *, last: bool = False) -> int:
-    """Index of the first (default) or last unescaped ``target``, or -1.
-
-    ``\\,``/``\\:``/``\\\\`` escape pairs are skipped, so the search
-    looks past escaped characters.
-    """
-    i = 0
-    found = -1
-    while i < len(text):
-        ch = text[i]
-        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
-            i += 2
-            continue
-        if ch == target:
-            found = i
-            if not last:
-                return i
-        i += 1
-    return found
-
-
-def parse_question_spec(spec: str) -> Any:
-    """Parse a question SPEC into a ``daf_jev`` question object.
-
-    The type is taken before the first unescaped ``:``; for ``choice``/
-    ``score`` the criteria segment starts after the last unescaped ``:``,
-    so plain colons may appear inside instructions and ``\\:`` escapes a
-    literal colon anywhere (instructions, option descriptions, levels).
-    Commas in options/levels are escaped as ``\\,``. Raises ``ValueError``
-    on malformed specs.
-    """
-    from daf_jev._types import ChoiceQuestion, NoulQuestion, ScoreQuestion
-
-    type_end = _find_unescaped(spec, ":", last=False)
-    if type_end < 1:
-        raise ValueError(
-            f"invalid question spec {spec!r}: expected 'noul:<instructions>', "
-            f"'choice:<instructions>:k1=desc,k2=...' or 'score:<instructions>:l1,l2,...'"
-        )
-    qtype, rest = spec[:type_end], spec[type_end + 1 :]
-
-    if qtype == "noul":
-        if not rest:
-            raise ValueError(f"invalid noul spec {spec!r}: instructions required")
-        return NoulQuestion(instructions=_unescape(rest))
-
-    criteria_start = _find_unescaped(rest, ":", last=True)
-    if criteria_start < 0:
-        raise ValueError(
-            f"invalid {qtype} spec {spec!r}: expected '<instructions>:<criteria>'"
-        )
-    instructions = _unescape(rest[:criteria_start])
-    criteria_text = rest[criteria_start + 1 :]
-    if not instructions:
-        raise ValueError(f"invalid {qtype} spec {spec!r}: instructions required")
-
-    if qtype == "choice":
-        options: dict[str, str | None] = {}
-        for item in _split_unescaped_commas(criteria_text):
-            key, _eq, desc = item.partition("=")
-            key = key.strip()
-            if not key:
-                raise ValueError(
-                    f"invalid choice spec {spec!r}: empty option key in {item!r}"
-                )
-            options[key] = desc.strip() if desc.strip() else None
-        if not options:
-            raise ValueError(
-                f"invalid choice spec {spec!r}: at least one option required"
-            )
-        return ChoiceQuestion(instructions=instructions, criteria=options)
-
-    if qtype == "score":
-        levels = [item.strip() for item in _split_unescaped_commas(criteria_text)]
-        if len(levels) < 2 or any(not level for level in levels):
-            raise ValueError(
-                f"invalid score spec {spec!r}: at least 2 non-empty levels required"
-            )
-        return ScoreQuestion(instructions=instructions, criteria=levels)
-
-    raise ValueError(
-        f"invalid question spec {spec!r}: unknown type {qtype!r} "
-        f"(expected noul, choice or score)"
-    )
 
 
 # ------------------------------------------------------------------- output
@@ -294,16 +168,7 @@ def _provider_arg(value: str) -> str:
         raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
-def _question_from_yaml(spec: Any, path: Path) -> Any:
-    """Build a question from a SPEC string or a native YAML mapping."""
-    from daf_jev.questions import question_from_mapping
-
-    if isinstance(spec, str):
-        return parse_question_spec(spec)
-    return question_from_mapping(spec, context=f"questions file {path}")
-
-
-def _load_questions_file(path: Path) -> dict[str, Any]:
+def _load_questions_file(path: Path) -> dict[str, Question]:
     """Load a YAML mapping of id -> SPEC string or native question mapping.
 
     Duplicate question ids are rejected (both literal duplicate YAML keys
@@ -344,14 +209,14 @@ def _load_questions_file(path: Path) -> dict[str, Any]:
             f"questions file {path} must be a non-empty YAML mapping of "
             f"id -> question spec"
         )
-    questions: dict[str, Any] = {}
+    questions: dict[str, Question] = {}
     for qid, spec in data.items():
         key = str(qid)
         if key in questions:
             raise ValueError(
                 f"questions file {path}: duplicate question id {key!r}"
             )
-        questions[key] = _question_from_yaml(spec, path)
+        questions[key] = question_from_value(spec, context=f"questions file {path}")
     return questions
 
 
@@ -376,12 +241,12 @@ def _load_states_file(path: Path) -> list[str]:
 # ----------------------------------------------------------------- commands
 
 
-def _questions_from_flags(entries: Sequence[str]) -> dict[str, Any]:
+def _questions_from_flags(entries: Sequence[str]) -> dict[str, Question]:
     """Parse repeated ``--question ID=SPEC`` flags into a question mapping.
 
     Raises ``ValueError`` on a malformed entry or a duplicated id.
     """
-    questions: dict[str, Any] = {}
+    questions: dict[str, Question] = {}
     for entry in entries:
         qid, sep, spec = entry.partition("=")
         if not sep or not qid:
@@ -410,20 +275,10 @@ def _cmd_ask(args: argparse.Namespace) -> int:
         with _make_client(args) as client:
             response = client.ask(state, questions)
     except (TypeSafeError, ValueError, OSError) as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
 
-    payload: dict[str, Any] = {
-        "model": response.model,
-        "answers": {
-            qid: {**asdict(ans), "type": ans.type}
-            for qid, ans in response.answers.items()
-        },
-        "usage": asdict(response.usage),
-    }
-    if response.request_id is not None:
-        payload["request_id"] = response.request_id
-    _emit(payload, args.pretty)
+    _emit(response_record(response), args.pretty)
     return 0
 
 
@@ -434,7 +289,7 @@ def _cmd_models(args: argparse.Namespace) -> int:
         with _make_client(args) as client:
             cards = client.models()
     except (TypeSafeError, ValueError, OSError) as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
 
     if getattr(args, "pick", None) is not None or getattr(args, "contains", None):
@@ -446,9 +301,7 @@ def _cmd_models(args: argparse.Namespace) -> int:
                 cards, contains=args.contains, prefer=args.pick or "latest"
             )
         except ValueError as exc:
-            _emit_error(
-                {"error": type(exc).__name__, "message": str(exc)}, args.pretty
-            )
+            _emit_error(error_record(exc), args.pretty)
             return 1
         _emit({"model": asdict(card)}, args.pretty)
         return 0
@@ -485,7 +338,7 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
             if args.include_records:
                 payload["records"] = evaluator.to_json(records)
     except (TypeSafeError, ValueError, OSError) as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
 
     _emit(payload, args.pretty)
@@ -496,7 +349,7 @@ def _cmd_docs_verify(args: argparse.Namespace) -> int:
     try:
         summary = verify_manifest(Path(args.manifest))
     except ValueError as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
     _emit(summary, args.pretty)
     return 0 if summary["ok"] else 1
@@ -538,7 +391,7 @@ def _cmd_stack_member(args: argparse.Namespace) -> int:
         _emit_error({"error": "UsageError", "message": str(exc)}, args.pretty)
         return 2
     except (OSError, ValueError) as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
     _emit(audit.to_dict(), args.pretty)
     return 0 if audit.ok else 1
@@ -548,20 +401,9 @@ def _cmd_posteriors_load(args: argparse.Namespace) -> int:
     try:
         sidecar = load_posteriors(args.file, graphspec=args.graphspec)
     except ValueError as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
-    deviations = row_sum_deviations(sidecar)
-    _emit(
-        {
-            "ok": True,
-            "format": sidecar.format,
-            "evidence_count": len(sidecar.evidence or {}),
-            "variable_count": len(sidecar.posteriors),
-            "min_row_sum_deviation": min(deviations.values(), default=0.0),
-            "max_row_sum_deviation": max(deviations.values(), default=0.0),
-        },
-        args.pretty,
-    )
+    _emit(posteriors_record(sidecar), args.pretty)
     return 0
 
 def _cmd_posteriors_reask(args: argparse.Namespace) -> int:
@@ -569,17 +411,9 @@ def _cmd_posteriors_reask(args: argparse.Namespace) -> int:
         sidecar = load_posteriors(args.file, graphspec=args.graphspec)
         plan = reask_plan(sidecar, asked=args.asked or ())
     except ValueError as exc:
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, args.pretty)
+        _emit_error(error_record(exc), args.pretty)
         return 1
-    _emit(
-        {
-            "next_question": plan.next_question,
-            "entropy": plan.entropy,
-            "queue": [list(entry) for entry in plan.queue],
-            "evidence": dict(plan.evidence),
-        },
-        args.pretty,
-    )
+    _emit(reask_record(plan), args.pretty)
     return 0
 
 
@@ -835,7 +669,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return args.func(args)
     except Exception as exc:  # unexpected runtime failure
-        _emit_error({"error": type(exc).__name__, "message": str(exc)}, pretty)
+        _emit_error(error_record(exc), pretty)
         return 1
 
 

@@ -683,13 +683,26 @@ wire path is silently coerced.
   CLI `--provider KEY` / `--model NAME` / `--edge-penalty FLOAT` /
   `--propose-structure` / `--out-dir PATH`; keyless SKIP. Full contract in
   the Graphical models section (Experiment runner block).
-- `questions.py` — shared native question-mapping builder (no I/O):
+- `questions.py` — shared typed question normalization (no I/O):
+  `parse_question_spec(spec: str) -> Question` owns the escaped SPEC grammar;
+  its existing public import at `daf_jev.cli.parse_question_spec` is retained.
   `question_from_mapping(value, *, context="question") -> Question` builds a
   `NoulQuestion`/`ChoiceQuestion`/`ScoreQuestion` from a
   `{type, instructions, criteria}` mapping with strict validation and
-  actionable `ValueError` messages; the CLI (`evaluate --questions-file`) and
-  the MCP server route native mappings through it so validation is defined
-  exactly once.
+  actionable `ValueError` messages. `question_from_value(value, *,
+  context="question") -> Question` selects the SPEC/native path for CLI YAML
+  and MCP tools; native errors keep the caller's context. Question-ID coercion
+  and duplicate-ID checks remain with the existing transport input loaders.
+- `_records.py` — private, pure projections shared by CLI and MCP:
+  `response_record(SystemOneResponse)` preserves model/answer IDs, answer
+  types and values, usage and the optional request ID;
+  `posteriors_record(PosteriorsSidecar)` preserves the six-field validated
+  summary; `reask_record(ReAskPlan)` preserves queue/evidence order and null
+  exhaustion fields. `error_record(Exception)` preserves the exception class
+  name and message without catching failures. CLI exit codes/stderr routing,
+  MCP error envelopes, provider/client lifecycle and validation remain in
+  their owning surfaces/domain modules. No payload normalization, rounding,
+  new provenance or external-validation claim is introduced.
 - `docs_verify.py` — shared verifier for a docs snapshot manifest (read-only):
   `verify_manifest(manifest_path)` re-hashes every listed page (sha256 + byte
   length), flags `url`→path mismatches as `drifted`, and reports extra `.md`
@@ -721,7 +734,7 @@ wire path is silently coerced.
 - `mcp_server.py` — FastMCP server (`build_server()`,
   `main(transport="stdio")`): 8 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
-  `question_from_mapping`), `jev_evaluate` (async: `AsyncJevClient` +
+  `question_from_value`), `jev_evaluate` (async: `AsyncJevClient` +
   `Evaluator.evaluate_async()` on the serving loop; empty `states` →
   `ValueError`),
   `jev_models` (async; `pick` is a Literal schema; `contains=""` = no
@@ -1330,15 +1343,12 @@ Pure-stdlib ingest of posterior/marginals sidecar documents — the
 downstream seam of the cross-repo pipeline above (the Julia `--out`
 sidecar re-enters daf-jev here). No client, no numpy; the only I/O is
 reading the sidecar and optional GraphSpec JSON documents.
-Line receipts against current source: formats/tolerances
-`src/daf_jev/bayesnet_posteriors.py:60-65`, dataclasses `:68-95`,
-`load_posteriors` `:119-155`, `row_sum_deviations` `:399-404`,
-`pair_for_calibration` `:407-521`; CLI `src/daf_jev/cli.py:495-513`
-(posteriors-load handler; `:515-531` posteriors-reask) and `:700-714`
-(parser; `:716-738` posteriors-reask); MCP
-`src/daf_jev/mcp_server.py:385-411` (jev_posteriors_load tool;
-`:413-440` jev_reask_plan) and `:481-482` (registrations). Pinned by
-`tests/unit/test_bayesnet_posteriors.py`.
+The CLI handlers `_cmd_posteriors_load` / `_cmd_posteriors_reask` and MCP
+tools `jev_posteriors_load` / `jev_reask_plan` use the same loader/policy and
+the private `_records.posteriors_record` / `_records.reask_record` projections.
+Loader, GraphSpec validation, row-sum budgets, evidence and queue semantics
+remain defined in the domain modules and exercised by
+`tests/unit/test_bayesnet_posteriors.py` and `tests/unit/test_reask.py`.
 
 - Formats: `FORMAT_POSTERIORS = "dafjev.bayesnet-posteriors/1"` (variant
   A: exactly `{format, evidence, posteriors}`) and `FORMAT_MARGINALS =

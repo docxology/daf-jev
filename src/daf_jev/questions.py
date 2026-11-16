@@ -1,13 +1,10 @@
-"""Shared native question-mapping builder (no I/O).
+"""Shared question normalization (no I/O).
 
-:func:`daf_jev.questions.question_from_mapping` builds
-:class:`~daf_jev._types.NoulQuestion` / :class:`~daf_jev._types.ChoiceQuestion`
-/ :class:`~daf_jev._types.ScoreQuestion` objects from a native
-``{type, instructions, criteria}`` mapping, with strict validation and
-actionable ``ValueError`` messages. The CLI (``evaluate
---questions-file``) and the MCP server (``jev_ask`` / ``jev_evaluate``)
-route native mappings through it so validation is defined exactly once;
-spec strings keep using :func:`daf_jev.cli.parse_question_spec`.
+``parse_question_spec`` owns the escaped SPEC grammar; ``question_from_mapping``
+owns strict native ``{type, instructions, criteria}`` validation.
+``question_from_value`` selects between them for CLI YAML and MCP inputs,
+returning the same typed questions with the caller's native-mapping context.
+The public ``daf_jev.cli.parse_question_spec`` import remains available.
 """
 
 from __future__ import annotations
@@ -16,7 +13,140 @@ from collections.abc import Mapping
 
 from daf_jev._types import ChoiceQuestion, NoulQuestion, Question, ScoreQuestion
 
-__all__ = ["question_from_mapping"]
+__all__ = ["parse_question_spec", "question_from_mapping", "question_from_value"]
+
+
+# ---------------------------------------------------------------- questions
+
+
+#: Characters a backslash escapes inside a question SPEC.
+_ESCAPABLE = (",", "\\", ":")
+
+
+def _split_unescaped_commas(text: str) -> list[str]:
+    """Split on unescaped commas, honoring ``\\,``/``\\:``/``\\\\`` escapes."""
+    parts: list[str] = []
+    current: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            current.append(text[i + 1])
+            i += 2
+            continue
+        if ch == ",":
+            parts.append("".join(current))
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    parts.append("".join(current))
+    return parts
+
+
+def _unescape(text: str) -> str:
+    """Resolve ``\\,``/``\\:``/``\\\\`` escapes to literal characters.
+
+    A backslash not followed by an escapable character is kept verbatim,
+    mirroring :func:`_split_unescaped_commas`.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            out.append(text[i + 1])
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _find_unescaped(text: str, target: str, *, last: bool = False) -> int:
+    """Index of the first (default) or last unescaped ``target``, or -1.
+
+    ``\\,``/``\\:``/``\\\\`` escape pairs are skipped, so the search
+    looks past escaped characters.
+    """
+    i = 0
+    found = -1
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            i += 2
+            continue
+        if ch == target:
+            found = i
+            if not last:
+                return i
+        i += 1
+    return found
+
+
+def parse_question_spec(spec: str) -> Question:
+    """Parse a question SPEC into a ``daf_jev`` question object.
+
+    The type is taken before the first unescaped ``:``; for ``choice``/
+    ``score`` the criteria segment starts after the last unescaped ``:``,
+    so plain colons may appear inside instructions and ``\\:`` escapes a
+    literal colon anywhere (instructions, option descriptions, levels).
+    Commas in options/levels are escaped as ``\\,``. Raises ``ValueError``
+    on malformed specs.
+    """
+
+    type_end = _find_unescaped(spec, ":", last=False)
+    if type_end < 1:
+        raise ValueError(
+            f"invalid question spec {spec!r}: expected 'noul:<instructions>', "
+            f"'choice:<instructions>:k1=desc,k2=...' or 'score:<instructions>:l1,l2,...'"
+        )
+    qtype, rest = spec[:type_end], spec[type_end + 1 :]
+
+    if qtype == "noul":
+        if not rest:
+            raise ValueError(f"invalid noul spec {spec!r}: instructions required")
+        return NoulQuestion(instructions=_unescape(rest))
+
+    criteria_start = _find_unescaped(rest, ":", last=True)
+    if criteria_start < 0:
+        raise ValueError(
+            f"invalid {qtype} spec {spec!r}: expected '<instructions>:<criteria>'"
+        )
+    instructions = _unescape(rest[:criteria_start])
+    criteria_text = rest[criteria_start + 1 :]
+    if not instructions:
+        raise ValueError(f"invalid {qtype} spec {spec!r}: instructions required")
+
+    if qtype == "choice":
+        options: dict[str, str | None] = {}
+        for item in _split_unescaped_commas(criteria_text):
+            key, _eq, desc = item.partition("=")
+            key = key.strip()
+            if not key:
+                raise ValueError(
+                    f"invalid choice spec {spec!r}: empty option key in {item!r}"
+                )
+            options[key] = desc.strip() if desc.strip() else None
+        if not options:
+            raise ValueError(
+                f"invalid choice spec {spec!r}: at least one option required"
+            )
+        return ChoiceQuestion(instructions=instructions, criteria=options)
+
+    if qtype == "score":
+        levels = [item.strip() for item in _split_unescaped_commas(criteria_text)]
+        if len(levels) < 2 or any(not level for level in levels):
+            raise ValueError(
+                f"invalid score spec {spec!r}: at least 2 non-empty levels required"
+            )
+        return ScoreQuestion(instructions=instructions, criteria=levels)
+
+    raise ValueError(
+        f"invalid question spec {spec!r}: unknown type {qtype!r} "
+        f"(expected noul, choice or score)"
+    )
 
 
 def _require_str_or_none(context: str, kind: str, key: object, value: object) -> None:
@@ -120,3 +250,10 @@ def question_from_mapping(value: object, *, context: str = "question") -> Questi
         f"{context}: unknown question type {qtype!r} "
         f"(expected noul, choice or score)"
     )
+
+
+def question_from_value(value: object, *, context: str = "question") -> Question:
+    """Normalize a SPEC string or native mapping, preserving parser errors."""
+    if isinstance(value, str):
+        return parse_question_spec(value)
+    return question_from_mapping(value, context=context)
