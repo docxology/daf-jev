@@ -8,6 +8,5 @@ age/sops-encrypted ciphertext — inert without the identity key at
 `~/.config/docxology-sidecar/identity.txt`.
 
 Not to be confused with `.humos/sidecar.toml` (a different, HumOS-only
-project-registration mechanism — see `docs/format-spec.md` in the
-docxology/daf-sidecar repo, github.com/docxology/daf-sidecar, for the full
+project-registration mechanism — see the sidecar tool's format specification for the full
 disambiguation).

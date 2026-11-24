@@ -24,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Sync dependencies
-        run: uv sync --extra dev --extra figures --extra benchmark
+        run: uv sync --locked --extra dev --extra figures --extra benchmark
 
       - name: Ruff (lint)
         run: uv run ruff check .

@@ -453,8 +453,9 @@ both RxInfer 5.5.0 and 5.5.2; multi-parent `DiscreteTransition` nodes
 stall in RxInfer 5.5.x VMP (upstream limitation; full gap matrix in the
 GNN-side `examples/rxinfer/README.md`).
 
-GNN-side verification (run from the GNN checkout, branch
-`feat/rxinfer-bridge`):
+GNN-side verification (these commands belong to the separate GNN repository, not
+this one; run them from a GNN checkout on branch `feat/rxinfer-bridge`. `tests/gnn/`
+and `src/gnn/` do not exist in daf-jev):
 
 ```bash
 uv run mypy src/gnn/rxinfer_bridge.py
