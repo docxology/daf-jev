@@ -6,7 +6,7 @@ This view records no independent task state. Preserve blocked and completed reco
 
 Native contracts: [AGENTS.md](AGENTS.md). Task and gate signposts:
 [public/links.toml](.docxology/public/links.toml). Resolve ecosystem members from
-`daf_stack.manifest.default_manifest()`; Flywheel proposals and Horizon previews
+`daf_stack.manifest.default_manifest()`; Factory proposals and Horizon previews
 remain subject to Operator policy, source freshness and separate execution admission.
 
 - [daf-jev-stack-onboarding](tasks.yaml#L5) — Verify the offline package gate for stack onboarding

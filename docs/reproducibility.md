@@ -173,7 +173,7 @@ repository; installed package copies do not carry the whole snapshot by default.
 
 ```bash
 uv sync --extra dev --extra figures --extra benchmark
-uv run ruff check src tests benchmarks scripts
+uv run ruff check .
 uv run mypy src/daf_jev
 uv run pytest tests/unit --cov=src
 ```
@@ -188,23 +188,11 @@ process-environment key and retain their `live` marker. A skipped live test is
 not live acceptance. Generated test counts and coverage must refer to a completed
 check of the current source; prior results are not a current-tree guarantee.
 
-### Optional compiled benchmark runtime on Mac/Python 3.10
+### Optional compiled benchmark runtime diagnostic
 
-The locked SciPy 1.15.3 arm64 wheel failed `scipy.sparse.linalg` import on the
-tested Mac. Its PROPACK Mach-O zero-fill section had a nonzero file offset;
-the same failure reproduced from the exact published artifact. SciPy's
-[upstream issue 25635](https://github.com/scipy/scipy/issues/25635) reports this
-loader failure class. That report is context, not a substitute for this
-repository's retained machine/artifact evidence.
-
-The benchmark extra constrains SciPy to `>=1.14.1,<1.15` only for Darwin with
-Python below 3.11. The lock selects 1.14.1 there; the complementary non-Darwin
-Python 3.10 constraint preserves its previous 1.15.3 selection. Newer Python
-selections and core dependencies are unchanged. The isolated candidate imports
-the real compiled library and fits/predicts the public structured classifier on
-owned toy data, retaining a complete vocabulary including an absent class.
-This is runtime compatibility evidence; it does not rerun the Wine study or
-establish native language-model acceptance.
+A retired Mac/Python 3.10 SciPy wheel failure once motivated a platform pin; the
+package floor is now Python 3.11 and that pin no longer applies. To check that
+the compiled benchmark runtime imports and fits on the current machine:
 
 ```bash
 uv run --extra benchmark python scripts/check_benchmark_runtime.py
@@ -215,8 +203,7 @@ prints dependency versions, training-input hash and the two check predictions;
 it performs no provider calls. Save its output alongside the full aggregate
 checks for the exact source/runtime being accepted. Keep previous failed
 captures intact. A repaired subset cannot be added to an older failed aggregate
-to claim a full passing run. The general SciPy/Python compatibility policy is
-documented in its [release notes](https://docs.scipy.org/doc/scipy/release/1.14.0-notes.html).
+to claim a full passing run.
 
 ### Retained verification for exact offline regeneration
 

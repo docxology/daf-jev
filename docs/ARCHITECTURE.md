@@ -732,7 +732,7 @@ wire path is silently coerced.
   branch, board and sidecar facts are echoed, never executed or verified
   here; Sidecar evidence stays with the Sidecar CLI and its roster audit.
 - `mcp_server.py` — FastMCP server (`build_server()`,
-  `main(transport="stdio")`): 8 tools — `jev_ask` (state widened to
+  `main(transport="stdio")`): 9 tools — `jev_ask` (state widened to
   str|dict|list; questions are SPEC strings or native dicts routed through
   `question_from_value`), `jev_evaluate` (async: `AsyncJevClient` +
   `Evaluator.evaluate_async()` on the serving loop; empty `states` →
@@ -741,6 +741,8 @@ wire path is silently coerced.
   filter), `jev_composite_score` (finite/non-negative probability validation
   via `composite_score`), `jev_confidence_gate`, `jev_tiered_gate`,
   `jev_docs_verify` (error shape `{"error", "message", "ok": False}`),
+  `jev_reask_plan` (max-entropy re-ask plan over an evidence-bearing posterior
+  sidecar; same policy as the `reask` module; makes no API call),
   `jev_posteriors_load` (async sidecar ingest: `path` plus optional
   `graphspec_path` cross-checked against a `dafjev.bayesnet/1` document;
   same loader as the CLI `posteriors-load` command; makes no API call —
@@ -1597,7 +1599,8 @@ a previously handled request's evidence. Receipts and billing remain observer
 owned; these helpers neither infer transport arrival nor change cancellation
 state, financial admission or retry policy.
 
-Python 3.10 task boundaries may raise a fresh cancellation exception while
+On Python 3.10 (historical; the package floor is now 3.11) task boundaries
+may raise a fresh cancellation exception while
 retaining the original in standard exception chaining. Direct custom attributes
 and cause identity on the outer wrapper are therefore not the contract. The
 real-task and HTTP regression checks retain the workflow and original
