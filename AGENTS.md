@@ -5,12 +5,8 @@ authoritative design contract see `docs/ARCHITECTURE.md` (single source of
 truth; workers must match its current signatures exactly and report any
 contradiction rather than silently deviating).
 
-This is a **self-versioned** git repo at
-`projects/platform/hum-docxology/repos/public/daf-jev` — a managed Docxology
-checkout (each checkout there owns its own git history and upstream; the
-hum-docxology worktree intentionally ignores nested checkouts). Container
-rules live in `../../AGENTS.md` (the `repos/` checkout container) — do not
-restate them here; there is no `../AGENTS.md` in this location.
+This is a **self-versioned** git repository that owns its own history and
+upstream (`docxology/daf-jev`). Repository-local guidance lives in this file.
 
 ## Layout
 
@@ -21,6 +17,9 @@ restate them here; there is no `../AGENTS.md` in this location.
   - `_errors.py` — exception hierarchy mirroring the official SDK
     (`TypeSafeError` base, `APIStatusError` subclasses per status code,
     `error_from_status`).
+  - `_records.py` — pure JSON record projections shared by the CLI and MCP
+    surfaces; they project typed domain values without rounding, inference or
+    validation, and callers keep file/client lifecycle, exit codes and envelopes.
   - `_retry.py` — `RetryPolicy` (429/529, exponential backoff + jitter,
     `Retry-After` aware); pure `next_delay`, sleeping happens in the client.
   - `_json.py` — `strict_json_loads`: preserves insertion order, rejects
@@ -70,6 +69,11 @@ restate them here; there is no `../AGENTS.md` in this location.
     accepted reviewed bounds for finished imported UNKNOWN attempts retain
     UNKNOWN and hold their liability against the same allowance. See
     `docs/shared_allocations.md` and the authoritative benchmark contract.
+  - `study_evidence.py` — pure consumption of selected study aggregates; no
+    inference or plotting. These are retained descriptive summaries, not newly
+    executed studies, and interval limits are consumed as recorded.
+  - `study_figures.py` — evidence-selected empirical manuscript figures
+    (optional matplotlib extra).
   - `figures.py` — matplotlib figure registry: 8 core named figures
     (`architecture`, `primitives`, `batching`, `latency`, `confidence`,
     `calibration`, `graphical_abstract`, `admission`) plus six opt-in empirical
@@ -270,6 +274,11 @@ restate them here; there is no `../AGENTS.md` in this location.
   - `benchmark_metrics.py` — quality, calibration, repeatability, grouped
     uncertainty and dataset audits over supplied rows, retaining all planned
     outcomes and unknown probability meaning/cost.
+  - `benchmark_comparisons.py` — paired, fixed-prediction comparisons over a
+    complete frozen cohort. No I/O: callers supply verified input/source
+    bindings and all planned primary decisions, including those without an
+    outcome. Group draws are shared between arms; repeats are never
+    independent sampling units.
   - `benchmark_policies.py` — validation-only gate fitting, descriptive offline
     policy replay and bounded synthetic entropy controls. Replay is not an
     executed cascade or measured end-to-end policy latency.
@@ -332,7 +341,7 @@ restate them here; there is no `../AGENTS.md` in this location.
   `--only`, 1 unexpected error.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`; writes `output/data/manuscript_variables.json`
-  and (inside the template checkout) substitutes `{{TOKEN}}`s into
+  and (inside a template checkout) substitutes `{{TOKEN}}`s into
   `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
   analysis outputs are missing.
 - `scripts/capture_verification.py` — genuine unit coverage/JUnit + live
@@ -482,9 +491,8 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   ahead count and tip move with every fold, so read them from git, not here.
   Commit meaningful changes locally — the template's provenance validation
   requires git-tracked worktree files — and push to `origin` for
-  owner-approved publication (2026-09-18). Never `git add` any path under
-  this lane into an OUTER repo (the hum-docxology worktree; container
-  rules in `../../AGENTS.md`).
+  owner-approved publication (2026-09-18). Never `git add` any path of this
+  repository into another repository.
 - **Zenodo deposits (v0.7.1 published and live API verified 2026-10-09).**
   The stable concept DOI
   `10.5281/zenodo.22816187` always resolves to the latest published
@@ -528,15 +536,13 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   version deposit. File uploads: POST the files URL with an ARRAY body
   (`[{"key": ...}]`), PUT the content link with
   `Content-Type: application/octet-stream` (a pdf content-type 415s),
-  then POST the commit link. The Zenodo API token lives in the template checkout's `.env` as
-  `ZENODO_PROD_TOKEN`: never echo it, never print it in logs or
-  transcripts, never copy it into the lane repo or commit it anywhere.
+  then POST the commit link. Deposit credentials are supplied by the releaser and are never committed.
 - **Public release remote.** <https://github.com/docxology/daf-jev>
   (`docxology/daf-jev`) is the release remote for the published code and
-  repo landing page; the local lane git repo (branch `main`) remains the
+  repo landing page; the local git repository (branch `main`) remains the
   source of truth. Publishing to the public
-  repo is the owner's call; the lane invariant against `git add`-ing lane
-  paths into outer repos stands.
+  repo is the owner's call; the invariant against `git add`-ing this
+  repository's paths into other repositories stands.
 - **Release metadata files.** `CITATION.cff` (CFF 1.2.0, concept DOI) and
   `.zenodo.json` (Zenodo mirror, `upload_type: software`, `license: mit`)
   live at the repo root and MUST stay in sync with the pyproject version
@@ -693,7 +699,7 @@ Dependency resolution can use the network. After preparation, these checkout
 checks need no API key or remote service:
 
 ```bash
-uv run pytest tests/unit --cov=src           # completed source gate; do not hardcode results
+bash scripts/gate.sh                         # offline gate; do not hardcode results
 uv run ruff check .
 uv run mypy src/daf_jev
 uv run daf-jev docs-verify                  # local SHA/size/path verification
@@ -703,9 +709,11 @@ uv run daf-jev serve --help                 # stdio surface only; does not start
 uv run daf-jev benchmark --help             # dispatcher only; no fetch/model call
 ```
 
-`bash scripts/gate.sh` runs `ruff`, `mypy`, `docs-verify` and the offline scraper
-drift check from this list before the offline pytest gate, so a green native gate
-matches the CI lint and docs jobs.
+`bash scripts/gate.sh` is the offline gate. It runs `ruff check .`, `mypy src/daf_jev`,
+`daf-jev docs-verify` and the offline scraper drift check (the commands below),
+then `pytest tests/ -m 'not live'` with branch coverage and a 90% floor, with the
+`dev`, `figures` and `benchmark` extras. A green native gate matches the CI lint
+and docs jobs; live tests need separate explicit execution.
 
 `docs-verify` defaults to the module-anchored repository snapshot. Wheel installs
 do not include `docs/reference/`; use `docs-verify --manifest PATH` with a supplied

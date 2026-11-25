@@ -1,9 +1,10 @@
 # AGENTS.md — `.docxology/`
 
-This folder is managed by the `docxology-sidecar` tool
-(github.com/docxology/daf-sidecar); `init` scaffolded it and
-`seal`/`open`/`status`/`doctor`/`recipients` maintain it. Read
-`docs/format-spec.md` in that repo before writing against any field.
+This folder is managed by the `docxology-sidecar` tool (the daf-sidecar
+repository); `init` scaffolded it and
+`seal`/`open`/`status`/`doctor`/`recipients` maintain it. Read the tool's
+format specification (`docs/format-spec.md` in that repository) before writing
+against any field.
 
 ## Layout
 

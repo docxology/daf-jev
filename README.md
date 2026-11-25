@@ -993,7 +993,7 @@ selected journal cut; the larger quality run remains in progress. The retained
 v0.7.1 release and its PDF continue to describe their original evidence.
 
 The v0.7.1 source adds shared hosted allocation admission and the scoped
-Mac/Python 3.10 benchmark-runtime repair to the modular decision-evaluation
+Mac/Python 3.10 benchmark-runtime repair (historical; since retired with the 3.11 floor) to the modular decision-evaluation
 release: typed native
 and constrained-chat adapters, frozen datasets and policies, exact graphical
 inference, explicit execution coverage and cost accounting, and an
@@ -1122,6 +1122,7 @@ source to contract. Module contracts live in
 | `benchmark_datasets` | [`benchmark_datasets.py`](src/daf_jev/benchmark_datasets.py) | pinned synthetic and real data, labels/splits/duplicate groups |
 | `benchmark_sampling` | [`benchmark_sampling.py`](src/daf_jev/benchmark_sampling.py) | exact target-free global timing packs, group/task balance and legacy scope |
 | `benchmark_models` | [`benchmark_models.py`](src/daf_jev/benchmark_models.py) | synthetic exact rules, train-only prior and supervised comparators |
+| `benchmark_comparisons` | [`benchmark_comparisons.py`](src/daf_jev/benchmark_comparisons.py) | paired, fixed-prediction comparisons over a complete frozen cohort (no I/O) |
 | `benchmark_metrics` | [`benchmark_metrics.py`](src/daf_jev/benchmark_metrics.py) | quality, calibration, grouped uncertainty, latency and costs |
 | `benchmark_policies` | [`benchmark_policies.py`](src/daf_jev/benchmark_policies.py) | validation gate fitting and explicit offline policy replay |
 | `benchmark_workflows` | [`benchmark_workflows.py`](src/daf_jev/benchmark_workflows.py) | executed weak-to-strong cascades with child receipts |
