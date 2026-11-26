@@ -712,8 +712,9 @@ uv run daf-jev benchmark --help             # dispatcher only; no fetch/model ca
 `bash scripts/gate.sh` is the offline gate. It runs `ruff check .`, `mypy src/daf_jev`,
 `daf-jev docs-verify` and the offline scraper drift check (the commands below),
 then `pytest tests/ -m 'not live'` with branch coverage and a 90% floor, with the
-`dev`, `figures` and `benchmark` extras. A green native gate matches the CI lint
-and docs jobs; live tests need separate explicit execution.
+`dev`, `figures` and `benchmark` extras. CI runs the same gate with
+`DAF_JEV_JUNIT_XML` for a JUnit report and separately checks that live tests
+collect. Live execution requires a separate command.
 
 `docs-verify` defaults to the module-anchored repository snapshot. Wheel installs
 do not include `docs/reference/`; use `docs-verify --manifest PATH` with a supplied

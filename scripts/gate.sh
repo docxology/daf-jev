@@ -18,4 +18,8 @@ run=(uv run --locked --extra dev --extra figures --extra benchmark)
 "${run[@]}" mypy src/daf_jev
 "${run[@]}" daf-jev docs-verify
 "${run[@]}" python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json
-exec uv run --locked --extra dev --extra figures --extra benchmark python -m pytest tests/ -m 'not live' --cov=src --cov-branch --cov-fail-under=90
+report=()
+if [ -n "${DAF_JEV_JUNIT_XML:-}" ]; then
+    report=(--junitxml "$DAF_JEV_JUNIT_XML")
+fi
+exec "${run[@]}" python -m pytest tests/ -m 'not live' --cov=src --cov-branch --cov-fail-under=90 "${report[@]}"
