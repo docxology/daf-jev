@@ -72,9 +72,17 @@ require_board, require_sidecar, gate_cmd, required_files, board_path}]}`.
 daf-jev consumes that document as an external dual-use member:
 
 ```sh
-daf-stack-doctor roster > /tmp/roster.json        # in the daf-stack checkout
-daf-jev stack-member /tmp/roster.json --pretty
+(
+  roster="$(mktemp)"
+  trap 'rm -f -- "$roster"' EXIT
+  daf-stack-doctor roster --repo daf-jev > "$roster" &&
+    daf-jev stack-member "$roster" --pretty
+)
 ```
+
+Keep the roster and its audit output local. They include absolute checkout
+paths and can include values supplied by the selected roster entry. Public
+examples and uploaded test artifacts use synthetic data.
 
 `daf-jev stack-member` parses the roster strictly (duplicate JSON keys,
 missing/typed fields, relative or escaping `required_files` entries and

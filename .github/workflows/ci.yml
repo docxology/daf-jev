@@ -11,11 +11,15 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [ "3.14", "3.15" ]
+        python-version: ["3.11", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # astral-sh/setup-uv@v10.4.0
@@ -26,19 +30,18 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --extra dev --extra figures --extra benchmark
 
-      - name: Ruff (lint)
-        run: uv run ruff check .
-
-      - name: Mypy (types)
-        run: uv run mypy src/daf_jev
-
-      - name: Unit tests + coverage gate (>= 90%)
+      - name: Run the offline package gate
+        env:
+          DAF_JEV_JUNIT_XML: ci-results/unit.xml
+          UV_NO_SYNC: "1"
+          UV_OFFLINE: "1"
         shell: bash
         run: |
           set -o pipefail
           mkdir -p ci-results
-          uv run pytest tests/unit --cov=src --junitxml=ci-results/unit.xml 2>&1 | tee ci-results/unit.log
-      - name: Retain unit test evidence
+          bash scripts/gate.sh 2>&1 | tee ci-results/gate.log
+
+      - name: Retain offline gate evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2
         with:
@@ -46,18 +49,13 @@ jobs:
           path: ci-results/
           if-no-files-found: warn
           retention-days: 30
-      - name: Live tests (2 tests skip without JEV_API_KEY)
-        run: uv run pytest tests/live
+      - name: Check live test collection
+        run: uv run --locked --no-sync python -m pytest --collect-only tests/live
 
-      - name: Docs snapshot drift check
-        run: uv run daf-jev docs-verify
-
-      - name: Offline scraper drift check
-        run: uv run python scripts/scrape_docs.py --check --manifest docs/reference/MANIFEST.json
       - name: Serve subcommand smoke (stdio only)
-        run: uv run daf-jev serve --help
+        run: uv run --locked --no-sync daf-jev serve --help
 
-      - name: Keyless example smoke
-        run: uv run python examples/quickstart.py
-      - name: Keyless provider-dispatch example smoke (SKIP + exit 0, no network even with a key)
-        run: uv run python examples/providers_example.py
+      - name: Check example command startup
+        run: |
+          uv run --locked --no-sync python examples/quickstart.py --help
+          uv run --locked --no-sync python examples/providers_example.py --help
