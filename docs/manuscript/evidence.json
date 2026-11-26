@@ -38,7 +38,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/v0.7.2-public-mac310-1fc82cc/verification.json",
-    "sha256": "2a6076df2c6cac40f7c083a628d05fd199bc56d4929b214ddd2c5e4839a7f7c0"
+    "path": "output/verification/v0.7.2-public-linux315-5445b27c440f/verification.json",
+    "sha256": "b54bd89c67a9f1b739bac3eabe7b50fcff0eb305a8395f5238c3b5913784fec7"
   }
 }
