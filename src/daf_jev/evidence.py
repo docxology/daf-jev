@@ -11,9 +11,11 @@ from typing import Any
 
 from ._json import strict_json_loads
 
+PUBLICATION_SELECTION_PATH = Path("docs/manuscript/evidence.json")
+
 
 def _selection(project_root: Path) -> dict[str, Any]:
-    path = project_root / "manuscript/evidence.json"
+    path = project_root / PUBLICATION_SELECTION_PATH
     if path.is_symlink() or any(p.is_symlink() for p in path.parents):
         raise ValueError("publication selection must be nonsymlink")
     if not path.is_file():
@@ -58,7 +60,7 @@ def bound_input(project_root: Path, item: Any) -> Path:
 
 def _benchmark_selection(project_root: Path, prefix: str) -> Any:
     bench_dir = project_root / "output" / "benchmarks"
-    selection = project_root / "manuscript" / "evidence.json"
+    selection = project_root / PUBLICATION_SELECTION_PATH
     if not selection.is_file():
         raise FileNotFoundError(f"Missing benchmark data selection: {selection}; {bench_dir} requires explicit evidence")
     spec = _selection(project_root)
@@ -93,7 +95,7 @@ def selected_study_bytes(project_root: Path, name: str) -> bytes:
 
 def has_study_selection(project_root: Path) -> bool:
     """Legacy publications may omit studies; explicit malformed maps still fail."""
-    path = project_root / "manuscript/evidence.json"
+    path = project_root / PUBLICATION_SELECTION_PATH
     return (path.exists() or path.is_symlink()) and "study_summaries" in _selection(project_root)
 
 
@@ -114,8 +116,7 @@ def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
     excluded so selecting a completed check cannot change its tested inputs.
     """
     paths: set[Path] = set()
-    for folder in ("src/daf_jev", "tests", "scripts", "benchmarks", "examples",
-                   "docs", "skills", "manuscript"):
+    for folder in ("src/daf_jev", "tests", "scripts", "benchmarks", "examples", "docs", "skills"):
         tree = project_root / folder
         if tree.is_symlink():
             raise ValueError("verification inputs must be nonsymlink")
@@ -124,10 +125,10 @@ def verification_inputs(project_root: Path) -> dict[str, dict[str, str | int]]:
                 continue
             if path.is_symlink():
                 raise ValueError("verification inputs must be nonsymlink")
-            if path.relative_to(project_root).as_posix() == "manuscript/evidence.json":
+            if path.relative_to(project_root) == PUBLICATION_SELECTION_PATH:
                 continue
             suffixes = ({".md", ".json", ".yaml", ".yml", ".bib", ".tex"}
-                        if folder in {"docs", "skills", "manuscript"}
+                        if folder in {"docs", "skills"}
                         else {".py", ".sh"} if folder == "scripts"
                         else {".py", ".yaml", ".yml"} if folder == "benchmarks" else {".py"})
             if path.is_file() and path.suffix in suffixes:
@@ -194,7 +195,7 @@ def selected_verification(project_root: Path) -> VerificationStatistics | None:
     A malformed, stale or incomplete explicit selection fails even in draft
     mode. With no selection, callers retain the historical collection path.
     """
-    selection = project_root / "manuscript/evidence.json"
+    selection = project_root / PUBLICATION_SELECTION_PATH
     if not selection.exists() and not selection.is_symlink():
         return None
     item = _selection(project_root).get("verification")

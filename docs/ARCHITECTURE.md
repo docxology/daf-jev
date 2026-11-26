@@ -499,7 +499,7 @@ wire path is silently coerced.
   deterministic vector PDF companions; default invocation renders eight core figures.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
   `manuscript_variables.py`: writes `output/data/manuscript_variables.json`
-  and (inside a template checkout) injects `{{TOKEN}}`s; strict mode (default)
+  for the [manuscript renderers](manuscript/README.md). Strict mode (default)
   exits 1 with a `FileNotFoundError` naming the missing analysis output —
   manuscript config, docs snapshot manifest, benchmark JSONs, or
   `output/figures/figure_registry.json` (the `FIGURES` token derives from
@@ -566,7 +566,7 @@ wire path is silently coerced.
   `placement: "h"`, `metadata.alt_text` — static metadata, no measured
   statistics; template validation consumes it). Data-driven figures
   (`batching`, `latency`, `calibration`, `graphical_abstract`) read the
-  exact benchmark JSONs selected by `manuscript/evidence.json` and verified
+  exact benchmark JSONs selected by `docs/manuscript/evidence.json` and verified
   through `evidence.selected_benchmark_bytes` in one verified consumption (the private compatibility helper
   keeps the name `_latest_benchmark`) and raise `FileNotFoundError` naming the missing
   file; `architecture`, `primitives`, `confidence`, and `admission` are data-free
@@ -651,7 +651,7 @@ wire path is silently coerced.
   `daf_jev.figures` import, which would pull matplotlib into core;
   `_load_manifest` (docs snapshot `MANIFEST.json`) follows the same
   loader shape (strict-raise vs draft-empty). The 49-token set derives
-  from manuscript/config.yaml (`CONFIG_*`; batch-width token NAMES
+  from docs/manuscript/config.yaml (`CONFIG_*`; batch-width token NAMES
   derive from the configured widths, canonical 5/10/20 fallback),
   pyproject metadata, AST-derived code stats, selected verification (or legacy
   collection/coverage), benchmark JSONs, and provenance — no hardcoded results.
@@ -662,7 +662,7 @@ wire path is silently coerced.
   software-verification identity.
   An optional selected native hosted summary adds seven `NATIVE_HOSTED_*`
   variables from its conserved plan, phase counts and per-attempt accounting.
-  Optional `manuscript/evidence.json` `verification={path,sha256}` selects a
+  Optional `docs/manuscript/evidence.json` `verification={path,sha256}` selects a
   completed capture through `evidence.selected_verification`. Unit/live counts,
   coverage and Python/platform then derive from those retained outputs; variable
   regeneration runs no pytest collection and reads no raw coverage. Live count
@@ -2153,7 +2153,7 @@ it is not the total validation/test quality-control physical row count.
 ### `evidence.py`
 
 `selected_benchmark(project_root: Path, prefix: str) -> Path` reads the explicit
-`manuscript/evidence.json` selection (`dafjev.publication-evidence/1`), verifies
+`docs/manuscript/evidence.json` selection (`dafjev.publication-evidence/1`), verifies
 the named input's SHA-256, confinement and absence of symlinks, and fails on
 missing/changed data. `selected_benchmark_bytes(project_root: Path, prefix: str)
 -> bytes` performs a single read and returns the same bytes whose hash it
@@ -2175,14 +2175,14 @@ inventories every `.py` file under `src/daf_jev`, `tests`, `scripts`, `benchmark
 and `examples`, plus `.sh` gate wrappers under `scripts` and `.yaml`/`.yml`
 benchmark recipes under `benchmarks`, excluding `__pycache__`; static `.md`,
 `.json`, `.yaml`, `.yml`,
-`.bib` and `.tex` files under `docs`, `skills` and `manuscript`; and
+`.bib` and `.tex` files under `docs` (including `docs/manuscript`) and `skills`; and
 `pyproject.toml`, `uv.lock`, `AGENTS.md`, `.github/workflows/ci.yml`, `README.md`,
 `tasks.yaml`, `CITATION.cff`, `.zenodo.json` and the package `py.typed` marker
 when present. Gate wrappers and the component board participate in freshness;
 older captures omitting those now-present inputs require a new native capture.
 This binds consumed documentation, the reference snapshot manifest, benchmark
 recipes, benchmark/example code, and render inputs alongside the SDK. Their additions/removals
-affect identity. `manuscript/evidence.json` is explicitly excluded so selecting
+affect identity. `docs/manuscript/evidence.json` is explicitly excluded so selecting
 a capture does not invalidate its tested inputs. Generated output and private
 run evidence are not static verification inputs.
 

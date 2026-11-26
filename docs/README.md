@@ -1,4 +1,4 @@
-# docs/
+# DAF-JEV documentation
 
 Documentation for daf-jev.
 
@@ -45,6 +45,8 @@ Documentation for daf-jev.
   paired group bootstrap differences and semantic comparison limits.
 - [release.md](release.md) — exact installed artifacts, public privacy projections,
   release asset allowlists and GitHub/Zenodo acceptance.
+- [Manuscript](manuscript/README.md) — paper sources, bibliography, selected
+  evidence and instructions for standalone and template rendering.
 - [reproducibility.md](reproducibility.md) — exact source/input/result identities,
   historical receipt limits, verification, rendering and publication gates.
 - [methods_review.md](methods_review.md) — reproduced defects, repaired contracts,
@@ -115,9 +117,8 @@ use the commands in [AGENTS.md](../AGENTS.md#verification-commands). Passed-test
 and coverage results must come from a completed gate bound to the exact inputs;
 do not infer current results from prose counts or an older generated map.
 
-Figures and measured manuscript variables share the explicit, hash-verified
-selection in [manuscript/evidence.json](../manuscript/evidence.json). They do not
-select the newest benchmark file. Prefer the genuine
+Figures and measured manuscript variables use the same hash-verified
+[manuscript evidence selection](manuscript/evidence.json). Prefer the genuine
 `scripts/capture_verification.py --out-dir FRESH_INSIDE_ROOT` capture and optional
 hash-bound `verification` selection for exact offline regeneration. It runs unit
 coverage/JUnit and only collects live tests; generation reads those native
@@ -144,8 +145,8 @@ uv run python scripts/render_pdf.py --output output/pdf/reproduction-new.pdf \
     --artifacts-dir .benchmarks/reproduction-build-new
 ```
 
-Rendering also requires Pandoc, XeLaTeX, BibTeX, the preamble's TeX packages,
-Times New Roman, Menlo and Latin Modern Math. The release reproduction record
+See [manuscript rendering](manuscript/README.md) for the full toolchain.
+The release reproduction record
 identifies the source-build commit and fixed epoch; overlay its retained
 evidence, figures and saved variables for exact same-host reproduction. A later
 artifact commit's HEAD timestamp defines a different build.
@@ -173,7 +174,7 @@ what the models are, how Jev is built and trained, how calibration works,
 and where the vendor's claims have (and have not) been corroborated. Every
 factual claim carries a source link and an access date; primary (TypeSafe
 docs snapshot) and third-party claims are flagged distinctly. Its cite-key
-crosswalk matches the BibTeX keys in `manuscript/references.bib`
+crosswalk matches the BibTeX keys in `docs/manuscript/references.bib`
 (`typesafe2026systemone`, `register2026jev`, …). A contents list at the
 top of the page links every section; sections 10-12 cover the
 sibling-server ecosystem and Jev as a factor source for graphical models

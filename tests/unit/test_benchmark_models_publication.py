@@ -92,8 +92,8 @@ def test_standalone_reports_are_exclusive_and_deterministic(tmp_path):
 
 def test_explicit_shared_evidence_ignores_newer_and_rejects_mutation(tmp_path):
     root = tmp_path
-    (root / "manuscript").mkdir()
-    selection = root / "manuscript/evidence.json"
+    (root / "docs/manuscript").mkdir(parents=True)
+    selection = root / "docs/manuscript/evidence.json"
     with pytest.raises(FileNotFoundError):
         selected_benchmark(root, "batching")
     selection.write_text('{}')

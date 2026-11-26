@@ -79,17 +79,17 @@ upstream (`docxology/daf-jev`). Repository-local guidance lives in this file.
     `calibration`, `graphical_abstract`, `admission`) plus six opt-in empirical
     study figures and `figure_registry.json` emission;
     data-driven figures read the exact receipts selected and hash-verified by
-    `manuscript/evidence.json` through `evidence.py`, never an independently
+    `docs/manuscript/evidence.json` through `evidence.py`, never an independently
     chosen newest file. An optional selected native hosted capability cut adds
     `native_capabilities` with PNG/PDF/data provenance and seven evidence-derived
     `NATIVE_HOSTED_*` manuscript variables.
   - `manuscript_variables.py` — `generate_variables` / `save_variables`: 66 legacy
     `{{TOKEN}}` manuscript variables derived from pyproject, docs MANIFEST,
-    test counts, benchmark JSONs, and the `manuscript/config.yaml`
+    test counts, benchmark JSONs, and the `docs/manuscript/config.yaml`
     experiment knobs (`BATCHING_RUNS`, `CALIBRATION_STATES`,
     `CALIBRATION_REPEATS`; `CONFIG_BATCHING_N<n>` token names derive from
     the configured batch widths); zero hardcoded result values. Benchmark inputs
-    use the same explicit `manuscript/evidence.json` selection as figures.
+    use the same explicit `docs/manuscript/evidence.json` selection as figures.
     Verification inputs must match the source and tests being described; see
     the coverage and manuscript invariants below. Optional selected native
     verification exports supply recorded counts/coverage/environment without
@@ -340,16 +340,15 @@ upstream (`docxology/daf-jev`). Repository-local guidance lives in this file.
   `figures` extra (`uv sync --extra figures`). Exit 0 ok, 2 unknown
   `--only`, 1 unexpected error.
 - `scripts/z_generate_manuscript_variables.py` — thin orchestrator over
-  `manuscript_variables.py`; writes `output/data/manuscript_variables.json`
-  and (inside a template checkout) substitutes `{{TOKEN}}`s into
-  `output/manuscript/`. `--allow-draft` permits `N/A` fallbacks when
-  analysis outputs are missing.
+  `manuscript_variables.py`; writes `output/data/manuscript_variables.json`.
+  `--allow-draft` permits `N/A` fallbacks when analysis outputs are missing.
+  See [manuscript rendering](docs/manuscript/README.md) for both render paths.
 - `scripts/capture_verification.py` — genuine unit coverage/JUnit + live
   collection capture into `--out-dir FRESH_INSIDE_ROOT`. Retains native exports,
   logs, before/after inventories and failed captures; removes only its owned
   private raw coverage. Does not execute live tests or select publication inputs.
 - `scripts/render_pdf.py` — in-repo PDF render (pandoc --natbib over the
-  generated token map; inputs `manuscript/render/{preamble,cover}.tex`);
+  generated token map; inputs `docs/manuscript/render/{preamble,cover}.tex`);
   requires a successful warning-free native BibTeX run and runs the render
   gates (zero unresolved bibtex entries / undefined refs /
   unloadable images / overfull vertical boxes; `SOURCE_DATE_EPOCH` pinned from
@@ -384,12 +383,12 @@ upstream (`docxology/daf-jev`). Repository-local guidance lives in this file.
   Markdown skill) + `daf-jev/README.md` (per-skill install + pointers) +
   `README.md` (skill-tree install notes). Documentation only — never
   imported by code.
-- `manuscript/` — 10 sections (`00_abstract.md` …
+- `docs/manuscript/` — 10 sections (`00_abstract.md` …
   `08_scope_and_related_work.md`, `99_references.md`) + `preamble.md` +
   `config.yaml` + `references.bib`
   (32 entries). Prose only: every measured number is a `{{TOKEN}}`
   placeholder (see invariants).
-- `manuscript/render/` — render inputs for the in-repo PDF fallback
+- `docs/manuscript/render/` — render inputs for the standalone PDF renderer
   (`preamble.tex`, `cover.tex`), consumed by `scripts/render_pdf.py`.
 - `benchmarks/` — historical/live-API scripts plus explicit frozen benchmark
   recipes in `configs/`, documented in `benchmarks/README.md`;
@@ -581,18 +580,14 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   sentinel is unavailable evidence. Consult the current architecture and
   reproduction guide for the accepted verification-input path. Prefer a genuine
   `scripts/capture_verification.py` capture and explicit hash-bound `verification`
-  selection in `manuscript/evidence.json` for exact offline regeneration from
+  selection in `docs/manuscript/evidence.json` for exact offline regeneration from
   retained native JSON/JUnit/collection outputs. Before, after and current
   source/test/script/config inventories must agree; no new pytest collection or
   raw data is needed when reading the selected completed capture.
-- **Render path (no leaf alias).** The former managed lifecycle leaf symlink
-  `template/projects/ongoing/daf-jev -> .../Code_Tools/daf-jev` was removed
-  2026-09-18 by owner decision. The template's project-path confinement
-  rejects intermediate symlinks (e.g. resolving through
-  `ongoing/Code_Tools`) by design, so `--project ongoing/daf-jev`
-  render/validate via the template pipeline is currently blocked.
-  Re-create a leaf symlink only with owner say-so; never substitute a
-  non-leaf alias.
+- **Render path.** Use the standalone renderer from this checkout or a
+  disposable checkout registered as an ordinary `projects/working/daf-jev`
+  directory in the pinned template. Preserve owner approval requirements for
+  managed lifecycle registration. See the [render guide](docs/manuscript/README.md).
 - **`figure_registry.json` must be emitted with the figures.**
   `figures.generate_all()` always writes it into the figures directory
   after the PNGs (`scripts/generate_figures.py` inherits this); template
@@ -601,10 +596,10 @@ fallback environment is `src/gnn/execute/rxinfer/`).
   `latency`, `calibration`, `graphical_abstract`) raise `FileNotFoundError`
   naming the missing benchmark JSON rather than fabricating data;
   `architecture`, `primitives`, and `confidence` are data-free and always
-  render. Data-driven inputs must match the explicit `manuscript/evidence.json`
+  render. Data-driven inputs must match the explicit `docs/manuscript/evidence.json`
   selection used by manuscript variables; adding a newer file does not select it.
 - **`{{TOKEN}}` no-hardcode manuscript protocol.** Every measured number in
-  `manuscript/*.md` is a `{{TOKEN}}` placeholder; the 66 legacy tokens live in
+  `docs/manuscript/*.md` is a `{{TOKEN}}` placeholder; the 66 legacy tokens live in
   `output/data/manuscript_variables.json` (generated by
   `scripts/z_generate_manuscript_variables.py` from pyproject, the docs
   MANIFEST, test collection counts, and the benchmark JSONs — no hardcoded
@@ -723,7 +718,7 @@ The shared verifier also detects URL-to-path drift.
 
 Reproduction builds write artifacts and must use the reviewed evidence selection.
 Capture native verification exports first, then deliberately select the receipt's
-relative path and SHA-256 in `manuscript/evidence.json`; retain historical
+relative path and SHA-256 in `docs/manuscript/evidence.json`; retain historical
 benchmark selections. Captures execute unit tests and only collect live tests.
 With the selection, regeneration reads exact retained outputs without new
 pytest collection/raw coverage. The legacy raw path remains available; retain

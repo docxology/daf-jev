@@ -1,0 +1,3 @@
+# References {#sec:references}
+
+The bibliography distinguishes primary methodological papers and dataset publications from provider documentation and historical launch coverage. Proper scoring, calibration, selective prediction, cascades, exact inference and benchmark-overlap claims are attributed to their primary research sources. Documentation citations describe the recorded interface, not empirical acceptance of a present service. Historical access dates and snapshot notes remain attached to the original entries; newly checked sources carry their own access date. All citation keys resolve through `docs/manuscript/references.bib` using the repository's normal bibliography pipeline.

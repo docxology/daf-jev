@@ -1122,7 +1122,7 @@ def write_figure_registry(out_dir: Path, project_root: Path | None = None, *, in
             "metadata": {
                 "alt_text": meta["alt_text"],
                 "source": "daf-jev benchmark/figure pipeline",
-                "evidence_selection": "manuscript/evidence.json",
+                "evidence_selection": "docs/manuscript/evidence.json",
             },
         }
         if meta["label"] == _NATIVE_META["label"]:

@@ -274,7 +274,7 @@ def test_unmodified_genuine_capture_records_actual_stdlib_and_preserves_statisti
     original = selected_verification(root)
     original_bytes = {p: p.read_bytes() for p in record_path.parent.iterdir()}
     projection = _PROJECTOR.project(root, record_path, root / "verification/stdlib-public")
-    selection = root / "manuscript/evidence.json"
+    selection = root / "docs/manuscript/evidence.json"
     evidence = json.loads(selection.read_text())
     evidence["verification"] = {"path": projection.relative_to(root).as_posix(), "sha256": _hash(projection.read_bytes())}
     selection.write_text(json.dumps(evidence))

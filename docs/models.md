@@ -27,7 +27,7 @@ local verification gates are documented in [providers.md](providers.md).
 - [12. Jev as a factor source for graphical models](#12-jev-as-a-factor-source-for-graphical-models)
 - [Sources](#sources)
 
-> **Canonical cite keys.** The BibTeX entries in `manuscript/references.bib` use the keys
+> **Canonical cite keys.** The BibTeX entries in `docs/manuscript/references.bib` use the keys
 > referenced throughout this page (`typesafe2026systemone`, `typesafe2026systemoneconcept`,
 > `typesafe2026apidocs`, `typesafe2026confidence`, `typesafe2026patterns`, `register2026jev`,
 > `orcarouter2026jev`, `elsolitario2026jev`, …); see the crosswalk table at the bottom.
@@ -461,7 +461,7 @@ page; treat them as navigation, not as verified claims:
 - **Jin et al. (ICLR 2024)** — LLMs repurposed for structured
   probabilistic prediction tasks.
 
-None of these anchors has a cite key in `manuscript/references.bib`;
+None of these anchors has a cite key in `docs/manuscript/references.bib`;
 they are navigational pointers for the feature, not manuscript sources.
 
 ## Sources
