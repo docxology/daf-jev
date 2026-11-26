@@ -128,7 +128,8 @@ class RunStore:
             stat = (self.directory / name).stat()
             if (stat.st_dev, stat.st_ino) != tuple(identity):
                 raise ValueError("experiment lock identity changed")
-        self._read()
+        with self.transaction():
+            self._read()
 
     def _safe_read(self, name: str) -> str:
         path = self.directory / name

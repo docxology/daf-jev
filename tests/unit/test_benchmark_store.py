@@ -100,6 +100,41 @@ def test_independent_ledgers_share_atomic_admission(tmp_path):
     assert second.snapshot()["reserved_usd"] == "25"
 
 
+def test_writable_store_open_waits_for_an_active_journal_transaction(tmp_path):
+    store = _store(tmp_path)
+    ready = tmp_path / "opening"
+    code = """
+import sys
+from pathlib import Path
+from daf_jev.benchmark_store import RunStore
+directory, ready = Path(sys.argv[1]), Path(sys.argv[2])
+ready.touch()
+RunStore(directory)
+print("opened")
+"""
+    child = None
+    try:
+        with store.transaction():
+            child = subprocess.Popen(
+                [sys.executable, "-c", code, str(store.directory), str(ready)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            )
+            deadline = time.monotonic() + 5
+            while not ready.exists():
+                if child.poll() is not None or time.monotonic() > deadline:
+                    pytest.fail("fixture reader never reached the open barrier")
+                time.sleep(.005)
+            with pytest.raises(subprocess.TimeoutExpired):
+                child.wait(timeout=.2)
+            store.append({"event": "fixture"})
+        stdout, stderr = child.communicate(timeout=5)
+        assert child.returncode == 0 and stdout.strip() == "opened", stderr
+    finally:
+        if child is not None and child.poll() is None:
+            child.kill()
+            child.communicate(timeout=5)
+
+
 def test_real_processes_cannot_each_admit_the_whole_budget(tmp_path):
     store = _store(tmp_path)
     code = """

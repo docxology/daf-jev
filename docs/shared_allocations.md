@@ -104,7 +104,9 @@ flowchart LR
 ```
 
 The allocation manifest, linked journal, saved head and physical locks are
-separate custody inputs. Mutation, replaced locks, symlinks, malformed events
+separate custody inputs. Opening a writable store waits for the journal
+transaction to complete before checking its saved head. Mutation, replaced
+locks, symlinks, malformed events
 and incomplete journal/head writes fail closed. Currency uses decimal
 arithmetic. Reported billing, tariff estimates and unknown charges remain
 different categories. The reservation ceiling is an admission rule conditional
