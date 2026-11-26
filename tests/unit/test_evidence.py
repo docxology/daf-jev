@@ -33,7 +33,7 @@ def _binding(root: Path, path: Path) -> dict[str, str]:
 
 
 def _select(root: Path, record: Path) -> None:
-    path = root / "manuscript/evidence.json"
+    path = root / "docs/manuscript/evidence.json"
     value = json.loads(path.read_text())
     value["verification"] = _binding(root, record)
     path.write_text(json.dumps(value))
@@ -118,7 +118,7 @@ def captured(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     _write_analysis_outputs(root)
     for name in ("AGENTS.md", "docs/README.md", "docs/reference/MANIFEST.json",
                  "benchmarks/bench_calibration.py", "examples/quickstart.py",
-                 "manuscript/render/cover.tex"):
+                 "docs/manuscript/render/cover.tex"):
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
@@ -181,7 +181,7 @@ def test_selected_verification_rejects_truncated_or_multiple_footers(
                                     "README.md", "CITATION.cff", ".zenodo.json", "src/daf_jev/py.typed",
                                     "skills/daf-jev/SKILL.md", "AGENTS.md", "docs/README.md",
                                     "docs/reference/MANIFEST.json", "benchmarks/bench_calibration.py",
-                                    "examples/quickstart.py", "manuscript/render/cover.tex"])
+                                    "examples/quickstart.py", "docs/manuscript/render/cover.tex"])
 def test_verification_detects_all_inventory_changes(captured: tuple[Path, Path], change: str) -> None:
     root, _ = captured
     if change == "source":
@@ -316,7 +316,7 @@ def test_selected_benchmark_intake_rejects_ambiguous_bytes(captured: tuple[Path,
     root, _ = captured
     path = root / "output/benchmarks/batching_20260916.json"
     path.write_text(payload)
-    selection_path = root / "manuscript/evidence.json"
+    selection_path = root / "docs/manuscript/evidence.json"
     selection = json.loads(selection_path.read_text())
     selection["historical_benchmarks"]["batching"] = _binding(root, path)
     selection_path.write_text(json.dumps(selection))
@@ -328,8 +328,8 @@ def test_selected_benchmark_intake_rejects_ambiguous_bytes(captured: tuple[Path,
 
 def test_verification_no_selection_and_strict_publication_json(tmp_path: Path) -> None:
     assert selected_verification(tmp_path) is None
-    (tmp_path / "manuscript").mkdir()
-    selection = tmp_path / "manuscript/evidence.json"
+    (tmp_path / "docs/manuscript").mkdir(parents=True)
+    selection = tmp_path / "docs/manuscript/evidence.json"
     selection.write_text('{"format":"dafjev.publication-evidence/1","verification":null}')
     assert selected_verification(tmp_path) is None
     selection.write_text('{"format":"bad"}')
@@ -377,11 +377,11 @@ def test_bound_input_and_inventory_reject_symlinks(tmp_path: Path) -> None:
 def test_missing_selected_benchmark_preserves_clear_error(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="selection"):
         selected_benchmark(tmp_path, "batching")
-    (tmp_path / "manuscript").mkdir()
-    (tmp_path / "manuscript/evidence.json").write_text('{"format":"dafjev.publication-evidence/1"}')
+    (tmp_path / "docs/manuscript").mkdir(parents=True)
+    (tmp_path / "docs/manuscript/evidence.json").write_text('{"format":"dafjev.publication-evidence/1"}')
     with pytest.raises(FileNotFoundError, match="batching"):
         selected_benchmark(tmp_path, "batching")
-    selection = tmp_path / "manuscript/evidence.json"
+    selection = tmp_path / "docs/manuscript/evidence.json"
     selection.write_text('{"format":"dafjev.publication-evidence/1","historical_benchmarks":[]}')
     with pytest.raises(ValueError, match="object"):
         selected_benchmark(tmp_path, "batching")
@@ -487,8 +487,8 @@ def test_verification_status_absent_and_invalid_are_never_current(
     (tmp_path / "src/daf_jev").mkdir(parents=True)
     (tmp_path / "pyproject.toml").write_text('[project]\nname="daf-jev"\n')
     if selection is not None:
-        (tmp_path / "manuscript").mkdir()
-        (tmp_path / "manuscript/evidence.json").write_text(selection)
+        (tmp_path / "docs/manuscript").mkdir(parents=True)
+        (tmp_path / "docs/manuscript/evidence.json").write_text(selection)
     assert main(["verification-status", "--root", str(tmp_path), "--json"]) == 1
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == expected

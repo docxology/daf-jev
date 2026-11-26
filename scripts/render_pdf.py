@@ -1,23 +1,15 @@
 #!/usr/bin/env python3
-"""Render daf-jev_combined.pdf from the substituted manuscript.
-
-The template render pipeline (stage_03_render from the template checkout) is
-currently unavailable — the leaf symlink was removed 2026-09-18 (owner
-decision). This script is the documented manual fallback: it reproduces the
-same render via pandoc --natbib (see docs/README.md and the manuscript's own
-99_references.md note):
+"""Render daf-jev_combined.pdf from the repository's maintained manuscript.
 
   tokens -> citation-form cross-refs to \\ref -> pandoc --natbib
          -> xelatex / bibtex / xelatex x2.
 
 Inputs (all in-repo):
   output/data/manuscript_variables.json   generated token map (z_generate)
-  manuscript/*.md                         substituted section sources
-  manuscript/render/preamble.tex          render preamble (fence minus the two
-                                          environment-conditional blocks)
-  manuscript/render/cover.tex             cover page (title, author, DOI,
-                                          version)
-  manuscript/references.bib               bibliography
+  docs/manuscript/*.md                   source sections
+  docs/manuscript/render/preamble.tex    standalone render preamble
+  docs/manuscript/render/cover.tex       cover page (title, author, DOI, version)
+  docs/manuscript/references.bib         bibliography
 
 Usage:
   uv run python scripts/render_pdf.py --output output/pdf/new-report.pdf
@@ -43,6 +35,7 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+MANUSCRIPT = pathlib.Path('docs/manuscript')
 ORDER = ['00_abstract', '01_introduction', '02_the_jev_model', '03_methodology',
          '04_integration_surfaces', '05_results', '06_experimental_setup',
          '07_reproducibility', '08_scope_and_related_work', '99_references']
@@ -50,8 +43,8 @@ ORDER = ['00_abstract', '01_introduction', '02_the_jev_model', '03_methodology',
 PANDOC = ['pandoc', 'combined.md', '-o', 'out.tex', '--standalone', '--natbib',
           '--number-sections', '-H', 'preamble.tex', '-B', 'cover.tex',
           '-V', 'documentclass=article',
-          '-V', 'mainfont=Times New Roman',
-          '-V', 'monofont=Menlo',
+          '-V', 'mainfont=Latin Modern Roman',
+          '-V', 'monofont=DejaVu Sans Mono',
           '--pdf-engine=xelatex']
 
 
@@ -74,9 +67,10 @@ def build(install: bool, output: pathlib.Path | None = None,
             return 1
     with (REPO / 'output/data/manuscript_variables.json').open() as fh:
         vars = json.load(fh)
+    source_dir = REPO / MANUSCRIPT
     parts = []
     for name in ORDER:
-        text = (REPO / 'manuscript' / f'{name}.md').read_text()
+        text = (source_dir / f'{name}.md').read_text()
         for k, v in vars.items():
             text = text.replace('{{' + k + '}}', v)
         assert '{{' not in text, f'unresolved token in {name}'
@@ -87,23 +81,24 @@ def build(install: bool, output: pathlib.Path | None = None,
     # otherwise turn [@sec:x] into \citep{sec:x} and feed it to bibtex.
     combined, n = re.subn(r'\[@((?:sec|fig|tbl):[A-Za-z0-9_-]+)\]', r'\\ref{\1}', combined)
     print(f'cross-refs converted: {n}')
-    bib_keys = re.findall(r'^@\w+\{([^,]+),', (REPO / 'manuscript' / 'references.bib').read_text(), re.M)
+    bib_keys = re.findall(r'^@\w+\{([^,]+),', (source_dir / 'references.bib').read_text(), re.M)
     pattern = '|'.join(re.escape(k) for k in bib_keys)
     leftover = [c for c in re.findall(r'\[(@[^\]]*)\]', combined)
                 if not re.fullmatch(f'@(?:{pattern})(?:\\s*;\\s*@(?:{pattern}))*', c)]
     print(f'leftover non-bib [@...] cites: {leftover if leftover else "none"}')
     assert not leftover, 'non-bib cross-refs survived conversion'
 
-    combined += '\n\n\\bibliography{' + str((REPO / 'manuscript' / 'references').resolve()) + '}\n'
+    combined += '\n\n\\bibliography{references}\n'
 
     build_dir = artifacts_dir or pathlib.Path(tempfile.mkdtemp(prefix='dafjev_render_'))
     if artifacts_dir is not None:
         build_dir.mkdir(parents=True, exist_ok=False)
-    man = build_dir / 'manuscript'
-    man.mkdir()
+    man = build_dir / MANUSCRIPT
+    man.mkdir(parents=True)
     (man / 'combined.md').write_text(combined)
-    shutil.copy(REPO / 'manuscript/render/preamble.tex', man / 'preamble.tex')
-    cover = (REPO / 'manuscript/render/cover.tex').read_text()
+    shutil.copy(source_dir / 'references.bib', man / 'references.bib')
+    shutil.copy(source_dir / 'render/preamble.tex', man / 'preamble.tex')
+    cover = (source_dir / 'render/cover.tex').read_text()
     for key, value in vars.items():
         cover = cover.replace('{{' + key + '}}', value)
     assert '{{' not in cover, 'unresolved cover token'

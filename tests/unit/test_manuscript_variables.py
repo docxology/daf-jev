@@ -1,7 +1,7 @@
 """Unit tests for daf_jev.manuscript_variables: full-token contract on a fake project.
 
 No-mock convention: daf_jev internals are never patched. Each test builds a
-minimal, schema-faithful project tree (pyproject.toml, manuscript/config.yaml,
+minimal, schema-faithful project tree (pyproject.toml, docs/manuscript/config.yaml,
 docs/reference/MANIFEST.json, benchmark JSONs, src/daf_jev) in ``tmp_path`` and
 asserts the computed token values. Strict mode (missing analysis output raises)
 and draft mode (``--allow-draft``: missing output becomes ``"N/A"``) are both
@@ -162,8 +162,8 @@ def _write_minimal_skeleton(root: Path) -> None:
 
 
 def _write_analysis_outputs(root: Path) -> None:
-    (root / "manuscript").mkdir(parents=True, exist_ok=True)
-    (root / "manuscript" / "config.yaml").write_text(_CONFIG_YAML, encoding="utf-8")
+    (root / "docs/manuscript").mkdir(parents=True, exist_ok=True)
+    (root / "docs/manuscript" / "config.yaml").write_text(_CONFIG_YAML, encoding="utf-8")
     manifest_dir = root / "docs" / "reference"
     manifest_dir.mkdir(parents=True, exist_ok=True)
     (manifest_dir / "MANIFEST.json").write_text(json.dumps(_MANIFEST_JSON), encoding="utf-8")
@@ -173,7 +173,7 @@ def _write_analysis_outputs(root: Path) -> None:
     (bench_dir / "patterns_20260916.json").write_text(json.dumps(_PATTERNS_JSON), encoding="utf-8")
     (bench_dir / "calibration_20260916.json").write_text(json.dumps(_CALIBRATION_JSON), encoding="utf-8")
     selected = {p.stem.split("_")[0]: {"path": str(p.relative_to(root)), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in bench_dir.glob("*.json")}
-    (root / "manuscript" / "evidence.json").write_text(json.dumps({"format": "dafjev.publication-evidence/1", "historical_benchmarks": selected}))
+    (root / "docs/manuscript" / "evidence.json").write_text(json.dumps({"format": "dafjev.publication-evidence/1", "historical_benchmarks": selected}))
     figures_dir = root / "output" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     registry = {"fig:b": {"filename": "b.png"}, "fig:a": {"filename": "a.png"}}
@@ -340,7 +340,7 @@ def test_generate_variables_draft_mode_missing_outputs_become_na(tmp_path: Path)
 @pytest.mark.parametrize(
     ("removal", "needle"),
     [
-        ("manuscript/config.yaml", "config.yaml"),
+        ("docs/manuscript/config.yaml", "config.yaml"),
         ("docs/reference/MANIFEST.json", "MANIFEST.json"),
         ("output/benchmarks/batching_20260916.json", "batching"),
         ("output/benchmarks/patterns_20260916.json", "patterns"),
@@ -403,7 +403,7 @@ def test_generate_variables_experiment_producers_config_defaults_and_draft(tmp_p
     assert draft_no_keys["CALIBRATION_STATES"] == "N/A"
     assert draft_no_keys["CALIBRATION_REPEATS"] == "N/A"
 
-    config_path = tmp_path / "manuscript" / "config.yaml"
+    config_path = tmp_path / "docs/manuscript" / "config.yaml"
     config_path.write_text(
         _CONFIG_YAML + "  batching_runs: 4\n  calibration_states: 8\n  calibration_repeats: 7\n",
         encoding="utf-8",
@@ -416,7 +416,7 @@ def test_generate_variables_experiment_producers_config_defaults_and_draft(tmp_p
 
 def test_generate_variables_batching_n_tokens_derive_from_config(fake_project: Path) -> None:
     """CONFIG_BATCHING_N* token names AND values follow experiment.batching_n_values."""
-    (fake_project / "manuscript" / "config.yaml").write_text(
+    (fake_project / "docs/manuscript" / "config.yaml").write_text(
         _CONFIG_YAML.replace("  batching_n_values: [5, 10, 20]", "  batching_n_values: [4, 8]"),
         encoding="utf-8",
     )

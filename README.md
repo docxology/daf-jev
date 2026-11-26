@@ -92,7 +92,7 @@ with prepared datasets, durable attempt receipts and separate quality/cost evide
 - **Figures & manuscript** — a matplotlib registry with eight core figures,
   six selected empirical figures and an optional native capability figure,
   plus `figure_registry.json` and a `{{TOKEN}}` variable pipeline that keep the
-  10-section manuscript in `manuscript/` free of hardcoded results.
+  10-section manuscript in `docs/manuscript/` free of hardcoded results.
 - **MCP server** — `daf-jev serve` exposes the toolkit as nine MCP tools
   (`jev_ask`, `jev_evaluate`, `jev_models`, `jev_composite_score`,
   `jev_confidence_gate`, `jev_tiered_gate`, `jev_docs_verify`,
@@ -866,7 +866,7 @@ in [benchmarks/](benchmarks/README.md) preserve their historical receipt lane.
 
 ## Figures and manuscript
 
-The repo renders its own paper: 10 manuscript sections under `manuscript/`,
+The repo renders its own paper: 10 manuscript sections under `docs/manuscript/`,
 with every measured number injected as a `{{TOKEN}}` placeholder — nothing is
 hardcoded in the prose.
 
@@ -883,7 +883,7 @@ the variable pipeline; an independently chosen newest file is not a coherent coh
 
 ```bash
 uv run python scripts/capture_verification.py --out-dir .benchmarks/verification-new
-# Deliberately select verification.json path + SHA-256 in manuscript/evidence.json.
+# Deliberately select verification.json path + SHA-256 in docs/manuscript/evidence.json.
 uv run python scripts/z_generate_manuscript_variables.py
 # tokens -> output/data/manuscript_variables.json
 uv run python scripts/render_pdf.py --output output/pdf/reproduction-new.pdf \
@@ -905,10 +905,11 @@ map, uses Pandoc/TeX, and checks unresolved citations, references, images and
 overfull vertical boxes. Retain intermediate TeX/log inputs with `--artifacts-dir`
 and inspect all headings/prose and pages; marker/bounds checks alone can miss
 clipped content. The reproducible build timestamp is separate from render time.
-It writes the selected fresh PDF path and preserves existing outputs; `--install` explicitly refreshes
-the root PDF. The optional external template integration has additional path
-and provenance requirements and is not needed for standalone rendering. See
-[reproducibility](docs/reproducibility.md) for evidence selection and final checks.
+It writes the selected fresh PDF path and preserves existing outputs.
+`--install` explicitly refreshes the root PDF. The
+[manuscript guide](docs/manuscript/README.md) documents the pinned template
+workflow. See [reproducibility](docs/reproducibility.md) for evidence selection
+and final checks.
 
 ## Tests and benchmarks
 
@@ -1194,8 +1195,8 @@ Methodology and the committed-receipts policy:
   reference [`docs/models.md`](docs/models.md), index
   [`docs/README.md`](docs/README.md), manifest-bound hashed snapshot under
   [`docs/reference/`](docs/reference/).
-- Manuscript: 10 sections under [`manuscript/`](manuscript/) +
-  [`config.yaml`](manuscript/config.yaml); rendered PDF
+- Manuscript: 10 sections under [`docs/manuscript/`](docs/manuscript/README.md) +
+  [`config.yaml`](docs/manuscript/config.yaml); rendered PDF
   [`daf-jev_combined.pdf`](daf-jev_combined.pdf).
 - Generated figures:
   [`output/figures/figure_registry.json`](output/figures/figure_registry.json)

@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: generate and inject manuscript variables.
+"""Generate the token map consumed by the manuscript renderers.
 
-Reads project metadata and analysis outputs, writes
-``output/data/manuscript_variables.json``, and substitutes
-``{{TOKEN}}`` markers in manuscript sections into
-``output/manuscript/`` for PDF rendering.
-
-All computation lives in ``src/daf_jev/manuscript_variables``;
-all injection lives in ``infrastructure.rendering.manuscript_injection``
-(available only when this project sits inside the template repository —
-standalone checkouts skip the injection step).
+Read project metadata and reviewed analysis outputs and write
+``output/data/manuscript_variables.json``. See ``docs/manuscript/README.md``
+for using that map with the standalone and pinned template renderers.
 
 Exit codes:
-    0   variables written (and injected, when inside a template repo)
+    0   variables written
     1   missing analysis outputs (strict mode) or unexpected error
 """
 
@@ -26,25 +20,6 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 for _candidate in (_PROJECT_ROOT, _PROJECT_ROOT / "src"):
     if str(_candidate) not in sys.path:
         sys.path.insert(0, str(_candidate))
-
-
-def _template_repo_root(project_root: Path) -> Path | None:
-    """Return the template repository root when this project is inside one."""
-    for parent in project_root.parents:
-        if (parent / "infrastructure").is_dir() and (parent / "pyproject.toml").is_file():
-            return parent
-        # Sidecar layout: the project lives under `<git>/projects/...` with the
-        # template engine checked out as the sibling `<git>/template` — probe it
-        # explicitly so injection works from the sidecar real path too.
-        sibling = parent / "template"
-        if (sibling / "infrastructure").is_dir() and (sibling / "pyproject.toml").is_file():
-            return sibling
-    return None
-
-
-_REPO_ROOT = _template_repo_root(_PROJECT_ROOT)
-if _REPO_ROOT is not None and str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 
 def main() -> int:
@@ -66,15 +41,6 @@ def main() -> int:
             require_analysis_outputs=not args.allow_draft,
         )
         save_variables(variables, out_path)
-
-        if _REPO_ROOT is not None:
-            from infrastructure.rendering.manuscript_injection import (
-                write_resolved_manuscript_tree,
-            )
-
-            write_resolved_manuscript_tree(_PROJECT_ROOT, variables)
-        else:
-            print("note: not inside a template repository — skipping {{TOKEN}} injection", file=sys.stderr)
     except FileNotFoundError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

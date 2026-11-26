@@ -58,7 +58,7 @@ def test_native_bibtex_diagnostics_are_not_excused_by_bbl(
 
 
 def test_complete_current_bibliography_is_plainnat_compatible(tmp_path: Path) -> None:
-    bibliography = (ROOT / "manuscript/references.bib").read_text()
+    bibliography = (ROOT / "docs/manuscript/references.bib").read_text()
     returncode, log = run_bibtex(tmp_path, bibliography, "*")
     assert returncode == 0, log
     assert "Warning--" not in log

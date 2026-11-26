@@ -11,7 +11,7 @@ accompany the figures. It also always writes the sibling ``architecture.mmd``
 ``figure_registry.json`` keeps its template-validation schema). The
 ``--only`` choices are derived from the figure
 registry itself so the help text can never drift. Data-driven figures
-read exact SHA-256-bound inputs from ``manuscript/evidence.json``; missing
+read exact SHA-256-bound inputs from ``docs/manuscript/evidence.json``; missing
 data raises a clear error naming the missing file (the
 architecture, primitives, and confidence figures are data-free and always
 render).

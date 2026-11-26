@@ -3,7 +3,7 @@
 Reads project metadata and analysis outputs:
 
 - ``pyproject.toml``                    — package name / version / min Python
-- ``manuscript/config.yaml``            — paper metadata and experiment params
+- ``docs/manuscript/config.yaml``       — paper metadata and experiment params
 - ``docs/reference/MANIFEST.json``      — docs snapshot stats
 - ``output/benchmarks/{batching,patterns}_*.json`` — benchmark results
 - ``output/figures/figure_registry.json`` — figure registry
@@ -48,7 +48,7 @@ _FIGURES_DIR = Path("output") / "figures"
 # figures.py pulls matplotlib in at module import.
 _FIGURE_REGISTRY = _FIGURES_DIR / "figure_registry.json"
 _MANIFEST_PATH = Path("docs") / "reference" / "MANIFEST.json"
-_CONFIG_PATH = Path("manuscript") / "config.yaml"
+_CONFIG_PATH = Path("docs/manuscript/config.yaml")
 _COVERAGE_PATH = Path(".coverage")
 _PYTEST_TIMEOUT_S = 180
 _GIT_TIMEOUT_S = 10
@@ -133,7 +133,7 @@ def _config_batching_n_values(config: dict[str, Any]) -> list[str]:
 
 def _load_config(project_root: Path, *, strict: bool) -> dict[str, Any]:
     config_path = project_root / _CONFIG_PATH
-    if not _require(config_path.is_file(), "manuscript config", config_path, "Create manuscript/config.yaml first.", strict=strict):
+    if not _require(config_path.is_file(), "manuscript config", config_path, "Create docs/manuscript/config.yaml first.", strict=strict):
         return {}
     value = strict_yaml_loads(config_path.read_bytes())
     if value is not None and not isinstance(value, dict):
@@ -352,7 +352,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
 
     Args:
         project_root: Root directory (contains ``pyproject.toml``,
-            ``manuscript/``, ``output/``, ``src/daf_jev``, ``tests/``).
+            ``docs/manuscript/``, ``output/``, ``src/daf_jev``, ``tests/``).
         require_analysis_outputs: When True (pipeline mode), missing
             analysis outputs (manuscript config, docs manifest, benchmark
             JSONs, figure registry) raise :class:`FileNotFoundError`. When
@@ -371,7 +371,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     strict = require_analysis_outputs
     variables: dict[str, str] = {}
 
-    # ---- Configuration-derived (manuscript/config.yaml) ----
+    # ---- Configuration-derived (docs/manuscript/config.yaml) ----
     config = _load_config(project_root, strict=strict)
     paper = config.get("paper", {}) if isinstance(config, dict) else {}
     keywords = [str(k) for k in (config.get("keywords", []) or [])]
@@ -388,7 +388,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     # the contracted token set stable when the config lacks the key.
     for n in batching_n_values or _DEFAULT_BATCHING_N_VALUES:
         variables[f"CONFIG_BATCHING_N{n}"] = n if batching_n_values else _NA
-    # Experiment parameters (experiment.* in manuscript/config.yaml). In
+    # Experiment parameters (experiment.* in docs/manuscript/config.yaml). In
     # pipeline (strict) mode a missing key falls back to the benchmark
     # default so no N/A sentinel leaks into a rendered manuscript; draft
     # mode emits the N/A sentinel like every other CONFIG_* producer.
@@ -442,7 +442,7 @@ def generate_variables(project_root: Path, *, require_analysis_outputs: bool = T
     variables["DOCS_SNAPSHOT_BYTES_HUMAN"] = _human_bytes(total_bytes) if manifest else _NA
     variables["DOCS_SNAPSHOT_DATE"] = str(manifest.get("scraped_at_utc", _NA))[:10] if manifest else _NA
 
-    # ---- Benchmarks (output/benchmarks/*.json, explicitly selected by manuscript/evidence.json) ----
+    # ---- Benchmarks (output/benchmarks/*.json, explicitly selected by docs/manuscript/evidence.json) ----
     batching = _load_benchmark(project_root, "batching", strict=strict)
     patterns = _load_benchmark(project_root, "patterns", strict=strict)
     model = batching.get("model") or patterns.get("model")

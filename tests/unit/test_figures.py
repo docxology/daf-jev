@@ -156,7 +156,7 @@ def _write_benchmark(root: Path, name: str, payload: dict) -> None:
     bench_dir = root / "output" / "benchmarks"
     bench_dir.mkdir(parents=True, exist_ok=True)
     (bench_dir / f"{name}_20260916.json").write_text(json.dumps(payload), encoding="utf-8")
-    selection = root / "manuscript" / "evidence.json"
+    selection = root / "docs/manuscript" / "evidence.json"
     selection.parent.mkdir(parents=True, exist_ok=True)
     spec = json.loads(selection.read_text()) if selection.exists() else {"format": "dafjev.publication-evidence/1", "historical_benchmarks": {}}
     path = bench_dir / f"{name}_20260916.json"
@@ -485,7 +485,7 @@ def test_figure_registry_schema_and_values(generated_project: Path) -> None:
         assert entry["placement"] == "h"
         assert entry["generated_by"] == "daf_jev.figures"
         assert set(entry["metadata"]) == {"alt_text", "source", "evidence_selection"}
-        assert entry["metadata"]["evidence_selection"] == "manuscript/evidence.json"
+        assert entry["metadata"]["evidence_selection"] == "docs/manuscript/evidence.json"
         assert len(entry["metadata"]["alt_text"]) > 40, label
         assert entry["metadata"]["source"] == "daf-jev benchmark/figure pipeline"
         assert entry["caption"] and entry["caption"].isprintable()

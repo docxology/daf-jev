@@ -222,7 +222,7 @@ It neither updates publication selection nor publishes anything. Prepare the
 repository extras first; this capture is a local source gate, not a model run.
 
 Select the completed `verification.json` by adding its relative path and exact
-SHA-256 to the optional `verification` entry in `manuscript/evidence.json`:
+SHA-256 to the optional `verification` entry in `docs/manuscript/evidence.json`:
 
 ```json
 {
@@ -263,7 +263,7 @@ rerender may reuse the unchanged, already validated saved map.
 
 Measured manuscript values remain `{{TOKEN}}` placeholders. A reviewed evidence
 selection must bind the exact result files used by both variables and figures.
-`manuscript/evidence.json` declares `dafjev.publication-evidence/1` and binds
+`docs/manuscript/evidence.json` declares `dafjev.publication-evidence/1` and binds
 selected paths to file hashes. Missing or changed inputs fail; reviewing model,
 date and protocol compatibility remains necessary. The
 historical paper and new benchmark-run reports are separate evidence schemas;
@@ -282,11 +282,9 @@ The standalone variable script writes `output/data/manuscript_variables.json`;
 the in-repository renderer resolves manuscript tokens using that map and writes
 the selected fresh PDF path. It refuses to overwrite an existing output; choose
 a new path for a rerun. Token-substituted `output/manuscript/` sections
-belong to the optional external template integration; they are not a prerequisite
-for the standalone renderer. Rendering requires the documented Pandoc/TeX
-toolchain: Pandoc, XeLaTeX, BibTeX, the declared TeX packages, Times New Roman,
-Menlo, and `latinmodern-math.otf`. Fonts and compiler versions are reproduction
-inputs, not bundled package dependencies. The release reproduction record binds
+are generated when using the optional pinned template. The
+[manuscript guide](manuscript/README.md) records both render paths and their
+toolchain. Fonts and compiler versions are reproduction inputs. The release reproduction record binds
 the source-build commit, its `SOURCE_DATE_EPOCH`, saved variables, selected
 evidence, figures and toolchain. Exact same-host reproduction uses that source
 commit with the released evidence/figure/map inputs overlaid; the later artifact
@@ -321,7 +319,7 @@ the reproduced defects and remaining scientific gates.
 ## Selected empirical figures and manuscript scholarship
 
 The expanded working manuscript selects two retained public aggregates through
-`manuscript/evidence.json` `study_summaries`: the CPU comparison and the hosted
+`docs/manuscript/evidence.json` `study_summaries`: the CPU comparison and the hosted
 continuation summary. Each selection has an exact relative path and SHA-256.
 The hosted summary carries the older native cohort with its separate identity.
 These sources remain historical execution evidence after software changes;

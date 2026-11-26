@@ -21,7 +21,7 @@ exit 1 with null statistics. Invalid evidence includes a typed error. Missing
 `--root` exits 2. The explicit root prevents an installed wheel or arbitrary CWD
 from being mistaken for a source checkout.
 
-This reads `manuscript/evidence.json` through `evidence.selected_verification`,
+This reads `docs/manuscript/evidence.json` through `evidence.selected_verification`,
 including exact bound capture/native-export bytes and before/after/current source
 inventories. It never falls back to raw coverage, a newer result, prose counts,
 pytest collection or execution. The inventory includes shell gates, tasks.yaml,

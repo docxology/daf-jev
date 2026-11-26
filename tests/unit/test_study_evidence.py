@@ -31,22 +31,22 @@ ROOT = Path(__file__).resolve().parents[2]
 def study_tree(tmp_path: Path) -> Path:
     """Relocate real retained public inputs; never depend on newest filenames."""
     source = ROOT
-    selection = json.loads((source / "manuscript/evidence.json").read_bytes())
+    selection = json.loads((source / "docs/manuscript/evidence.json").read_bytes())
     # Historical-only fixture stays historical even after an additive selection.
     selection["study_summaries"] = {k: v for k, v in selection["study_summaries"].items()
                                      if k in {"cpu", "hosted"}}
-    tmp_path.joinpath("manuscript").mkdir()
+    tmp_path.joinpath("docs/manuscript").mkdir(parents=True)
     for entry in selection["study_summaries"].values():
         dest = tmp_path / entry["path"]
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source / entry["path"], dest)
     selection.pop("verification", None)
-    (tmp_path / "manuscript/evidence.json").write_text(json.dumps(selection))
+    (tmp_path / "docs/manuscript/evidence.json").write_text(json.dumps(selection))
     return tmp_path
 
 
 def rewrite(root: Path, section: str, edit) -> None:
-    selection_path = root / "manuscript/evidence.json"
+    selection_path = root / "docs/manuscript/evidence.json"
     selection = json.loads(selection_path.read_bytes())
     entry = selection["study_summaries"][section]
     path = root / entry["path"]
@@ -70,14 +70,14 @@ def test_selected_tokens_and_newer_files_do_not_change_selection(study_tree: Pat
 
 
 def test_selected_bytes_detect_mutation_escape_and_missing(study_tree: Path) -> None:
-    selection = json.loads((study_tree / "manuscript/evidence.json").read_bytes())
+    selection = json.loads((study_tree / "docs/manuscript/evidence.json").read_bytes())
     entry = selection["study_summaries"]["cpu"]
     path = study_tree / entry["path"]
     path.write_bytes(path.read_bytes() + b" ")
     with pytest.raises(ValueError, match="changed"):
         selected_study_bytes(study_tree, "cpu")
     entry["path"] = "../escaped.json"
-    (study_tree / "manuscript/evidence.json").write_text(json.dumps(selection))
+    (study_tree / "docs/manuscript/evidence.json").write_text(json.dumps(selection))
     with pytest.raises(ValueError, match="confined"):
         load_studies(study_tree)
     with pytest.raises(ValueError, match="missing selected"):
@@ -87,8 +87,8 @@ def test_selected_bytes_detect_mutation_escape_and_missing(study_tree: Path) -> 
 def test_optional_selection_and_explicit_invalid_map(tmp_path: Path) -> None:
     assert not has_study_selection(tmp_path)
     assert not has_selected_study(tmp_path, "native_hosted")
-    p = tmp_path / "manuscript/evidence.json"
-    p.parent.mkdir()
+    p = tmp_path / "docs/manuscript/evidence.json"
+    p.parent.mkdir(parents=True)
     p.write_text('{"format":"dafjev.publication-evidence/1"}')
     assert not has_study_selection(tmp_path)
     assert not has_selected_study(tmp_path, "native_hosted")
@@ -265,7 +265,7 @@ def select_native(root: Path, value: dict) -> str:
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(value, allow_nan=False))
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
-    selection_path = root / "manuscript/evidence.json"
+    selection_path = root / "docs/manuscript/evidence.json"
     selection = json.loads(selection_path.read_bytes())
     selection["study_summaries"]["native_hosted"] = {"path": "output/native-summary.json", "sha256": sha}
     selection_path.write_text(json.dumps(selection))
@@ -489,7 +489,7 @@ def test_decoded_privacy_screen_handles_json_unicode_escapes(study_tree: Path) -
     value = native_summary()
     value["datasets"][0]["id"] = "/Users/private-fixture/person"
     select_native(study_tree, value)
-    selection_path = study_tree / "manuscript/evidence.json"
+    selection_path = study_tree / "docs/manuscript/evidence.json"
     selection = json.loads(selection_path.read_bytes())
     entry = selection["study_summaries"]["native_hosted"]
     path = study_tree / entry["path"]

@@ -204,12 +204,12 @@ never be committed, printed, or read by tests.
 - **Figures** (`daf_jev.figures`, `figures` extra) — `generate_all()`
   writes the 7 registry-named PNGs + `figure_registry.json` into the
   figures directory; data-driven figures read the explicit hash-bound
-  selections in `manuscript/evidence.json` and fail if selected evidence is
+  selections in `docs/manuscript/evidence.json` and fail if selected evidence is
   missing or changed.
 - **Manuscript variables** (`daf_jev.manuscript_variables`) —
   `generate_variables` / `save_variables` derive the 49 `{{TOKEN}}`
   manuscript variables from pyproject, the docs MANIFEST, test counts,
-  benchmark JSONs, and `manuscript/config.yaml` knobs; zero hardcoded
+  benchmark JSONs, and `docs/manuscript/config.yaml` knobs; zero hardcoded
   results (strict default; `--allow-draft` for drafts).
 - **CLI + MCP server** (`daf_jev.cli`, `daf_jev.mcp_server`) — the
   `daf-jev` console script (stdlib argparse, JSON to stdout, exit 0/1/2;
@@ -464,7 +464,7 @@ For measured manuscript regeneration, use
 `scripts/capture_verification.py --out-dir FRESH_INSIDE_ROOT` after preparing
 `dev`, `figures` and `benchmark` extras. It executes unit tests with native
 coverage/JUnit and only collects live tests. Select its receipt path/SHA in the
-optional `manuscript/evidence.json` `verification` field deliberately; preserve
+optional `docs/manuscript/evidence.json` `verification` field deliberately; preserve
 historical benchmark selection and failed captures. Read the
 [retained verification contract](../../docs/reproducibility.md#retained-verification-for-exact-offline-regeneration)
 before selection. This is local source evidence, not model/hosted or publication

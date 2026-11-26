@@ -14,7 +14,7 @@ The batching receipt compares one batched call with sequential single-question c
 
 The pattern receipt runs composite scoring and intent routing {{BENCH_PATTERNS_RUNS}} times and records end-to-end wall time plus usage. It includes both network and composition work, without a separate overhead baseline. The calibration receipt runs {{BENCH_CALIB_STATES}} inline states {{BENCH_CALIB_REPEATS}} times against {{BENCH_CALIB_MODEL}}, using modal self-agreement as its correctness proxy and pairwise noul gaps as stability. None of these inline states forms an independent ground-truth test corpus.
 
-The command scripts expose their protocol through explicit arguments. `manuscript/config.yaml` records manuscript experiment settings; a render setting is not proof that a historical script consumed it. Actual run counts and settings must come from the selected receipt, with discrepancies rejected or explained. Legacy scripts resolve a key through their documented environment/.env chain and skip without a key; they are outside the offline test suite.
+The command scripts expose their protocol through explicit arguments. `docs/manuscript/config.yaml` records manuscript experiment settings; a render setting is not proof that a historical script consumed it. Actual run counts and settings must come from the selected receipt, with discrepancies rejected or explained. Legacy scripts resolve a key through their documented environment/.env chain and skip without a key; they are outside the offline test suite.
 
 ## Measurement and evidence selection
 
@@ -63,7 +63,7 @@ The prospective expansion freezes complete validation and official-test obligati
 \begin{landscape}
 \begin{figure}[p]
 \centering
-\includegraphics[width=\linewidth]{../output/reports/hosted-expansion-20261008/admission-matrix.pdf}
+\includegraphics[width=\linewidth]{../../output/reports/hosted-expansion-20261008/admission-matrix.pdf}
 \caption{Prospective hosted admission matrix. Categories concern frozen task and accounting contracts, not observed model quality or endpoint acceptance. At this earlier source identity, the prior unresolved charge blocked new requests. Later Jev admission and validation probes are separately selected; this matrix retains its original plan and figure-source hashes.}
 \label{fig:hosted_admission}
 \end{figure}
