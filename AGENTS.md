@@ -688,6 +688,10 @@ fallback environment is `src/gnn/execute/rxinfer/`).
 
 ## Verification commands
 
+For documentation-snapshot claims, use the
+[offline verification entry points](docs/README.md#verification-and-reproduction-entry-points).
+The retained report binds verification to specific source, input, and result identities.
+
 Prepare the environment through the repository toolchain (`uv sync --extra dev
 --extra figures`, and `--extra benchmark` for optional comparators/resources).
 Dependency resolution can use the network. After preparation, these checkout
