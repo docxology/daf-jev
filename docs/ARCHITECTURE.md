@@ -1253,18 +1253,17 @@ the AGENTS.md invariant):
   exactly; the rows list order is parent-assignment lexicographic by each
   parent's states order (canonical, deterministic); the round-trip must
   be lossless (`==` after both directions).
-- This JSON is what GNN's bridge consumes/produces and what the
-  RxInfer.jl example reads. The schema lives here; GNN docs reference it.
+- The GNN bridge demonstration used this JSON for interchange with
+  RxInfer.jl. The schema lives here.
 
 ### End-to-end pipeline
 
-The pipeline crosses two repos: Jev factors become a Bayes net in this
-repo, and the net becomes an RxInfer.jl model in the GNN checkout
-(branch `feat/rxinfer-bridge` —
-[GNN PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)).
-Commands are signature-exact; step 1 runs from this repo, steps 2-3 from
-the GNN repo root — relative links cannot cross repos, so GNN-side
-paths are named, not linked.
+The September 2026 GNN demonstration converted GraphSpec to RxInfer.jl
+models and used a sidecar format for returning marginals to daf-jev.
+The bridge was developed in the GNN repository and merged there on
+2026-09-22.
+[Merged GNN PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
+
 ```mermaid
 flowchart LR
     subgraph jev["daf-jev (this repo)"]
@@ -1274,9 +1273,9 @@ flowchart LR
     subgraph art["output/experiments/asia"]
         C["asia_graphspec.json<br/>dafjev.bayesnet/1"]
     end
-    subgraph gnn["GNN repo (PR #165)"]
-        D["rxinfer_bridge.py<br/>GraphSpec → @model"]
-        E["examples/rxinfer/<br/>asia_model.jl"]
+    subgraph gnn["GNN demonstration"]
+        D["GraphSpec → @model"]
+        E["Julia example model"]
     end
     subgraph jl["Julia (RxInfer.jl)"]
         F["marginals<br/>evidence updates stay local"]
@@ -1288,36 +1287,13 @@ flowchart LR
     F --> G
 ```
 
-```bash
-# 1. this repo — propose the structure (printed vs the reference edges),
-#    elicit every CPT in one batched ask, write the artifacts
-uv sync --extra figures
-uv run python scripts/bayes_experiment.py --provider openrouter \
-    --propose-structure --out-dir output/experiments/asia
+The Julia example could write evidence and marginals as a
+`dafjev.bayesnet-posteriors/1` sidecar. In daf-jev, `load_posteriors`
+validates that format (CLI `daf-jev posteriors-load`, MCP
+`jev_posteriors_load`) and `pair_for_calibration` pairs Jev assignments
+against the sidecar rows. See [Posteriors sidecar ingest](#posteriors-sidecar-ingest-srcdaf_jevbayesnet_posteriorspy).
 
-# 2. GNN repo — emit the RxInfer.jl @model from the GraphSpec of step 1
-#    (or a .gnn source); gnn.rxinfer_bridge.emit_rxinfer_jl parses the
-#    subsets and writes the @model. The committed
-#    examples/rxinfer/asia_model.jl is the golden output, pinned
-#    byte-identical by
-#    tests/gnn/test_rxinfer_bridge.py::test_emit_golden_matches_example_file
-python -m gnn.rxinfer_bridge emit asia_graphspec.json
-
-# 3. GNN repo root — exact marginals from the emitted model
-julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
-    examples/rxinfer/asia_graphspec.json   # [--evidence key=state ...] [--out FILE] [--learn]
-```
-
-The Julia script prints marginal posteriors in topological order;
-`--evidence xray=true` clamps GraphSpec evidence, and `--out` writes
-a `dafjev.bayesnet-posteriors/1` sidecar (evidence + marginals) that
-re-feeds daf-jev for calibration / re-asking — the downstream seam:
-`load_posteriors` ingests and validates it (CLI `daf-jev posteriors-load`,
-MCP `jev_posteriors_load`), and `pair_for_calibration` pairs Jev
-assignments against the sidecar rows (Posteriors sidecar ingest section
-below).
-
-Artifacts (step 1; `--out-dir`, default `output/experiments/asia`):
+Tracked artifacts from the Jev experiment (default `output/experiments/asia`):
 
 | Artifact | Producer | Holds |
 | --- | --- | --- |
@@ -1333,11 +1309,24 @@ provider `openrouter`, model `jev-latest`, two batched asks (one
 0.371 → 0.434 under the cumulative evidence `asia=false` →
 `+xray=true` → `+dysp=true`.
 
-Verified gap matrix: single-parent networks run end-to-end with exact
-posteriors on RxInfer 5.5.0 and 5.5.2; the full Asia net (multi-parent
-`DiscreteTransition` nodes) stalls variational message passing — an
-upstream ReactiveMP limitation, reproduced independently of the
-bridge.
+The September 2026 checks returned exact posteriors for single-parent
+networks on RxInfer 5.5.0 and 5.5.2. The full Asia net's multi-parent
+`DiscreteTransition` nodes stalled during variational message passing.
+The ReactiveMP limitation was reproduced independently of the bridge.
+
+#### Offline GraphSpec and posterior checks
+
+With the development environment installed, run these unit checks from
+the daf-jev repository root.
+
+```bash
+uv run --offline --no-sync python -m pytest tests/unit/test_graphical.py tests/unit/test_bayesnet_posteriors.py
+```
+
+[`test_graphical.py`](../tests/unit/test_graphical.py) checks GraphSpec
+round-trips and verifies exact local inference against joint enumeration.
+[`test_bayesnet_posteriors.py`](../tests/unit/test_bayesnet_posteriors.py)
+checks sidecar validation, GraphSpec compatibility and calibration pairing.
 
 ## Posteriors sidecar ingest (src/daf_jev/bayesnet_posteriors.py)
 

@@ -421,63 +421,30 @@ upstream (`docxology/daf-jev`). Repository-local guidance lives in this file.
 
 ## Cross-repo pipeline
 
-The graphical-models story crosses repos: Jev elicits the Bayes net, the
-GNN repo's `rxinfer_bridge` turns the GraphSpec into an RxInfer.jl
-`@model`, Julia computes marginals, and posteriors feed back into
-daf-jev. Format seam: GraphSpec `dafjev.bayesnet/1` (invariant below;
-emitter/parser in [`src/daf_jev/graphical.py`](src/daf_jev/graphical.py) and
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#graphical-models)).
+The interchange format is GraphSpec `dafjev.bayesnet/1`.
+[`graphical.py`](src/daf_jev/graphical.py) emits and parses it, and
+[`bayesnet_posteriors.py`](src/daf_jev/bayesnet_posteriors.py)
+provides `load_posteriors` and `pair_for_calibration` for returned
+marginals. The loader is available as `daf-jev posteriors-load` and MCP
+`jev_posteriors_load`.
 
-1. **Elicit** — [`scripts/bayes_experiment.py`](scripts/bayes_experiment.py)
-   runs `propose_structure` + `elicit_cpts` (two batched asks) against the
-   selected provider.
-2. **Artifacts** — five files land in `output/experiments/asia/`:
-   [`asia_graphspec.json`](output/experiments/asia/asia_graphspec.json)
-   (interchange), [`network.png`](output/experiments/asia/network.png),
-   [`posterior_trajectory.png`](output/experiments/asia/posterior_trajectory.png),
-   [`mermaid.txt`](output/experiments/asia/mermaid.txt), and
-   [`receipts.json`](output/experiments/asia/receipts.json) (per-run
-   provenance: provider/model, proposed edges, elicited CPTs, posterior
-   trajectory; live openrouter run: tub `0.120 -> 0.371 -> 0.434` under
-   cumulative evidence `asia=false` → `+xray=true` → `+dysp=true`).
-3. **Bridge** — GNN `rxinfer_bridge`
-   ([PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165),
-   branch `feat/rxinfer-bridge`) reads the GraphSpec (`dafjev.bayesnet/1`),
-   parses `.gnn` subsets, emits a deterministic RxInfer.jl `@model`.
-4. **Infer** — `julia --project=examples/rxinfer examples/rxinfer/asia_model.jl
-   examples/rxinfer/asia_graphspec.json` — the committed 8-node Asia spec
-   currently stalls at the multi-parent `DiscreteTransition` nodes (Known
-   gap below); single-parent specs print exact marginals end-to-end.
-   `--out FILE` writes a `dafjev.bayesnet-posteriors/1` sidecar for
-   re-asking Jev.
-5. **Feed back** — posteriors re-enter daf-jev through
-   [`src/daf_jev/bayesnet_posteriors.py`](src/daf_jev/bayesnet_posteriors.py)
-   (`load_posteriors` + `pair_for_calibration`; surfaced as
-   `daf-jev posteriors-load` and MCP `jev_posteriors_load`) —
-   calibration, evidence queries, trajectory re-walk.
+[`scripts/bayes_experiment.py`](scripts/bayes_experiment.py) produced the
+tracked [Asia GraphSpec](output/experiments/asia/asia_graphspec.json),
+[network](output/experiments/asia/network.png),
+[posterior trajectory](output/experiments/asia/posterior_trajectory.png),
+[Mermaid diagram](output/experiments/asia/mermaid.txt) and
+[receipt](output/experiments/asia/receipts.json). The recorded OpenRouter
+run moved tub P(true) from 0.120 to 0.371 to 0.434 under cumulative
+evidence `asia=false`, `+xray=true` and `+dysp=true`.
 
-Known gap: single-parent nets run end-to-end with exact posteriors on
-both RxInfer 5.5.0 and 5.5.2; multi-parent `DiscreteTransition` nodes
-stall in RxInfer 5.5.x VMP (upstream limitation; full gap matrix in the
-GNN-side `examples/rxinfer/README.md`).
+The September 2026 GNN bridge demonstrated GraphSpec conversion to an
+RxInfer.jl `@model`. Single-parent nets returned exact posteriors on
+RxInfer 5.5.0 and 5.5.2. The multi-parent `DiscreteTransition` nodes
+in the full Asia example stalled during variational message passing.
+[Merged GNN PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
 
-GNN-side verification (these commands belong to the separate GNN repository, not
-this one; run them from a GNN checkout on branch `feat/rxinfer-bridge`. `tests/gnn/`
-and `src/gnn/` do not exist in daf-jev):
-
-```bash
-uv run mypy src/gnn/rxinfer_bridge.py
-uv run pytest tests/gnn/test_rxinfer_bridge.py
-julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
-    examples/rxinfer/asia_graphspec.json      # full Asia spec: stalls at multi-parent
-                                              # DiscreteTransition (Known gap above);
-                                              # single-parent specs print exact marginals
-```
-
-GNN-side paths are relative to that repo and not clickable from this repo
-on GitHub; note `examples/rxinfer/` there carries no committed
-`Project.toml` (RxInfer 5.5.x lives in a project-local depot; the committed
-fallback environment is `src/gnn/execute/rxinfer/`).
+Use the [offline GraphSpec and posterior checks](docs/ARCHITECTURE.md#offline-graphspec-and-posterior-checks)
+to verify GraphSpec round-trips, local inference and posterior ingestion.
 
 ## Invariants and gotchas
 
