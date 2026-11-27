@@ -13,7 +13,7 @@ Documentation for daf-jev.
   [Provider dispatch](ARCHITECTURE.md#provider-dispatch) ·
   [Graphical models](ARCHITECTURE.md#graphical-models) ·
   [End-to-end pipeline](ARCHITECTURE.md#end-to-end-pipeline) ·
-  [Tests](ARCHITECTURE.md#tests-tests--template-no-mock-convention) ·
+  [Tests](../tests/README.md) ·
   [Benchmarks](ARCHITECTURE.md#benchmarks-benchmarks--live-api-graceful-skip-without-key) ·
   [Decision backends and benchmark contracts](ARCHITECTURE.md#decision-backends-and-benchmark-contracts) ·
   [Conventions](ARCHITECTURE.md#conventions-template_code_project)
