@@ -200,8 +200,14 @@ See [Tests and benchmarks](#tests-and-benchmarks) for the selected receipt.
 
 ## Quickstart
 
+Use Python 3.11 or newer. For a local check of the committed documentation
+snapshot, start with the [offline verification guide](docs/README.md#verification-and-reproduction-entry-points).
+That check uses retained evidence and needs no provider key. The client
+example below requires provider credentials.
+
+
 ```bash
-uv sync
+uv sync --locked
 export JEV_API_KEY="sk-..."   # or TYPESAFE_API_KEY, or put it in .env
 ```
 
