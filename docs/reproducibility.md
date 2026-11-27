@@ -171,36 +171,32 @@ repository; installed package copies do not carry the whole snapshot by default.
 
 ## Tests
 
+Run the offline gate from the repository root after installing the locked
+`dev`, `figures`, and `benchmark` extras. The gate checks lint, types, the
+documentation snapshot, and non-live tests with branch coverage.
+
 ```bash
-uv sync --extra dev --extra figures --extra benchmark
-uv run ruff check .
-uv run mypy src/daf_jev
-uv run pytest tests/unit --cov=src
+uv sync --locked --extra dev --extra figures --extra benchmark
+UV_NO_SYNC=1 UV_OFFLINE=1 bash scripts/gate.sh
 ```
 
-Use repository configuration and current CI to determine required checks.
-The CI matrix declares Python 3.14 and 3.15 checks with development, figure and
-benchmark extras. A local gate on one interpreter does not establish the other
-matrix job or remote CI success.
-Tests drive real transports through an ephemeral loopback HTTP server; they do
-not monkeypatch package behavior. Live tests require a separately supplied
-process-environment key and retain their `live` marker. A skipped live test is
-not live acceptance. Generated test counts and coverage must refer to a completed
-check of the current source; prior results are not a current-tree guarantee.
+The [CI workflow](../.github/workflows/ci.yml) configures Python 3.11, 3.14,
+and 3.15. It runs the offline gate and separately checks live test collection.
+The [test guide](../tests/README.md) gives commands for focused local tests and
+live collection. Bind reported counts and coverage to the exact source and
+completed run that produced them.
 
 ### Optional compiled benchmark runtime diagnostic
 
-A retired Mac/Python 3.10 SciPy wheel failure once motivated a platform pin; the
-package floor is now Python 3.11 and that pin no longer applies. To check that
-the compiled benchmark runtime imports and fits on the current machine:
+Run the optional diagnostic to import `scipy.sparse.linalg` and fit a small
+scikit-learn model using the project’s test inputs.
 
 ```bash
 uv run --extra benchmark python scripts/check_benchmark_runtime.py
 ```
 
-This bounded offline diagnostic imports SciPy and runs a small actual fit. It
-prints dependency versions, training-input hash and the two check predictions;
-it performs no provider calls. Save its output alongside the full aggregate
+The offline diagnostic prints dependency versions, the training-input hash,
+and two check predictions. Save its output alongside the full aggregate
 checks for the exact source/runtime being accepted. Keep previous failed
 captures intact. A repaired subset cannot be added to an older failed aggregate
 to claim a full passing run.
@@ -235,15 +231,14 @@ SHA-256 to the optional `verification` entry in `docs/manuscript/evidence.json`:
 
 This is a fragment of the existing `dafjev.publication-evidence/1` selection;
 keep its historical benchmark selection intact and use the actual hash.
-Selection is deliberate and does not authorize a newer model result, funding,
-execution or release. The parser checks every selected artifact and requires
-the exact before/after/current inventory: all source, test and script Python
-files, plus pyproject, lockfile, manuscript experiment configuration and CI
-workflow. File additions/removals also change identity. Publication selection
-itself is excluded so choosing the completed capture does not invalidate it.
-This inventory identifies the declared Python/configuration inputs; it is not
-an inventory of every installed dependency, non-Python fixture asset or serving
-runtime. Model/runtime custody remains a separate protocol.
+The parser checks every selected artifact and requires the before, after, and
+current inventories to match. The verifier inventories Python source and tests,
+script and benchmark definitions, checked-in documentation and skills, the
+workflow, and project metadata. File additions and removals also change the
+identity. The selection file is excluded so it can point to a completed capture.
+The exact path and suffix rules live in the
+[evidence validator](../src/daf_jev/evidence.py). Installed dependencies and
+serving runtimes have separate custody records.
 
 With this selection, variable regeneration reads the retained native exports
 without pytest collection or raw `.coverage`. Unit count means passing,
