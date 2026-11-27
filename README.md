@@ -457,8 +457,7 @@ spec = net.to_json()                     # GraphSpec interchange
 | `elicit_cpts_async(...)` / `propose_structure_async(...)` | awaited requests on the caller loop; caller owns client closure |
 
 `to_json()` emits **GraphSpec** (`"format": "dafjev.bayesnet/1"`), the
-interchange between this client and downstream graphical-model engines:
-the GNN bridge consumes/produces it and the RxInfer.jl example reads it;
+interchange format used in the [GNN bridge demonstration](#jev-to-rxinferjl-pipeline).
 GTSAM-style engines map the same elicited factors onto their own discrete
 types. The format string is a cross-repo contract — it changes only
 together with the consuming bridges in the same wave (see `AGENTS.md`).
@@ -540,11 +539,11 @@ skip cleanly):
 
 ## Jev to RxInfer.jl pipeline
 
-GraphSpec (`dafjev.bayesnet/1`) is the interchange between daf-jev and
-the GNN bridge — [PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
-on branch `feat/rxinfer-bridge`. daf-jev elicits structure and factors,
-the GNN bridge emits a RxInfer.jl `@model`, Julia runs the inference,
-and the marginals come back to daf-jev for calibration and re-asking:
+The September 2026 GNN bridge demonstration used GraphSpec
+(`dafjev.bayesnet/1`) to pass elicited structure and factors from daf-jev
+to a Julia model. The resulting marginals could return to daf-jev for
+calibration and re-asking.
+[Merged GNN PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
 
 ```mermaid
 flowchart LR
@@ -555,9 +554,9 @@ flowchart LR
     subgraph art["output/experiments/asia"]
         C["asia_graphspec.json<br/>dafjev.bayesnet/1"]
     end
-    subgraph gnn["GNN repo (PR #165)"]
-        D["rxinfer_bridge.py<br/>GraphSpec → @model"]
-        E["examples/rxinfer/<br/>asia_model.jl"]
+    subgraph gnn["GNN demonstration"]
+        D["GraphSpec → @model"]
+        E["Julia example model"]
     end
     subgraph jl["Julia (RxInfer.jl)"]
         F["marginals<br/>evidence updates stay local"]
@@ -569,32 +568,14 @@ flowchart LR
     F --> G
 ```
 
-Runnable end to end — the [live receipts](#live-receipts) above are
-step 1 with `--provider openrouter`:
+The [recorded Jev run](#live-receipts) produced the checked-in
+[Asia GraphSpec](output/experiments/asia/asia_graphspec.json).
+The September 2026 GNN checks returned exact posteriors for single-parent
+nets on RxInfer 5.5.0 and 5.5.2. Multi-parent `DiscreteTransition` nodes
+in the full Asia example stalled during variational message passing.
 
-```bash
-# 1. daf-jev (this repo) — elicit the Asia net, write the five artifacts
-uv run python scripts/bayes_experiment.py --provider openrouter --propose-structure
-
-# 2. GNN repo — clone, check out the bridge branch, emit the Julia model
-git clone https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation
-cd Generalized_Notation_Notation && git checkout feat/rxinfer-bridge
-python -m gnn.rxinfer_bridge emit /path/to/daf-jev/output/experiments/asia/asia_graphspec.json
-
-# 3. Julia — run the generated model over the same GraphSpec
-julia --project=examples/rxinfer examples/rxinfer/asia_model.jl \
-      examples/rxinfer/asia_graphspec.json
-```
-
-Cross-repo note: the bridge (`src/gnn/rxinfer_bridge.py`), its 39 tests,
-and the GNN-side walkthrough (`examples/rxinfer/README.md`, with the
-verified capability/gap matrix) live in the GNN repository — a relative
-link across repos does not resolve on GitHub, so
-[PR #165](https://github.com/ActiveInferenceInstitute/Generalized_Notation_Notation/pull/165)
-is the entry point (its Files list shows all five bridge files).
-Verified capability status: single-parent nets run end-to-end with
-correct posteriors; multi-parent `DiscreteTransition` nodes hit a
-ReactiveMP structured-rule limitation (documented in the PR).
+The [offline GraphSpec and posterior checks](docs/ARCHITECTURE.md#offline-graphspec-and-posterior-checks)
+exercise GraphSpec round-trips, exact inference and posterior ingestion in daf-jev.
 
 Downstream is plain Python and needs no bridge: feed the marginals back
 into [`Decider`](src/daf_jev/decider.py) /
