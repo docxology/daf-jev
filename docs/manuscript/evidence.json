@@ -38,7 +38,7 @@
     }
   },
   "verification": {
-    "path": "output/verification/2026-11-27-public-linux-python3.14/verification.json",
-    "sha256": "749c31183f3ce465e56fc75f2821e134ee3d32d8819efcebb76f219817fe3107"
+    "path": "output/verification/2026-11-28-public-linux-python3.14-floor/verification.json",
+    "sha256": "1f43543e687878f9fefe61004ad66cc58547fb900c58eec1c87cf141bd10dc57"
   }
 }

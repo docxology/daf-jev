@@ -4,7 +4,7 @@ The results in [@sec:results] combine separately selected historical API receipt
 
 ## Software and documentation identities
 
-The current package/render edition is {{PACKAGE_NAME}} {{PACKAGE_VERSION}}, generated under {{PYTHON_VERSION}} on `{{PLATFORM}}`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python {{PACKAGE_PYTHON_MIN}} or newer. Core runtime dependencies are `httpx` and `pyyaml`, with `tomli` on Python 3.10 and standard-library `tomllib` on newer Python. Optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
+The current package/render edition is {{PACKAGE_NAME}} {{PACKAGE_VERSION}}, generated under {{PYTHON_VERSION}} on `{{PLATFORM}}`. Those values describe variable generation, not the historical benchmark execution environment. The old receipts lack a complete source, Python, hardware and dependency identity; those historical fields remain unknown. The package targets Python {{PACKAGE_PYTHON_MIN}} or newer. Core runtime dependencies are `httpx` and `pyyaml`, with standard-library `tomllib` for TOML metadata. Optional supervised benchmarking uses scikit-learn and figure generation uses matplotlib/Pillow.
 
 The model-level documentation claims in [@sec:jev_model] are grounded in a retained hash-manifested TypeSafe snapshot ({{DOCS_SNAPSHOT_ID}}, {{DOCS_SNAPSHOT_PAGES}} pages). That identifies source documentation bytes, not the model's weights or current hosted behavior.
 

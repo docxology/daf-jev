@@ -54,7 +54,7 @@ the intended source commit; unrelated ignored files must remain outside it.
 ```bash
 VERSION=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
 uv build --out-dir .benchmarks/release-new/dist
-uv venv --python 3.11 .benchmarks/release-new/core
+uv venv --python 3.14 .benchmarks/release-new/core
 uv pip install --python .benchmarks/release-new/core/bin/python \
     .benchmarks/release-new/dist/daf_jev-${VERSION}-py3-none-any.whl
 uv run python scripts/check_release_package.py \

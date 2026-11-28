@@ -4,16 +4,12 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
 from packaging.markers import Marker
 from packaging.requirements import Requirement
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # Python 3.10 uses the declared development dependency.
-    import tomli as tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,9 +33,9 @@ def test_release_checker_preserves_compound_benchmark_markers(system_operator):
 
 
 @pytest.mark.parametrize("system,python,active", [
-    ("darwin", "3.11", None),
-    ("linux", "3.11", None),
     ("darwin", "3.14", None),
+    ("linux", "3.14", None),
+    ("linux", "3.15", None),
 ])
 def test_benchmark_scipy_requirement_is_platform_scoped(system, python, active):
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
@@ -52,15 +48,16 @@ def test_benchmark_scipy_requirement_is_platform_scoped(system, python, active):
 
 
 @pytest.mark.parametrize("system,python,expected", [
-    ("darwin", "3.11.15", "1.17.1"),
+    ("darwin", "3.14.4", "1.18.1"),
     ("linux", "3.14.4", "1.18.1"),
 ])
 def test_lock_preserves_other_platform_scipy_versions(system, python, expected):
     lock = tomllib.loads((ROOT / "uv.lock").read_text())
     environment = {"sys_platform": system, "python_full_version": python}
     selected = [package["version"] for package in lock["package"] if package["name"] == "scipy"
-                and any(Marker(marker).evaluate(environment)
-                        for marker in package["resolution-markers"])]
+                and (not package.get("resolution-markers")
+                     or any(Marker(marker).evaluate(environment)
+                            for marker in package["resolution-markers"]))]
     assert selected == [expected]
 
 

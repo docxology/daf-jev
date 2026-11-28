@@ -9,14 +9,10 @@ by code. No I/O.
 import math
 from collections.abc import Callable, Mapping, Sequence
 from fractions import Fraction
-from typing import TypeVar
 
 from daf_jev._types import ChoiceAnswer, ScoreAnswer, validate_probability_row
 
 __all__ = ["composite_score", "confidence_gate", "pick", "route", "tiered_gate"]
-
-T = TypeVar("T")
-
 
 def _valid_confidence(value: object) -> bool:
     return (
@@ -179,7 +175,7 @@ def confidence_gate(
     return primary if confidence >= threshold else below
 
 
-def route(
+def route[T](
     answer: ChoiceAnswer,
     handlers: Mapping[str, Callable[[], T]],
     *,

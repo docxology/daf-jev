@@ -20,17 +20,13 @@ import stat
 import subprocess
 import sys
 import tarfile
+import tomllib
 import zipfile
 from collections import Counter
 from email.parser import Parser
 from io import BytesIO, StringIO
 from pathlib import Path, PurePosixPath
 from typing import Any
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
 
 
 def digest(data: bytes) -> str:

@@ -966,7 +966,7 @@ pure-Python engine turns those factors into exact inference. Jev sits
 UPSTREAM (structure + CPTs), WITHIN (the factors are Jev probabilities),
 and DOWNSTREAM (evidence queries / re-asking). Engines such as GTSAM or
 RxInfer.jl consume the same factors through the GraphSpec interchange
-below. Python >= 3.11, stdlib only — no numpy.
+below. Python >= 3.14, stdlib only — no numpy.
 
 Core (`src/daf_jev/graphical.py` — frozen dataclasses, no I/O):
 
@@ -1588,7 +1588,7 @@ a previously handled request's evidence. Receipts and billing remain observer
 owned; these helpers neither infer transport arrival nor change cancellation
 state, financial admission or retry policy.
 
-On Python 3.10 (historical; the package floor is now 3.11) task boundaries
+In the historical Python 3.10 runtime task boundaries
 may raise a fresh cancellation exception while
 retaining the original in standard exception chaining. Direct custom attributes
 and cause identity on the outer wrapper are therefore not the contract. The
@@ -2245,7 +2245,7 @@ file-access attestation, hosted/model acceptance or publication permission.
 ## Conventions (template_code_project)
 
 - uv-managed; thin scripts; logic in src; >= 90% coverage gate on src.
-- Python >= 3.11, httpx + pyyaml core, with standard-library
+- Python >= 3.14, httpx + pyyaml core, with standard-library
   tomllib; optional benchmark classifiers
   and grouped splits use scikit-learn, and figures use matplotlib/Pillow.
 - Every source dir carries README.md/AGENTS.md accurate to disk (docs pass later).

@@ -614,7 +614,7 @@ to verify GraphSpec round-trips, local inference and posterior ingestion.
   `docs/ARCHITECTURE.md`.
 - Score question criteria MUST be a list of >= 2 strings; choice criteria
   non-empty — both raise `ValueError` in `to_wire()`.
-- Python >= 3.11; core dependencies are `httpx` and `pyyaml`
+- Python >= 3.14; core dependencies are `httpx` and `pyyaml`
   (`tomllib` is in the standard library). The `.env` loader is
   a tiny built-in in `config.py`, no python-dotenv dependency. `matplotlib`
   is optional through the `figures` extra; benchmark classifiers/resources use
