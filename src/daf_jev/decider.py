@@ -41,7 +41,7 @@ import dataclasses
 import math
 import time
 from collections.abc import Callable, Mapping, MutableMapping
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from daf_jev._errors import TypeSafeError
 from daf_jev._retry import RetryPolicy
@@ -58,10 +58,6 @@ from daf_jev.ledger import UsageLedger, UsageSnapshot
 from daf_jev.resilience import CircuitBreaker, CircuitOpenError
 
 __all__ = ["Budget", "ConfidenceGate", "Decider", "DecisionEvent"]
-
-S = TypeVar("S")
-T = TypeVar("T")
-
 
 def _error_text(exc: BaseException) -> str:
     """Rendered exception text for event receipts."""
@@ -238,7 +234,7 @@ class _ResolutionFailed(Exception):
         self.error = error
 
 
-class Decider(Generic[S, T]):
+class Decider[S, T]:
     """Observe -> compose -> ask -> gate -> fail-open -> act, once per call.
 
     All I/O is injected: the client (or a factory, or the environment for

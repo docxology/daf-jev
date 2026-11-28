@@ -1,6 +1,6 @@
 # daf-jev
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22816187.svg)](https://doi.org/10.5281/zenodo.22816187)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.14%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![v0.7.1 on Zenodo](https://img.shields.io/badge/Zenodo-v0.7.1-1F77B4)](https://zenodo.org/records/23266335)
 
@@ -99,7 +99,7 @@ with prepared datasets, durable attempt receipts and separate quality/cost evide
   `jev_posteriors_load`, `jev_reask_plan`) plus a
   `jev://docs/snapshot` resource, over stdio (see [MCP server](#mcp-server)).
 
-Dependencies: Python >= 3.11, `httpx` and `pyyaml` (plus `matplotlib` + `pillow`
+Dependencies: Python >= 3.14, `httpx` and `pyyaml` (plus `matplotlib` + `pillow`
 for figures). Managed with `uv`.
 
 ## Architecture at a glance
@@ -200,7 +200,7 @@ See [Tests and benchmarks](#tests-and-benchmarks) for the selected receipt.
 
 ## Quickstart
 
-Use Python 3.11 or newer. For a local check of the committed documentation
+Use Python 3.14 or newer. For a local check of the committed documentation
 snapshot, start with the [offline verification guide](docs/README.md#verification-and-reproduction-entry-points).
 That check uses retained evidence and needs no provider key. The client
 example below requires provider credentials.

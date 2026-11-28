@@ -24,11 +24,10 @@ classifiers = [
 authors = [
     {name = "Daniel Ari Friedman"},
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "httpx>=0.27.0",
     "pyyaml>=6.0",
-    "tomli>=1.1.0; python_version < '3.11'",
 ]
 
 [project.urls]
@@ -70,9 +69,7 @@ mcp = [
 ]
 benchmark = [
     "scikit-learn>=1.5,<2",
-    # The 3.10 scipy workaround pins were retired with the >=3.11 support
-    # floor (7b76479). On 3.11+ scipy arrives through scikit-learn; the
-    # 3.10-only pins are unreachable and no longer lockable.
+    # SciPy is a dependency of scikit-learn.
     "psutil>=6,<8",
 ]
 
@@ -115,7 +112,7 @@ exclude_also = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -129,7 +126,7 @@ select = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
@@ -138,10 +135,6 @@ follow_imports_for_stubs = true
 [[tool.mypy.overrides]]
 module = ["numpy", "numpy.*", "matplotlib", "matplotlib.*", "cycler", "cycler.*", "kiwisolver", "kiwisolver.*"]
 follow_imports = "skip"
-
-[[tool.mypy.overrides]]
-module = ["tomllib", "tomli"]
-ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["sklearn", "sklearn.*", "psutil", "psutil.*"]

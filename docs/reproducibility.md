@@ -180,8 +180,7 @@ uv sync --locked --extra dev --extra figures --extra benchmark
 UV_NO_SYNC=1 UV_OFFLINE=1 bash scripts/gate.sh
 ```
 
-The [CI workflow](../.github/workflows/ci.yml) configures Python 3.11, 3.14,
-and 3.15. It runs the offline gate and separately checks live test collection.
+The [CI workflow](../.github/workflows/ci.yml) configures Python 3.14 and 3.15. It runs the offline gate and separately checks live test collection.
 The [test guide](../tests/README.md) gives commands for focused local tests and
 live collection. Bind reported counts and coverage to the exact source and
 completed run that produced them.
